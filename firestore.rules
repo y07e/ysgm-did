@@ -42,10 +42,11 @@ service cloud.firestore {
     }
 
     // 일일 시간표 변경 (날짜별 오버라이드)
-    // 관리자 + 담임교사 모두 변경 가능 (행정원/담임이 분담)
+    // 관리자 + 담임교사 모두 변경 가능 (담임은 익명 인증이므로 isLoggedIn 으로 허용)
+    // PIN 게이트는 UI 레이어에서 처리됨 (classAnnouncements와 동일 패턴)
     match /timetableOverrides/{date} {
       allow read: if true;
-      allow write: if isAdmin() || isTeacher();
+      allow write: if isLoggedIn();
     }
 
     // 긴급 공지
