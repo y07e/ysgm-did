@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>양산여자중학교 전자칠판 시스템</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: #0f172a;
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    .main-logo {
+      width: 90px; height: 90px; border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      margin-bottom: 18px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 900; font-size: 2.2rem;
+      box-shadow: 0 8px 24px rgba(59,130,246,0.35);
+    }
+    .main-logo img { width: 100%; height: 100%; object-fit: cover; }
+    h1 { font-size: 1.8rem; font-weight: 900; margin-bottom: 6px; }
+    .sub { color: #64748b; font-size: 0.95rem; margin-bottom: 48px; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      max-width: 860px;
+      width: 100%;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 32px 28px;
+      border: 1px solid #334155;
+      text-decoration: none;
+      color: white;
+      transition: transform 0.2s, border-color 0.2s;
+      display: block;
+    }
+    .card:hover { transform: translateY(-4px); border-color: #3b82f6; }
+    .card-icon { font-size: 2.4rem; margin-bottom: 14px; }
+    .card-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; }
+    .card-desc  { font-size: 0.85rem; color: #64748b; line-height: 1.6; }
+    .card-link  { font-size: 0.78rem; color: #3b82f6; margin-top: 16px; display: block; }
+
+    .grade-section { margin-bottom: 28px; }
+    .grade-title {
+      font-size: 0.78rem; color: #64748b; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .class-grid {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .class-btn {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 8px 16px;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .class-btn:hover { background: #1d4ed8; border-color: #3b82f6; color: white; }
+
+    .classroom-panel {
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 28px;
+      border: 1px solid #334155;
+      max-width: 860px;
+      width: 100%;
+      margin-top: 24px;
+    }
+    .classroom-panel-title {
+      font-size: 0.9rem; font-weight: 700;
+      margin-bottom: 20px;
+      color: #94a3b8;
+      display: flex; align-items: center; gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="main-logo" id="mainLogo">⚡</div>
+  <h1 id="mainTitle">양산여자중학교</h1>
+  <p class="sub">전자칠판 DID 시스템</p>
+
+  <script src="config.js"></script>
+  <script>
+    document.getElementById('mainTitle').textContent = SCHOOL_CONFIG.schoolName;
+    if (SCHOOL_CONFIG.schoolLogo) {
+      document.getElementById('mainLogo').innerHTML = `<img src="${SCHOOL_CONFIG.schoolLogo}" alt="logo">`;
+    }
+  </script>
+
+  <div class="cards">
+    <a class="card" href="admin/">
+      <div class="card-icon">🛠️</div>
+      <div class="card-title">관리자 페이지</div>
+      <div class="card-desc">공지사항 등록, 시간표 편집, 긴급 공지 전송, 설정 변경</div>
+      <span class="card-link">/admin/ →</span>
+    </a>
+
+    <a class="card" href="start/" style="background: linear-gradient(135deg, #1e293b 0%, #1d4ed8 100%); border-color: #3b82f6;">
+      <div class="card-icon">⚙️</div>
+      <div class="card-title">교실 전자칠판 셋업</div>
+      <div class="card-desc">각 교실 전자칠판에서 1회 클릭 — 학년·반 선택 후 자동 기억. <strong style="color:#93c5fd;">29개 교실 모두 같은 URL 사용</strong></div>
+      <span class="card-link">/start/ →</span>
+    </a>
+
+    <div class="card" style="cursor:default;">
+      <div class="card-icon">📺</div>
+      <div class="card-title">전자칠판 화면 (직접 접근)</div>
+      <div class="card-desc">URL에 학년·반 파라미터를 직접 지정. 아래 목록에서 클릭하세요.</div>
+      <span class="card-link">/display/?grade=X&amp;class=Y</span>
+    </div>
+  </div>
+
+  <!-- 교실별 URL -->
+  <div class="classroom-panel">
+    <div class="classroom-panel-title">📋 교실별 전자칠판 URL (클릭 시 새 탭에서 열림)</div>
+
+    <div class="grade-section">
+      <div class="grade-title">1학년 (9개반)</div>
+      <div class="class-grid" id="grade1"></div>
+    </div>
+    <div class="grade-section">
+      <div class="grade-title">2학년 (9개반)</div>
+      <div class="class-grid" id="grade2"></div>
+    </div>
+    <div class="grade-section" style="margin-bottom:0;">
+      <div class="grade-title">3학년 (11개반)</div>
+      <div class="class-grid" id="grade3"></div>
+    </div>
+  </div>
+
+  <script>
+    const config = { '1': 9, '2': 9, '3': 11 };
+    const base = window.location.href.replace('index.html','').replace(/\/$/, '');
+
+    Object.entries(config).forEach(([grade, max]) => {
+      const el = document.getElementById('grade' + grade);
+      for (let c = 1; c <= max; c++) {
+        const a = document.createElement('a');
+        a.className = 'class-btn';
+        a.textContent = `${grade}-${c}반`;
+        a.href = `${base}/display/index.html?grade=${grade}&class=${c}`;
+        a.target = '_blank';
+        el.appendChild(a);
+      }
+    });
+  </script>
+
+</body>
+</html>

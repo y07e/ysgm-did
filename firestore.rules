@@ -1,0 +1,82 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isLoggedIn() &&
+        exists(/databases/$(database)/documents/teachers/$(request.auth.uid)) &&
+        getUserData().role == 'admin';
+    }
+
+    function isTeacher() {
+      return isLoggedIn() &&
+        exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+    }
+
+    // ===== 전자칠판 표시 페이지는 인증 없이 읽기 가능 =====
+
+    // 공지사항
+    match /announcements/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 학급 게시판
+    match /classAnnouncements/{id} {
+      allow read: if true;
+      allow create, update, delete: if isLoggedIn();
+    }
+
+    // 시간표 (기초)
+    match /timetable/{classId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 일일 시간표 변경 (날짜별 오버라이드)
+    match /timetableOverrides/{date} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 긴급 공지
+    match /emergency/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 설정 (수업시간, 급식시간, 학교설정, 운영기간, 오버라이드)
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // D-Day 카운터
+    match /dDays/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 학사일정
+    match /schoolEvents/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 교사 컬렉션 — 익명 포함 로그인 사용자 읽기 가능 (담임 로그인용)
+    // 관리자는 모든 문서 쓰기, 본인 문서는 본인이 생성/수정 가능 (자동 가입)
+    match /teachers/{docId} {
+      allow read: if isLoggedIn();
+      allow create: if isLoggedIn();
+      allow update, delete: if isAdmin() || request.auth.uid == docId;
+    }
+  }
+}

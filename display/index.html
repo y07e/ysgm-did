@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>전자칠판 표시</title>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Black+Han+Sans&family=Nanum+Myeongjo:wght@800&display=swap" rel="stylesheet">
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1e293b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="apple-touch-icon" href="/logo.png">
+  <link rel="icon" href="/logo.png">
+
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      background: #1e293b;
+      padding: 10px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #334155;
+      flex-shrink: 0;
+    }
+    .school-info { display: flex; align-items: center; gap: 12px; }
+    .school-logo {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      color: white; font-weight: 900; font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; box-shadow: 0 2px 8px rgba(59,130,246,0.35);
+      overflow: hidden;
+    }
+    .school-logo img { width: 100%; height: 100%; object-fit: cover; }
+    .school-name { font-size: 1.4rem; color: #f1f5f9; font-weight: 700; letter-spacing: -0.3px; }
+    /* ===== 배지 + 부제목 통합 그룹 (시각적으로 하나로 연결) ===== */
+    .class-section {
+      display: inline-flex;
+      align-items: stretch;
+      gap: 0;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow:
+        0 6px 22px rgba(15,23,42,0.5),
+        inset 0 -2px 0 rgba(0,0,0,0.15);
+      position: relative;
+      isolation: isolate;
+    }
+    /* 상단 글라스 하이라이트 — 통합 카드 위에 한 번에 */
+    .class-section::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 50%;
+      background: linear-gradient(180deg, rgba(255,255,255,0.2), transparent);
+      pointer-events: none;
+      z-index: 3;
+    }
+    .board-title {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 24px;
+      background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
+      color: white;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+      position: relative;
+      z-index: 2;
+    }
+    /* 부제목과 배지 사이 구분선 */
+    .board-title::after {
+      content: '';
+      position: absolute;
+      right: 0; top: 18%; bottom: 18%;
+      width: 1px;
+      background: rgba(255,255,255,0.15);
+      z-index: 4;
+    }
+
+    /* ===== 학년·반 배지 (학년별 컬러) ===== */
+    .class-badge {
+      display: inline-flex;
+      align-items: stretch;
+      padding: 8px 0;
+      position: relative;
+      z-index: 2;
+    }
+    /* 학년별 그라데이션 (그림자는 .class-section에서 일괄 처리) */
+    .class-badge.grade-1 { background: linear-gradient(135deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%); }
+    .class-badge.grade-2 { background: linear-gradient(135deg, #10b981 0%, #14b8a6 50%, #06b6d4 100%); }
+    .class-badge.grade-3 { background: linear-gradient(135deg, #f59e0b 0%, #f97316 50%, #ef4444 100%); }
+    .badge-section {
+      display: flex;
+      flex-direction: row;
+      align-items: baseline;
+      justify-content: center;
+      gap: 5px;
+      padding: 4px 20px;
+      position: relative;
+      z-index: 2;
+    }
+    .badge-num {
+      font-size: 1.55rem;
+      font-weight: 900;
+      color: white;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      letter-spacing: -0.5px;
+    }
+    .badge-label {
+      font-size: 1.35rem;
+      color: white;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+    }
+    .badge-divider {
+      width: 1px;
+      background: linear-gradient(180deg, transparent, rgba(255,255,255,0.4), transparent);
+      margin: 6px 0;
+      position: relative;
+      z-index: 2;
+    }
+    .header-right { display: flex; flex-direction: column; align-items: flex-end; }
+    .clock {
+      font-size: 2.4rem;
+      font-weight: 900;
+      color: #38bdf8;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      margin-top: 2px;
+    }
+    .date-info { font-size: 1.15rem; color: #cbd5e1; font-weight: 600; }
+
+    /* ===== MAIN ===== */
+    .main {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 14px;
+      padding: 14px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ===== LEFT PANEL — 시간표 + 날씨 + 학사일정 3행 ===== */
+    .left-panel {
+      display: grid;
+      grid-template-rows: minmax(0,1fr) auto auto;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    /* ===== D-Day 바 ===== */
+    .dday-bar {
+      display: none;
+      gap: 10px;
+      padding: 8px 14px;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      overflow-x: auto;
+      scrollbar-width: none;
+      flex-shrink: 0;
+    }
+    .dday-bar.show { display: flex; }
+    .dday-bar::-webkit-scrollbar { display: none; }
+    .dday-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 22px;
+      flex-shrink: 0;
+      box-shadow: 0 3px 10px rgba(59,130,246,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+      white-space: nowrap;
+    }
+    .dday-item.urgent {
+      background: linear-gradient(135deg, #b91c1c, #ef4444);
+      box-shadow: 0 3px 12px rgba(239,68,68,0.45), inset 0 1px 0 rgba(255,255,255,0.15);
+      animation: ddayPulse 2s ease-in-out infinite;
+    }
+    .dday-item.dday-today {
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+      box-shadow: 0 3px 12px rgba(245,158,11,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+      animation: ddayPulse 1.5s ease-in-out infinite;
+    }
+    @keyframes ddayPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+    .dday-icon { font-size: 1.05rem; }
+    .dday-title { font-size: 0.95rem; font-weight: 600; }
+    .dday-count {
+      font-size: 1.05rem;
+      font-weight: 900;
+      background: rgba(255,255,255,0.22);
+      padding: 1px 11px;
+      border-radius: 12px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.3px;
+    }
+
+    /* ===== 학사일정 패널 ===== */
+    .events-panel {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 14px 16px;
+      border: 1px solid #334155;
+    }
+    .events-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+    .event-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: #0f172a;
+      border-radius: 7px;
+      border-left: 3px solid #475569;
+    }
+    .event-item.today { border-left-color: #f59e0b; background: #1c1917; }
+    .event-item.past  { opacity: 0.4; }
+    .event-date {
+      font-size: 0.72rem;
+      color: #64748b;
+      font-weight: 700;
+      min-width: 52px;
+      flex-shrink: 0;
+    }
+    .event-item.today .event-date { color: #fbbf24; }
+    .event-info { flex: 1; min-width: 0; }
+    .event-title {
+      font-size: 0.92rem;
+      color: #e2e8f0;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .event-desc {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 1px;
+    }
+    .events-empty {
+      color: #475569;
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 14px 0;
+    }
+
+    /* ===== 주간 급식표 (5일 컴팩트 — 스크롤 없음) ===== */
+    .lunch-panel { overflow: hidden; }
+    .lunch-panel #lunchContent {
+      flex: 1;
+      min-height: 0;
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+    .lunch-week {
+      display: flex; flex-direction: column;
+      gap: 4px; flex: 1;
+    }
+    .lunch-day {
+      display: flex; align-items: center; gap: 10px;
+      padding: 4px 10px;
+      background: #0f172a;
+      border-radius: 7px;
+      border-left: 3px solid #334155;
+      flex: 1; min-height: 0;
+    }
+    .lunch-day.past   { opacity: 0.35; }
+    .lunch-day.today {
+      background: #052e16;
+      border-left-color: #10b981;
+      flex: 1.4; /* 오늘 행만 약간 크게 */
+    }
+    .lunch-day-head {
+      display: flex; align-items: center;
+      gap: 5px; flex-shrink: 0;
+      min-width: 78px;
+    }
+    .lunch-day-date {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+    .lunch-day.today .lunch-day-date { color: #6ee7b7; }
+    .lunch-day-tag {
+      background: #10b981;
+      color: white;
+      font-size: 0.6rem;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 6px;
+      letter-spacing: 0.4px;
+    }
+    .lunch-day-menu {
+      font-size: 0.78rem;
+      color: #94a3b8;
+      line-height: 1.35;
+      flex: 1; min-width: 0;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .lunch-day.today .lunch-day-menu {
+      font-size: 0.88rem;
+      color: #e2e8f0;
+      font-weight: 600;
+      -webkit-line-clamp: 3;
+    }
+    .lunch-day-empty {
+      font-size: 0.72rem;
+      color: #475569;
+      font-style: italic;
+    }
+
+    /* ===== TIMETABLE ===== */
+    .timetable-panel {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-title {
+      font-size: 1.15rem;
+      color: #cbd5e1;
+      letter-spacing: 0.3px;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+    .day-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+    .day-tab {
+      flex: 1; padding: 4px 2px; text-align: center;
+      border-radius: 6px; font-size: 0.78rem;
+      color: #475569; background: #0f172a;
+    }
+    .day-tab.active { background: #3b82f6; color: white; font-weight: 700; }
+
+    .periods-list {
+      display: flex; flex-direction: column;
+      gap: 5px; flex: 1; overflow-y: auto;
+    }
+    .period-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 8px;
+      background: #0f172a;
+      border: 1px solid transparent;
+      transition: all 0.3s;
+    }
+    /* 현재 시간(수업·점심·기타) — 녹색 배경 + 펄스 점으로 통일 */
+    .period-item.current  { background: #065f46; border-color: #10b981; }
+    .period-item.past     { opacity: 0.3; }
+    /* 변경된 교시 — 연한 붉은 배경 + 펄스 변경 태그 */
+    .period-item.changed { background: #4a2424; border-color: #a64f4f; }
+    .period-item.changed.current { background: #5c2c2c; border-color: #c25e5e; }
+    .changed-tag {
+      display: inline-block;
+      background: #ef4444;
+      color: white;
+      font-size: 0.62rem;
+      font-weight: 800;
+      padding: 1px 7px;
+      border-radius: 8px;
+      margin-left: 6px;
+      letter-spacing: 0.5px;
+      vertical-align: middle;
+      animation: changedPulse 2s ease-in-out infinite;
+    }
+    @keyframes changedPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.55; }
+    }
+
+    .period-num   { font-size: 0.85rem; color: #64748b; width: 22px; font-weight: 700; text-align: center; }
+    .period-item.current .period-num { color: #6ee7b7; }
+    .period-subject {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column;
+      justify-content: center;
+      gap: 1px;
+    }
+    .subject-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    /* 두 글자 과목명(국어·수학·영어 등)은 글자 사이 약간 띄워서 여유 있게 */
+    .subject-name.two-char { letter-spacing: 0.35em; padding-right: 0.35em; }
+    .subject-teacher {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: #94a3b8;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .period-item.current .subject-teacher { color: #6ee7b7; }
+    .period-time  { font-size: 0.72rem; color: #64748b; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .period-item.current .period-time { color: #6ee7b7; }
+
+    .pulse-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #22c55e; animation: pulse 2s infinite; flex-shrink: 0;
+    }
+    @keyframes pulse { 50% { opacity: 0.3; transform: scale(0.7); } }
+
+    /* ===== 날씨 / 미세먼지 ===== */
+    .weather-panel {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 14px 16px;
+      border: 1px solid #334155;
+    }
+    .weather-main {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #334155;
+    }
+    .weather-icon { font-size: 2.4rem; line-height: 1; }
+    .weather-temp-block { flex: 1; }
+    .weather-temp { font-size: 1.7rem; font-weight: 900; color: #f1f5f9; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .weather-desc { font-size: 0.82rem; color: #94a3b8; margin-top: 2px; }
+    .weather-loc { font-size: 0.7rem; color: #64748b; }
+    .weather-rows {
+      display: flex; flex-direction: column; gap: 4px;
+      font-size: 0.85rem;
+    }
+    .weather-row {
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .weather-row-label { color: #64748b; font-size: 0.78rem; }
+    .weather-row-val   { color: #cbd5e1; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .aq-good      { color: #4ade80 !important; }
+    .aq-moderate  { color: #fbbf24 !important; }
+    .aq-bad       { color: #fb923c !important; }
+    .aq-very-bad  { color: #f87171 !important; }
+
+    /* ===== RIGHT PANEL — 3행 (학교공지 크게 · 학급게시판 작게) ===== */
+    .right-panel {
+      display: grid;
+      grid-template-rows: 1.5fr 0.55fr 0.95fr;
+      gap: 14px;
+    }
+
+    /* ===== PANEL 공통 ===== */
+    .panel {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 14px 18px;
+      border: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ===== 학교 공지 ===== */
+    .ann-body-wrap {
+      flex: 1; display: flex; flex-direction: column;
+      justify-content: center; overflow: hidden;
+    }
+    .ann-title {
+      font-size: 1.3rem; font-weight: 700;
+      margin-bottom: 6px; color: #e2e8f0; line-height: 1.3;
+    }
+    .ann-body {
+      font-size: 1rem; color: #94a3b8; line-height: 1.7;
+      overflow: hidden;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    }
+    .ann-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 8px;
+    }
+    .ann-date { font-size: 0.72rem; color: #475569; }
+    .ann-dots { display: flex; gap: 5px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: #334155; transition: background 0.3s; }
+    .dot.active { background: #3b82f6; }
+    .empty-msg { display: flex; align-items: center; justify-content: center; flex: 1; color: #334155; font-size: 0.9rem; gap: 6px; }
+
+    /* ===== 학급 게시판 ===== */
+    .class-board-panel {
+      border-color: #1e3a5f;
+      background: #0f2744;
+    }
+    .class-board-panel .panel-title { color: #3b82f6; }
+    .class-ann-list {
+      display: flex; flex-direction: column; gap: 6px;
+      flex: 1; overflow: hidden;
+      justify-content: center;
+    }
+    .class-ann-item {
+      background: #0f172a;
+      border-radius: 7px; padding: 7px 12px;
+      border-left: 3px solid #3b82f6;
+      flex: 1;
+      min-height: 0;
+      max-height: calc(50% - 3px);
+      display: flex; flex-direction: column; justify-content: center;
+      animation: fadeIn 0.5s ease;
+      overflow: hidden;
+    }
+    .class-ann-item.solo { max-height: none; }
+    .class-ann-item-title {
+      font-size: 1rem; font-weight: 700; color: #f1f5f9;
+      line-height: 1.25;
+      overflow: hidden;
+      display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+    }
+    .class-ann-item.solo .class-ann-item-title { font-size: 1.2rem; -webkit-line-clamp: 2; }
+    .class-ann-item-body {
+      font-size: 0.82rem; color: #94a3b8; margin-top: 2px;
+      line-height: 1.4; overflow: hidden;
+      display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical;
+    }
+    .class-ann-item.solo .class-ann-item-body { -webkit-line-clamp: 3; font-size: 0.95rem; margin-top: 4px; }
+    .class-ann-meta { font-size: 0.65rem; color: #475569; margin-top: 2px; }
+    .class-ann-item.solo .class-ann-meta { font-size: 0.72rem; margin-top: 4px; }
+    .class-ann-dots {
+      display: flex; gap: 5px;
+      justify-content: flex-end;
+      padding-top: 4px;
+      margin-top: auto;
+    }
+    /* 학급 게시판 패널 자체 padding 축소 */
+    .class-board-panel { padding: 10px 14px; }
+    .class-board-panel .panel-title { font-size: 0.95rem; margin-bottom: 6px; }
+
+    /* ===== 학급 게시판 LED 전광판 스타일 ===== */
+    .class-board-panel.led { background: #1e293b; }
+    .class-board-panel.led .class-ann-list {
+      background: #0a0a0a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      position: relative;
+      overflow: hidden;
+      flex: 1; min-height: 0;
+      display: flex; flex-direction: column;
+      gap: 0;
+    }
+    .class-board-panel.led .class-ann-list::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1.5px);
+      background-size: 3px 3px;
+      pointer-events: none; z-index: 1;
+    }
+    .class-led-ann {
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column;
+      height: 100%; justify-content: center;
+      font-family: 'DotGothic16', monospace;
+    }
+    .class-led-title {
+      font-size: 1.15rem; color: #fbbf24;
+      text-shadow: 0 0 8px rgba(251,191,36,0.7), 0 0 14px rgba(251,191,36,0.3);
+      text-align: left;
+      margin-bottom: 8px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .class-led-marquee-wrap {
+      flex: 1; display: flex; align-items: center;
+      overflow: hidden;
+      mask-image: linear-gradient(90deg, transparent 0, black 5%, black 95%, transparent);
+    }
+    .class-led-marquee {
+      font-size: 1rem; color: #4ade80;
+      text-shadow: 0 0 6px rgba(74,222,128,0.55), 0 0 12px rgba(74,222,128,0.25);
+      white-space: nowrap;
+      animation: marquee 18s linear infinite;
+    }
+    .class-board-panel.led .empty-msg {
+      color: #4b5563 !important;
+      font-family: 'DotGothic16', monospace;
+      background: #0a0a0a;
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    /* ===== 급식 ===== */
+    .lunch-panel { position: relative; }
+    .lunch-panel.lunch-time { border-color: #059669; background: #052e16; }
+    .lunch-panel.lunch-soon { border-color: #f59e0b; }
+
+    .lunch-countdown {
+      display: none;
+      font-size: 0.75rem; font-weight: 700;
+      padding: 3px 10px; border-radius: 12px;
+      margin-bottom: 6px; width: fit-content;
+    }
+    .lunch-countdown.soon { display: inline-block; background: #78350f; color: #fcd34d; }
+    .lunch-countdown.now  { display: inline-block; background: #064e3b; color: #6ee7b7; }
+
+    .lunch-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .lunch-item {
+      background: #0f172a; border-radius: 20px;
+      padding: 4px 12px; font-size: 0.88rem; color: #e2e8f0;
+    }
+    .lunch-panel.lunch-time .lunch-item { background: #064e3b; }
+    .lunch-cal { font-size: 0.72rem; color: #64748b; margin-top: 8px; }
+
+    /* 다음 급식 라벨 */
+    .lunch-label {
+      display: inline-block;
+      font-size: 0.72rem; font-weight: 700;
+      color: #fbbf24; background: #422006;
+      padding: 3px 10px; border-radius: 12px;
+      margin-top: 6px; margin-bottom: 4px;
+    }
+    /* 빈 상태 */
+    .lunch-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 4px;
+      padding: 14px 0;
+    }
+    .lunch-empty-icon { font-size: 1.8rem; opacity: 0.6; }
+    .lunch-empty-msg  { font-size: 0.95rem; color: #cbd5e1; font-weight: 600; }
+    .lunch-empty-sub  { font-size: 0.78rem; color: #64748b; }
+
+    /* ===== BREAK BAR ===== */
+    .break-bar {
+      display: none; position: fixed; bottom: 16px; left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b; border: 2px solid #f59e0b;
+      border-radius: 40px; padding: 10px 32px;
+      z-index: 100; text-align: center; white-space: nowrap;
+    }
+    .break-bar.active { display: block; }
+    .break-bar-title { font-size: 0.9rem; color: #f59e0b; font-weight: 700; }
+    .break-bar-info  { font-size: 0.82rem; color: #94a3b8; margin-top: 2px; }
+
+    /* ===== LUNCH FULL NOTIFY ===== */
+    .lunch-notify {
+      display: none; position: fixed; bottom: 16px; left: 50%;
+      transform: translateX(-50%);
+      background: #052e16; border: 2px solid #10b981;
+      border-radius: 40px; padding: 10px 32px;
+      z-index: 100; text-align: center; white-space: nowrap;
+    }
+    .lunch-notify.active { display: block; }
+    .lunch-notify-title { font-size: 0.9rem; color: #10b981; font-weight: 700; }
+    .lunch-notify-info  { font-size: 0.82rem; color: #6ee7b7; margin-top: 2px; }
+
+    /* ===== EMERGENCY ===== */
+    .emergency-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(127,29,29,0.97); z-index: 1000;
+      flex-direction: column; justify-content: center;
+      align-items: center; text-align: center; padding: 40px;
+    }
+    .emergency-overlay.active { display: flex; }
+    .emergency-badge {
+      background: #ef4444; color: white;
+      padding: 8px 28px; border-radius: 30px;
+      font-size: 1rem; font-weight: 700; margin-bottom: 24px;
+      animation: blink 1s ease-in-out infinite;
+    }
+    @keyframes blink { 50% { opacity: 0.65; } }
+    .emergency-title   { font-size: 3rem; font-weight: 900; color: white; margin-bottom: 20px; }
+    .emergency-message { font-size: 1.6rem; color: #fca5a5; max-width: 820px; line-height: 1.7; white-space: pre-wrap; }
+
+    .fade-in { animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ============================================================
+       4가지 공지사항 스타일 데모 — 패널 타이틀 유지, 카드는 body-wrap
+       ============================================================ */
+    .ann-style-1 .ann-body-wrap, .ann-style-2 .ann-body-wrap,
+    .ann-style-3 .ann-body-wrap, .ann-style-4 .ann-body-wrap,
+    .ann-style-dual .ann-body-wrap {
+      border-radius: 10px;
+      overflow: hidden;
+      position: relative;
+      isolation: isolate;
+    }
+
+    /* ===== Style 1: DID 스포트라이트 ===== */
+    .ann-style-1 .ann-body-wrap {
+      background: linear-gradient(135deg, #1e40af 0%, #6366f1 50%, #8b5cf6 100%);
+      padding: 18px;
+    }
+    .ann-spotlight {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; height: 100%;
+    }
+    .ann-sp-icon { font-size: 3rem; margin-bottom: 6px; }
+    .ann-sp-tag {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      color: white; font-size: 0.7rem; font-weight: 700;
+      padding: 3px 12px; border-radius: 12px; letter-spacing: 1.5px;
+      margin-bottom: 10px;
+    }
+    .ann-sp-title {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 2.6rem; color: white;
+      line-height: 1.1; margin-bottom: 14px;
+      text-shadow: 0 3px 12px rgba(0,0,0,0.3);
+    }
+    .ann-sp-body {
+      font-size: 1.35rem; color: rgba(255,255,255,0.95);
+      line-height: 1.5; font-weight: 500;
+    }
+
+    /* ===== Style 2: LED 전광판 ===== */
+    .ann-style-2 .ann-body-wrap {
+      background: #0a0a0a;
+      padding: 16px;
+    }
+    .ann-style-2 .ann-body-wrap::before {
+      content: ''; position: absolute; inset: 0;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1.5px);
+      background-size: 3px 3px;
+      pointer-events: none; z-index: 1;
+    }
+    .ann-led { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; font-family: 'DotGothic16', monospace; }
+    .ann-led-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed rgba(251,191,36,0.4);
+      margin-bottom: 14px;
+      font-size: 0.95rem;
+    }
+    .ann-led-tag { color: #fbbf24; letter-spacing: 2px; }
+    .ann-led-live {
+      display: inline-flex; align-items: center; gap: 5px;
+      color: #ef4444; font-weight: 700;
+    }
+    .ann-led-live::before {
+      content: '●'; animation: ledBlink 1s infinite;
+    }
+    @keyframes ledBlink { 50% { opacity: 0.25; } }
+    .ann-led-title {
+      font-size: 2.3rem; color: #fbbf24;
+      text-shadow: 0 0 12px rgba(251,191,36,0.7), 0 0 24px rgba(251,191,36,0.3);
+      margin-bottom: 18px; text-align: center;
+      font-weight: 700;
+    }
+    .ann-led-marquee-wrap {
+      flex: 1; display: flex; align-items: center;
+      overflow: hidden; mask-image: linear-gradient(90deg, transparent 0, black 5%, black 95%, transparent);
+    }
+    .ann-led-marquee {
+      font-size: 1.85rem; color: #4ade80;
+      text-shadow: 0 0 10px rgba(74,222,128,0.6), 0 0 20px rgba(74,222,128,0.2);
+      white-space: nowrap;
+      animation: marquee 22s linear infinite;
+    }
+    @keyframes marquee {
+      0%   { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    /* ===== Style 3: 신문 헤드라인 ===== */
+    .ann-style-3 .ann-body-wrap {
+      background: #fefdf7;
+      color: #111;
+      border: 1.5px solid #1a1a1a;
+      padding: 16px;
+    }
+    .ann-headline { display: flex; flex-direction: column; height: 100%; }
+    .ann-hd-date {
+      display: flex; justify-content: space-between;
+      font-family: 'Nanum Myeongjo', serif;
+      font-size: 0.8rem; color: #444;
+      letter-spacing: 2px; text-transform: uppercase;
+      border-bottom: 2px solid #111;
+      padding-bottom: 6px; margin-bottom: 14px;
+    }
+    .ann-hd-title {
+      font-family: 'Nanum Myeongjo', serif;
+      font-size: 2.3rem; color: #111;
+      font-weight: 900; line-height: 1.15;
+      text-align: center; margin-bottom: 12px;
+      letter-spacing: -1px;
+    }
+    .ann-hd-divider {
+      text-align: center; color: #999;
+      letter-spacing: 6px; margin: 4px 0 12px;
+      font-size: 0.85rem;
+    }
+    .ann-hd-body {
+      font-family: 'Nanum Myeongjo', serif;
+      font-size: 1.25rem; color: #333;
+      line-height: 1.6; text-align: center;
+      font-style: italic;
+    }
+
+    /* ===== Style 4: 알림 카드 (1개) ===== */
+    .ann-style-4 .ann-body-wrap {
+      background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+      color: #0f172a;
+      border: 1px solid #99f6e4;
+      padding: 18px 20px;
+    }
+    .ann-notif {
+      display: flex; gap: 16px;
+      align-items: center; height: 100%;
+    }
+    .ann-notif-icon {
+      width: 100px; height: 100px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #0d9488, #0891b2);
+      box-shadow: 0 10px 26px rgba(13,148,136,0.35);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 3rem; flex-shrink: 0;
+    }
+    .ann-notif-content { flex: 1; min-width: 0; }
+    .ann-notif-tag {
+      display: inline-block;
+      background: #0d9488; color: white;
+      padding: 4px 12px; border-radius: 10px;
+      font-size: 0.78rem; font-weight: 800;
+      letter-spacing: 1px; margin-bottom: 8px;
+    }
+    .ann-notif-title {
+      font-size: 1.95rem; font-weight: 800;
+      color: #0f172a; line-height: 1.2;
+      margin-bottom: 8px;
+    }
+    .ann-notif-body {
+      font-size: 1.25rem; color: #475569;
+      line-height: 1.5;
+    }
+
+    /* ===== Style 4-Dual: 알림 카드 2개 묶음 ===== */
+    .ann-style-dual .ann-body-wrap {
+      background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+      border: 1px solid #99f6e4;
+      padding: 12px 14px;
+      display: flex; flex-direction: column;
+      gap: 8px; justify-content: center;
+    }
+    .ann-dual-item {
+      display: flex; gap: 12px;
+      align-items: center;
+      background: white;
+      border-radius: 13px;
+      padding: 12px 14px;
+      border: 1px solid #99f6e4;
+      box-shadow: 0 3px 10px rgba(13,148,136,0.1);
+      animation: fadeIn 0.5s ease;
+    }
+    .ann-dual-icon {
+      width: 68px; height: 68px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #0d9488, #0891b2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.1rem; flex-shrink: 0;
+      box-shadow: 0 5px 14px rgba(13,148,136,0.28);
+    }
+    .ann-dual-content { flex: 1; min-width: 0; }
+    .ann-dual-title {
+      font-size: 1.4rem; font-weight: 800;
+      color: #0f172a; line-height: 1.2;
+      margin-bottom: 4px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .ann-dual-body {
+      font-size: 1.08rem; color: #475569;
+      line-height: 1.45;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    /* 모든 스타일에 fade-in */
+    .ann-style-1 .ann-spotlight, .ann-style-2 .ann-led,
+    .ann-style-3 .ann-headline, .ann-style-4 .ann-notif {
+      animation: fadeIn 0.6s ease;
+    }
+
+    /* ============================================================
+       반응형 — 태블릿·모바일 지원
+       ============================================================ */
+    /* 태블릿 / 모바일 가로 (1023px 이하) */
+    @media (max-width: 1023px) {
+      body { height: auto; min-height: 100vh; overflow-y: auto; }
+      .main {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto;
+        height: auto;
+        gap: 12px;
+        padding: 12px;
+      }
+      .timetable-panel { min-height: 320px; }
+      .right-panel {
+        grid-template-rows: auto auto auto;
+        gap: 12px;
+      }
+      .panel { min-height: 180px; }
+      .periods-list { overflow-y: visible; }
+    }
+
+    /* 모바일 세로 (640px 이하) */
+    @media (max-width: 640px) {
+      .header {
+        padding: 10px 14px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .school-info { order: 1; flex: 1; min-width: 0; }
+      .school-logo { width: 32px; height: 32px; font-size: 0.95rem; }
+      .school-name { font-size: 0.95rem; }
+      .class-section { order: 2; border-radius: 11px; }
+      .class-badge { padding: 4px 0; }
+      .badge-section { padding: 2px 13px; gap: 4px; }
+      .badge-num { font-size: 1.15rem; }
+      .badge-label { font-size: 1rem; }
+      .board-title { font-size: 1rem; padding: 4px 14px; }
+      .header-right {
+        order: 3;
+        width: 100%;
+        align-items: flex-start;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .clock { font-size: 1.7rem; }
+      .date-info { font-size: 0.9rem; margin-top: 0; }
+
+      .panel { padding: 14px 16px; }
+      .panel-title { font-size: 1rem; margin-bottom: 10px; }
+      .ann-title { font-size: 1.15rem; }
+      .ann-body { font-size: 0.92rem; }
+      .class-ann-item-title { font-size: 1.05rem; }
+      .class-ann-item-body  { font-size: 0.85rem; }
+
+      .timetable-panel { min-height: auto; padding: 12px; }
+      .period-item { padding: 5px 9px; }
+      .subject-name { font-size: 1.05rem; }
+      .subject-teacher { font-size: 0.75rem; }
+      .period-time { font-size: 0.65rem; }
+      .period-num { width: 18px; font-size: 0.78rem; }
+
+      .lunch-items { gap: 5px; }
+      .lunch-item { font-size: 0.82rem; padding: 3px 10px; }
+
+      .break-bar, .lunch-notify {
+        bottom: 10px; padding: 8px 18px;
+        max-width: calc(100% - 24px);
+      }
+      .break-bar-title, .lunch-notify-title { font-size: 0.82rem; }
+      .break-bar-info, .lunch-notify-info { font-size: 0.76rem; }
+
+      .emergency-title   { font-size: 1.8rem; }
+      .emergency-message { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="school-info">
+    <div class="school-logo" id="schoolLogo"></div>
+    <div class="school-name" id="schoolName">전자칠판</div>
+  </div>
+  <div class="class-section">
+    <div class="board-title" id="boardTitle"></div>
+    <div class="class-badge" id="classBadge">-- 학년 --반</div>
+  </div>
+  <div class="header-right">
+    <div class="date-info" id="dateInfo"></div>
+    <div class="clock" id="clock">00:00:00</div>
+  </div>
+</header>
+
+<!-- D-Day BAR -->
+<div class="dday-bar" id="ddayBar"></div>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- LEFT: 시간표 + 날씨 + 학사일정 -->
+  <div class="left-panel">
+    <div class="timetable-panel">
+      <div class="panel-title">오늘 시간표</div>
+      <div class="day-tabs" id="dayTabs"></div>
+      <div class="periods-list" id="periodsList">
+        <div style="color:#475569;text-align:center;padding:20px;">불러오는 중...</div>
+      </div>
+    </div>
+
+    <div class="events-panel">
+      <div class="panel-title">📅 금주 학사일정</div>
+      <div class="events-list" id="eventsContent">
+        <div class="events-empty">불러오는 중...</div>
+      </div>
+    </div>
+
+    <div class="weather-panel">
+      <div class="panel-title">🌤️ 양산 날씨 · 미세먼지</div>
+      <div id="weatherContent" style="color:#475569;font-size:0.85rem;">불러오는 중...</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: 3행 -->
+  <div class="right-panel">
+
+    <!-- 학교 공지 -->
+    <div class="panel" id="schoolAnnPanel">
+      <div class="panel-title">📢 학교 공지사항</div>
+      <div class="ann-body-wrap" id="schoolAnnWrap">
+        <div class="empty-msg">📋 공지사항이 없습니다</div>
+      </div>
+      <div class="ann-footer">
+        <span class="ann-date" id="schoolAnnDate"></span>
+        <div class="ann-dots" id="schoolAnnDots"></div>
+      </div>
+    </div>
+
+    <!-- 학급 게시판 -->
+    <div class="panel class-board-panel" id="classBoardPanel">
+      <div class="panel-title">📋 학급 게시판</div>
+      <div class="class-ann-list" id="classAnnList">
+        <div class="empty-msg" style="color:#1e3a5f;">담임 선생님의 공지가 없습니다</div>
+      </div>
+      <div class="class-ann-dots" id="classAnnDots"></div>
+    </div>
+
+    <!-- 급식 -->
+    <div class="panel lunch-panel" id="lunchPanel">
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <div class="panel-title" style="margin-bottom:0;">🍱 이번 주 급식</div>
+        <span class="lunch-countdown" id="lunchCountdown"></span>
+      </div>
+      <div id="lunchContent" style="color:#475569;">불러오는 중...</div>
+    </div>
+
+  </div>
+</main>
+
+<!-- BREAK BAR -->
+<div class="break-bar" id="breakBar">
+  <div class="break-bar-title">쉬는 시간</div>
+  <div class="break-bar-info" id="breakBarInfo"></div>
+</div>
+
+<!-- LUNCH NOTIFY BAR -->
+<div class="lunch-notify" id="lunchNotify">
+  <div class="lunch-notify-title">🍽️ 급식 시간</div>
+  <div class="lunch-notify-info" id="lunchNotifyInfo"></div>
+</div>
+
+<!-- EMERGENCY -->
+<div class="emergency-overlay" id="emergencyOverlay">
+  <div class="emergency-badge">🚨 긴급 공지</div>
+  <div class="emergency-title" id="emergencyTitle"></div>
+  <div class="emergency-message" id="emergencyMessage"></div>
+</div>
+
+<!-- Firebase + Config -->
+<script src="../config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // ============================================================
+  // 초기화
+  // ============================================================
+  firebase.initializeApp(SCHOOL_CONFIG.firebase);
+  const db = firebase.firestore();
+
+  document.getElementById('schoolName').textContent = SCHOOL_CONFIG.schoolName;
+
+  // 학교 로고 — 이미지 URL이 있으면 이미지, 없으면 학교명 첫 글자
+  const logoEl = document.getElementById('schoolLogo');
+  if (SCHOOL_CONFIG.schoolLogo) {
+    logoEl.innerHTML = `<img src="${SCHOOL_CONFIG.schoolLogo}" alt="logo">`;
+  } else {
+    logoEl.textContent = SCHOOL_CONFIG.schoolName.charAt(0);
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const grade = params.get('grade') || SCHOOL_CONFIG.example.grade;
+  const cls   = params.get('class') || SCHOOL_CONFIG.example.class;
+  // 학년·반 배지 (학년별 색상 + 카드형 디자인)
+  const badgeEl = document.getElementById('classBadge');
+  badgeEl.className = `class-badge grade-${grade}`;
+  badgeEl.innerHTML = `
+    <div class="badge-section">
+      <span class="badge-num">${grade}</span>
+      <span class="badge-label">학년</span>
+    </div>
+    <div class="badge-divider"></div>
+    <div class="badge-section">
+      <span class="badge-num">${cls}</span>
+      <span class="badge-label">반</span>
+    </div>`;
+
+  // 학급 배지 옆 부제목 (config.js의 boardTitle)
+  const titleEl = document.getElementById('boardTitle');
+  if (SCHOOL_CONFIG.boardTitle) {
+    titleEl.textContent = SCHOOL_CONFIG.boardTitle;
+  } else {
+    titleEl.style.display = 'none';
+  }
+
+  const DAY_KEYS = ['mon','tue','wed','thu','fri'];
+
+  let classTimes  = [...SCHOOL_CONFIG.defaultPeriods];
+  let myLunch     = { ...SCHOOL_CONFIG.defaultLunch };
+  let timetable   = {};
+  let schoolAnns  = [];
+  let schoolAnnIdx = 0;
+  let schoolAnnTimer = null;
+
+  // ============================================================
+  // 시계 (함수 정의만 — 호출은 맨 아래 초기화에서)
+  // ============================================================
+  function updateClock() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    document.getElementById('clock').textContent =
+      `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const days = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+    document.getElementById('dateInfo').textContent =
+      `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${days[now.getDay()]}`;
+    updatePeriodState(now);
+  }
+
+  // ============================================================
+  // 시간 유틸
+  // ============================================================
+  const toMin = t => {
+    if (!t || typeof t !== 'string' || !t.includes(':')) return -1;
+    const [h, m] = t.split(':').map(Number);
+    if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return -1;
+    return h * 60 + m;
+  };
+  const getWeekdayIdx = () => { const d = new Date().getDay(); return d>=1&&d<=5 ? d-1 : 0; };
+
+  function getPeriodState(now) {
+    const cur = now.getHours()*60 + now.getMinutes();
+
+    for (const p of classTimes)
+      if (cur >= toMin(p.start) && cur < toMin(p.end))
+        return { type:'class', period: p.period };
+
+    if (cur >= toMin(myLunch.start) && cur < toMin(myLunch.end))
+      return { type:'lunch', end: myLunch.end };
+
+    for (let i = 0; i < classTimes.length-1; i++) {
+      if (classTimes[i].period === 4) continue;
+      const bStart = toMin(classTimes[i].end);
+      const bEnd   = toMin(classTimes[i+1].start);
+      if (cur >= bStart && cur < bEnd)
+        return { type:'break', nextPeriod: classTimes[i+1].period, nextStart: classTimes[i+1].start };
+    }
+    return { type:'other' };
+  }
+
+  // 과목명(교사명) 파싱
+  function parseSubject(raw) {
+    if (!raw || typeof raw !== 'string') return { name: '', teacher: '' };
+    const trimmed = raw.trim();
+    if (!trimmed) return { name: '', teacher: '' };
+    const m = trimmed.match(/^(.+?)\(([^()]+)\)\s*$/);
+    if (m) return { name: m[1].trim(), teacher: m[2].trim() };
+    return { name: trimmed, teacher: '' };
+  }
+
+  // ============================================================
+  // 시간표 렌더
+  // ============================================================
+  function renderDayTabs(active) {
+    document.getElementById('dayTabs').innerHTML =
+      ['월','화','수','목','금'].map((d,i) =>
+        `<div class="day-tab${i===active?' active':''}">${d}</div>`
+      ).join('');
+  }
+
+  function renderPeriods(dayIdx) {
+    const key = DAY_KEYS[dayIdx];
+    const schedule = timetable[key] || [];
+    const el = document.getElementById('periodsList');
+    if (!schedule.length && !Object.keys(timetable).length) {
+      el.innerHTML = '<div style="color:#475569;text-align:center;padding:20px;">시간표 미등록</div>';
+      return;
+    }
+
+    const now = new Date();
+    const cur = now.getHours()*60 + now.getMinutes();
+    const state = getPeriodState(now);
+    const isToday = (dayIdx === getWeekdayIdx());
+
+    // 표시 중인 날짜 계산 — 평일은 오늘, 주말은 다음 월요일(시간표가 월요일로 보이므로)
+    const _disp = new Date(); _disp.setHours(0,0,0,0);
+    const _ddow = _disp.getDay();
+    if (_ddow === 0) _disp.setDate(_disp.getDate() + 1);       // 일 → 월
+    else if (_ddow === 6) _disp.setDate(_disp.getDate() + 2);  // 토 → 월
+    const todayStr = `${_disp.getFullYear()}-${String(_disp.getMonth()+1).padStart(2,'0')}-${String(_disp.getDate()).padStart(2,'0')}`;
+    const todayOverrides = (isToday && typeof dailyOverridesAll === 'object' && dailyOverridesAll)
+      ? (dailyOverridesAll[todayStr]?.classes?.[`${grade}-${cls}`] || {})
+      : {};
+
+    let html = '';
+    for (let i = 0; i < classTimes.length; i++) {
+      const p = classTimes[i];
+      // 1순위: 오늘 날짜 일일 변경 → 2순위: 기초 시간표
+      let raw = schedule[i];
+      let subject, changed;
+      if (todayOverrides[p.period] !== undefined) {
+        subject = todayOverrides[p.period];
+        changed = true;
+      } else if (raw && typeof raw === 'object') {
+        subject = raw.s || raw.subject || '-';
+        changed = !!(raw.c || raw.changed);
+      } else {
+        subject = raw || '-';
+        changed = false;
+      }
+      const changedTag = (changed && subject !== '-') ? ' <span class="changed-tag">변경</span>' : '';
+
+      let cls2 = 'period-item'; let dot = '';
+      if (changed) cls2 += ' changed';
+
+      if (isToday) {
+        if (state.type==='class' && state.period===p.period) { cls2+=' current'; dot='<div class="pulse-dot"></div>'; }
+        else if (cur > toMin(p.end)) cls2+=' past';
+      }
+
+      let lunchRow = '';
+      if (p.period === 4) {
+        let lCls = 'period-item lunch';
+        let lDot = '';
+        if (isToday && state.type==='lunch') { lCls+=' current'; lDot='<div class="pulse-dot"></div>'; }
+        else if (isToday && cur > toMin(myLunch.end)) lCls+=' past';
+        lunchRow = `<div class="${lCls}">${lDot}
+          <div class="period-num">점</div>
+          <div class="period-subject"><div class="subject-name">점심 시간</div></div>
+          <div class="period-time">${myLunch.start}–${myLunch.end}</div></div>`;
+      }
+
+      // 과목명(교사명) 파싱하여 2줄로 렌더링
+      const parsed = parseSubject(subject);
+      // 2글자 한글 과목(국어·수학 등)은 letter-spacing으로 여유있게
+      const isTwoChar = /^[가-힣]{2}$/.test(parsed.name);
+      const nameCls = 'subject-name' + (isTwoChar ? ' two-char' : '');
+      const subjectInner = parsed.name
+        ? `<div class="${nameCls}">${parsed.name}${changedTag}</div>${parsed.teacher ? `<div class="subject-teacher">${parsed.teacher}</div>` : ''}`
+        : `<div class="subject-name">-</div>`;
+
+      html += `<div class="${cls2}">${dot}
+        <div class="period-num">${p.period}</div>
+        <div class="period-subject">${subjectInner}</div>
+        <div class="period-time">${p.start}–${p.end}</div></div>${lunchRow}`;
+    }
+    el.innerHTML = html;
+  }
+
+  // ============================================================
+  // 교시·급식 상태 업데이트
+  // ============================================================
+  function updatePeriodState(now) {
+    const dayIdx = getWeekdayIdx();
+    renderPeriods(dayIdx);
+
+    const state = getPeriodState(now);
+    const cur   = now.getHours()*60 + now.getMinutes();
+
+    const breakBar    = document.getElementById('breakBar');
+    const lunchNotify = document.getElementById('lunchNotify');
+    const lunchPanel  = document.getElementById('lunchPanel');
+    const countdown   = document.getElementById('lunchCountdown');
+
+    breakBar.classList.remove('active');
+    lunchNotify.classList.remove('active');
+    lunchPanel.classList.remove('lunch-time','lunch-soon');
+    countdown.className = 'lunch-countdown';
+
+    const lunchStartMin = toMin(myLunch.start);
+    const lunchEndMin   = toMin(myLunch.end);
+    const minsToLunch   = lunchStartMin - cur;
+
+    if (state.type === 'break') {
+      const remaining = toMin(state.nextStart) - cur;
+      document.getElementById('breakBarInfo').textContent = `${state.nextPeriod}교시 시작까지 ${remaining}분`;
+      breakBar.classList.add('active');
+    } else if (state.type === 'lunch') {
+      const remaining = lunchEndMin - cur;
+      document.getElementById('lunchNotifyInfo').textContent = `급식 종료까지 ${remaining}분`;
+      lunchNotify.classList.add('active');
+      lunchPanel.classList.add('lunch-time');
+      countdown.className = 'lunch-countdown now';
+      countdown.textContent = '🍽️ 지금 급식 시간';
+    } else if (minsToLunch > 0 && minsToLunch <= 15) {
+      // 15분 전 알림
+      countdown.className = 'lunch-countdown soon';
+      countdown.textContent = `⏰ 급식 ${minsToLunch}분 전`;
+      lunchPanel.classList.add('lunch-soon');
+    }
+  }
+
+  // ============================================================
+  // 학교 공지 슬라이드쇼
+  // ============================================================
+  function filterSchoolAnns(all) {
+    const now = new Date();
+    return all.filter(a => {
+      if (!a.isActive) return false;
+      if (a.expiresAt?.toDate && a.expiresAt.toDate() < now) return false;
+      const tg = a.targetGrades  || ['all'];
+      const tc = a.targetClasses || ['all'];
+      return (tg.includes('all') || tg.includes(grade)) &&
+             (tc.includes('all') || tc.includes(cls));
+    });
+  }
+
+  // ========== 스마트 슬라이드 빌더 ==========
+  // 짧은 공지(60자 미만)는 2개씩 묶고, 긴 공지는 단독 표시
+  let schoolSlides = []; // [[ann1], [ann2, ann3], [ann4]]
+  const SHORT_THRESHOLD = 60;
+
+  function buildSchoolSlides() {
+    schoolSlides = [];
+    let i = 0;
+    while (i < schoolAnns.length) {
+      const a = schoolAnns[i];
+      const aLen = (a.title||'').length + (a.content||'').length;
+      if (aLen < SHORT_THRESHOLD && i + 1 < schoolAnns.length) {
+        const b = schoolAnns[i + 1];
+        const bLen = (b.title||'').length + (b.content||'').length;
+        if (bLen < SHORT_THRESHOLD) {
+          schoolSlides.push([a, b]);
+          i += 2; continue;
+        }
+      }
+      schoolSlides.push([a]);
+      i++;
+    }
+  }
+
+  function showSchoolSlide(idx) {
+    const wrap   = document.getElementById('schoolAnnWrap');
+    const panel  = document.getElementById('schoolAnnPanel');
+    const dateEl = document.getElementById('schoolAnnDate');
+    const dotsEl = document.getElementById('schoolAnnDots');
+
+    panel.classList.remove('ann-style-1','ann-style-2','ann-style-3','ann-style-4','ann-style-dual');
+
+    if (!schoolSlides.length) {
+      wrap.innerHTML = '<div class="empty-msg">📋 공지사항이 없습니다</div>';
+      dateEl.textContent = ''; dotsEl.innerHTML = ''; return;
+    }
+
+    const slide = schoolSlides[idx];
+    let html = '';
+
+    if (slide.length === 2) {
+      // 짧은 공지 2개 → 듀얼 카드
+      panel.classList.add('ann-style-dual');
+      html = slide.map(a => {
+        const date = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
+        return `<div class="ann-dual-item">
+          <div class="ann-dual-icon">📬</div>
+          <div class="ann-dual-content">
+            <div class="ann-dual-title">${a.title}</div>
+            <div class="ann-dual-body">${a.content}</div>
+          </div>
+        </div>`;
+      }).join('');
+      dateEl.textContent = `${slide.length}개 공지`;
+    } else {
+      // 단독 공지 — 짝수 인덱스: Style 4(알림카드), 홀수: Style 2(LED 전광판)
+      const a = slide[0];
+      const dateStr = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
+      const content = a.content.replace(/\n/g,'<br>');
+      const contentLine = a.content.replace(/\n/g,' · ');
+      const styleNum = (idx % 2 === 0) ? 4 : 2;
+      panel.classList.add('ann-style-' + styleNum);
+
+      if (styleNum === 4) {
+        html = `<div class="ann-notif">
+          <div class="ann-notif-icon">📬</div>
+          <div class="ann-notif-content">
+            <div class="ann-notif-tag">NEW · ${dateStr}</div>
+            <div class="ann-notif-title">${a.title}</div>
+            <div class="ann-notif-body">${content}</div>
+          </div>
+        </div>`;
+      } else {
+        html = `<div class="ann-led">
+          <div class="ann-led-header">
+            <span class="ann-led-tag">★ SCHOOL BOARD ★</span>
+            <span class="ann-led-live">LIVE</span>
+          </div>
+          <div class="ann-led-title">${a.title}</div>
+          <div class="ann-led-marquee-wrap">
+            <div class="ann-led-marquee">${contentLine} &nbsp;&nbsp;&nbsp; ※ ${a.title}</div>
+          </div>
+        </div>`;
+      }
+      dateEl.textContent = dateStr;
+    }
+
+    wrap.innerHTML = html;
+    dotsEl.innerHTML = schoolSlides.map((_,i) =>
+      `<div class="dot${i===idx?' active':''}"></div>`).join('');
+  }
+
+  // 호환용 별칭
+  function showSchoolAnn(idx) { showSchoolSlide(idx); }
+
+  function startSchoolSlideshow() {
+    if (schoolAnnTimer) clearInterval(schoolAnnTimer);
+    buildSchoolSlides();
+    schoolAnnIdx = 0;
+    showSchoolSlide(schoolAnnIdx);
+    if (schoolSlides.length > 1)
+      schoolAnnTimer = setInterval(() => {
+        schoolAnnIdx = (schoolAnnIdx+1) % schoolSlides.length;
+        showSchoolSlide(schoolAnnIdx);
+      }, 7000);
+  }
+
+  // ============================================================
+  // 학급 게시판 (2개씩 슬라이드)
+  // ============================================================
+  let classSlides = [];
+  let classSlideIdx = 0;
+  let classSlideTimer = null;
+
+  function buildClassSlides(anns) {
+    // 작은 패널이므로 1개씩 표시 (여러 개면 슬라이드 전환)
+    classSlides = anns.map(a => [a]);
+  }
+
+  function renderClassBoard(anns) {
+    if (classSlideTimer) clearInterval(classSlideTimer);
+    buildClassSlides(anns);
+    classSlideIdx = 0;
+    showClassSlide(0);
+    // 슬라이드 전환은 마키 애니메이션 완료(왼쪽 끝 도달) 시점에 자동 호출됨
+  }
+
+  function showClassSlide(idx) {
+    const list  = document.getElementById('classAnnList');
+    const dots  = document.getElementById('classAnnDots');
+    const panel = document.getElementById('classBoardPanel');
+
+    // LED 스타일 활성화
+    panel.classList.add('led');
+
+    if (!classSlides.length) {
+      list.innerHTML = '<div class="empty-msg">담임 선생님의 공지가 없습니다</div>';
+      dots.innerHTML = '';
+      return;
+    }
+
+    // LED는 1개씩만 표시 (buildClassSlides에서 이미 1개씩 분리됨)
+    const a = classSlides[idx][0];
+    const date = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
+    const contentLine = (a.content || '').replace(/\n/g, ' · ');
+
+    list.innerHTML = `
+      <div class="class-led-ann">
+        <div class="class-led-title">📋 ${a.title}</div>
+        <div class="class-led-marquee-wrap">
+          <div class="class-led-marquee">${contentLine} &nbsp;&nbsp;&nbsp; ✦ ${date} &nbsp;&nbsp;&nbsp;</div>
+        </div>
+      </div>`;
+
+    dots.innerHTML = classSlides.length > 1
+      ? classSlides.map((_,i) => `<div class="dot${i===idx?' active':''}"></div>`).join('')
+      : '';
+
+    // 마키 한 바퀴(왼쪽 끝까지) 완료 시 다음 슬라이드로 전환
+    if (classSlides.length > 1) {
+      const marqueeEl = list.querySelector('.class-led-marquee');
+      if (marqueeEl) {
+        marqueeEl.addEventListener('animationiteration', () => {
+          classSlideIdx = (classSlideIdx + 1) % classSlides.length;
+          showClassSlide(classSlideIdx);
+        }, { once: true });
+      }
+    }
+  }
+
+  // ============================================================
+  // 나이스 급식
+  // ============================================================
+  async function fetchMealByDate(d) {
+    const ymd = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+    const url = `https://open.neis.go.kr/hub/mealServiceDietInfo?Type=json` +
+      `&ATPT_OFCDC_SC_CODE=${SCHOOL_CONFIG.neis.officeCode}` +
+      `&SD_SCHUL_CODE=${SCHOOL_CONFIG.neis.schoolCode}&MLSV_YMD=${ymd}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    return data?.mealServiceDietInfo?.[1]?.row?.[0];
+  }
+
+  function renderMealMenu(row, label) {
+    const el = document.getElementById('lunchContent');
+    const items = row.DDISH_NM.split('<br/>')
+      .map(s => s.replace(/[0-9.()\s]+$/,'').trim())
+      .filter(Boolean);
+    el.innerHTML = `
+      ${label ? `<div class="lunch-label">${label}</div>` : ''}
+      <div class="lunch-items">${items.map(i=>`<div class="lunch-item">${i}</div>`).join('')}</div>
+      ${row.CAL_INFO ? `<div class="lunch-cal">열량: ${row.CAL_INFO}</div>` : ''}`;
+  }
+
+  function renderMealEmpty(icon, msg, sub) {
+    document.getElementById('lunchContent').innerHTML = `
+      <div class="lunch-empty">
+        <div class="lunch-empty-icon">${icon}</div>
+        <div class="lunch-empty-msg">${msg}</div>
+        ${sub ? `<div class="lunch-empty-sub">${sub}</div>` : ''}
+      </div>`;
+  }
+
+  async function fetchLunch() {
+    const el = document.getElementById('lunchContent');
+    const dayKor = ['일','월','화','수','목','금','토'];
+    try {
+      const now = new Date();
+      const today = new Date(now); today.setHours(0,0,0,0);
+      // 이번 주 월요일 계산
+      const day = now.getDay();
+      const offsetToMon = (day === 0) ? -6 : (1 - day);
+      const monday = new Date(today);
+      monday.setDate(today.getDate() + offsetToMon);
+
+      // 월~금 5일치 병렬 조회
+      const dates = [0,1,2,3,4].map(i => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        return d;
+      });
+      const meals = await Promise.all(dates.map(d => fetchMealByDate(d).catch(()=>null)));
+
+      const html = dates.map((d, i) => {
+        const dd = new Date(d); dd.setHours(0,0,0,0);
+        const isPast  = dd < today;
+        const isToday = dd.getTime() === today.getTime();
+        const cls = isToday ? 'today' : (isPast ? 'past' : '');
+        const meal = meals[i];
+
+        let menuHtml;
+        if (meal) {
+          const items = meal.DDISH_NM.split('<br/>')
+            .map(s => s.replace(/[0-9.()\s]+$/,'').trim())
+            .filter(Boolean);
+          menuHtml = `<div class="lunch-day-menu">${items.join(' · ')}</div>`;
+        } else {
+          menuHtml = `<div class="lunch-day-empty">정보 없음</div>`;
+        }
+
+        return `
+          <div class="lunch-day ${cls}">
+            <div class="lunch-day-head">
+              <span class="lunch-day-date">${d.getMonth()+1}/${d.getDate()} (${dayKor[d.getDay()]})</span>
+              ${isToday ? '<span class="lunch-day-tag">오늘</span>' : ''}
+            </div>
+            ${menuHtml}
+          </div>`;
+      }).join('');
+
+      el.innerHTML = `<div class="lunch-week">${html}</div>`;
+    } catch {
+      el.innerHTML = '<div style="color:#475569;">급식 정보를 불러올 수 없습니다</div>';
+    }
+  }
+
+  // ============================================================
+  // Firebase 리스너
+  // ============================================================
+
+  // 학교 기본 설정 (실시간 반영)
+  db.collection('settings').doc('general').onSnapshot(snap => {
+    if (!snap.exists) return;
+    const d = snap.data();
+    if (d.schoolName)     SCHOOL_CONFIG.schoolName = d.schoolName;
+    if (d.boardTitle !== undefined) SCHOOL_CONFIG.boardTitle = d.boardTitle;
+    if (d.schoolLogo !== undefined) SCHOOL_CONFIG.schoolLogo = d.schoolLogo;
+    if (d.neisSchoolCode) SCHOOL_CONFIG.neis.schoolCode = d.neisSchoolCode;
+    if (d.neisOfficeCode) SCHOOL_CONFIG.neis.officeCode = d.neisOfficeCode;
+    if (d.gradeClasses)   SCHOOL_CONFIG.gradeClasses = d.gradeClasses;
+
+    // 헤더 학교명·로고 즉시 갱신
+    document.getElementById('schoolName').textContent = SCHOOL_CONFIG.schoolName;
+    const logoEl = document.getElementById('schoolLogo');
+    if (SCHOOL_CONFIG.schoolLogo) {
+      logoEl.innerHTML = `<img src="${SCHOOL_CONFIG.schoolLogo}" alt="logo">`;
+    } else {
+      logoEl.textContent = SCHOOL_CONFIG.schoolName.charAt(0);
+    }
+    // 보드 부제목 갱신
+    const titleEl = document.getElementById('boardTitle');
+    if (SCHOOL_CONFIG.boardTitle) {
+      titleEl.textContent = SCHOOL_CONFIG.boardTitle;
+      titleEl.style.display = '';
+    } else {
+      titleEl.style.display = 'none';
+    }
+    // 급식 다시 조회 (NEIS 코드 바뀌었을 수 있음)
+    fetchLunch();
+  });
+
+  // 수업 시간 설정
+  db.collection('settings').doc('classTimes').onSnapshot(snap => {
+    if (snap.exists) {
+      const d = snap.data();
+      if (d.periods) classTimes = d.periods;
+    }
+  });
+
+  // 학급별 급식 시간 (수동 설정 / 3차 fallback)
+  let lunchTimesDoc = {};
+  db.collection('settings').doc('lunchTimes').onSnapshot(snap => {
+    lunchTimesDoc = snap.exists ? snap.data() : {};
+    applyMyLunch();
+  });
+
+  // 운영 기간 (2차 우선순위)
+  let schedulesDoc = [];
+  db.collection('settings').doc('lunchSchedules').onSnapshot(snap => {
+    schedulesDoc = (snap.exists && Array.isArray(snap.data().schedules)) ? snap.data().schedules : [];
+    applyMyLunch();
+  });
+
+  // 날짜 오버라이드 (1차 - 최우선)
+  let overridesDoc = {};
+  db.collection('settings').doc('lunchOverrides').onSnapshot(snap => {
+    overridesDoc = (snap.exists && snap.data().overrides) ? snap.data().overrides : {};
+    applyMyLunch();
+  });
+
+  // ===== 헬퍼 =====
+  function _parseLocalDate(s) {
+    if (!s) return null;
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m-1, d);
+  }
+  function _sortClassKeys(arr) {
+    return [...arr].sort((a, b) => {
+      const [ga, ca] = a.split('-').map(Number);
+      const [gb, cb] = b.split('-').map(Number);
+      return ga !== gb ? ga - gb : ca - cb;
+    });
+  }
+  function _getFloorOrder(f) {
+    if (Array.isArray(f.classOrder) && f.classOrder.length) {
+      const filtered = f.classOrder.filter(c => (f.classes || []).includes(c));
+      (f.classes || []).forEach(c => { if (!filtered.includes(c)) filtered.push(c); });
+      return filtered;
+    }
+    return _sortClassKeys(f.classes || []);
+  }
+  function _getMondayOf(date) {
+    const d = new Date(date); d.setHours(0,0,0,0);
+    const dow = d.getDay();
+    const offset = (dow === 0) ? -6 : (1 - dow);
+    d.setDate(d.getDate() + offset);
+    return d;
+  }
+  function _getRotatedStartClass(floor, schedule, targetDate) {
+    const order = _getFloorOrder(floor);
+    if (!order.length || !floor.startClass) return floor.startClass;
+    if (!floor.weeklyRotation || !schedule.startDate) return floor.startClass;
+    const anchor = _getMondayOf(_parseLocalDate(schedule.startDate));
+    const tgt    = _getMondayOf(targetDate);
+    const weeks  = Math.round((tgt - anchor) / (7 * 86400000));
+    const anchorIdx = order.indexOf(floor.startClass);
+    if (anchorIdx === -1) return floor.startClass;
+    const len = order.length;
+    return order[((anchorIdx + weeks) % len + len) % len];
+  }
+  function _calcFloorTimes(floor, opts) {
+    opts = opts || {};
+    const order = _getFloorOrder(floor);
+    if (!order.length) return [];
+    const startClass = opts.startClass || floor.startClass;
+    const startIdx = order.indexOf(startClass);
+    if (startIdx === -1) return [];
+    const queue = [...order.slice(startIdx), ...order.slice(0, startIdx)];
+    const startTimeStr = opts.startTime || floor.startTime || '12:30';
+    if (!startTimeStr.match(/^\d{1,2}:\d{2}$/)) return [];
+    const [sH, sM] = startTimeStr.split(':').map(Number);
+    const startMin = sH * 60 + sM;
+    const interval = parseInt(floor.interval, 10) || 2;
+    const duration = parseInt(floor.duration, 10) || 30;
+    const fmt = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+    return queue.map((classKey, i) => ({
+      classKey,
+      start: fmt(startMin + i * interval),
+      end:   fmt(startMin + i * interval + duration)
+    }));
+  }
+  function _formatDateYMD(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function applyMyLunch() {
+    const myKey = `${grade}-${cls}`;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const todayStr = _formatDateYMD(today);
+    const override = overridesDoc[todayStr];
+
+    // 활성 운영 기간 찾기
+    const activeSch = schedulesDoc.find(s => {
+      if (!s.startDate || !s.endDate) return false;
+      const start = _parseLocalDate(s.startDate); start.setHours(0,0,0,0);
+      const end   = _parseLocalDate(s.endDate);   end.setHours(23,59,59,999);
+      return today >= start && today <= end;
+    });
+
+    if (activeSch) {
+      for (const floor of (activeSch.floors || [])) {
+        if ((floor.classes || []).includes(myKey)) {
+          // 1순위: 날짜 오버라이드 적용 (시작 시간만 override)
+          const opts = {
+            startClass: _getRotatedStartClass(floor, activeSch, today),
+            startTime: override ? override.startTime : floor.startTime
+          };
+          const times = _calcFloorTimes(floor, opts);
+          const me = times.find(t => t.classKey === myKey);
+          if (me) { myLunch = { start: me.start, end: me.end }; return; }
+        }
+      }
+    }
+    // 2순위: lunchTimes 수동
+    if (lunchTimesDoc[myKey]) { myLunch = lunchTimesDoc[myKey]; return; }
+    if (lunchTimesDoc['default']) { myLunch = lunchTimesDoc['default']; return; }
+    // 3순위: config 기본값
+    myLunch = SCHOOL_CONFIG.defaultLunch;
+  }
+
+  // 매일 자정에 다시 적용 (날짜 바뀌면 자동 전환)
+  setInterval(() => {
+    const now = new Date();
+    if (now.getHours() === 0 && now.getMinutes() === 0) applyMyLunch();
+  }, 60 * 1000);
+
+  // 시간표
+  db.collection('timetable').doc(`${grade}-${cls}`).onSnapshot(snap => {
+    timetable = snap.exists ? (snap.data() || {}) : {};
+    const idx = getWeekdayIdx();
+    renderDayTabs(idx);
+    renderPeriods(idx);
+  });
+
+  // 일일 시간표 변경 (오늘 날짜만 적용)
+  let dailyOverridesAll = {};
+  db.collection('timetableOverrides').onSnapshot(snap => {
+    dailyOverridesAll = {};
+    snap.docs.forEach(d => dailyOverridesAll[d.id] = d.data());
+    renderPeriods(getWeekdayIdx());
+  });
+
+  // 학교 공지 (인덱스 불필요 — 클라이언트 필터링)
+  db.collection('announcements')
+    .orderBy('createdAt','desc')
+    .onSnapshot(snap => {
+      const all = snap.docs.map(d => ({id:d.id,...d.data()}));
+      schoolAnns  = filterSchoolAnns(all);
+      schoolAnnIdx = 0;
+      startSchoolSlideshow();
+    });
+
+  // 학급 게시판 (인덱스 불필요 — 클라이언트 필터링)
+  db.collection('classAnnouncements')
+    .orderBy('createdAt','desc')
+    .onSnapshot(snap => {
+      const now = new Date();
+      const anns = snap.docs
+        .map(d=>({id:d.id,...d.data()}))
+        .filter(a => a.targetGrade === grade && a.targetClass === cls)
+        .filter(a => a.isActive)
+        .filter(a => !a.expiresAt?.toDate || a.expiresAt.toDate() > now);
+      renderClassBoard(anns);
+    });
+
+  // D-Day 카운터 (상단 바)
+  db.collection('dDays').orderBy('targetDate').onSnapshot(snap => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const items = snap.docs
+      .map(d => ({id:d.id, ...d.data()}))
+      .filter(d => d.isActive !== false)
+      .map(d => {
+        const target = d.targetDate?.toDate ? d.targetDate.toDate() : new Date();
+        target.setHours(0,0,0,0);
+        const diff = Math.round((target - today) / 86400000);
+        return { ...d, diff, target };
+      })
+      .filter(d => d.diff >= -3) // 지난 D-Day는 3일 이내만 표시
+      .map(d => {
+        let txt, cls = '';
+        if (d.diff === 0) { txt = 'D-DAY'; cls = 'dday-today'; }
+        else if (d.diff > 0) {
+          txt = `D-${d.diff}`;
+          if (d.diff <= 7) cls = 'urgent';
+        } else {
+          txt = `D+${Math.abs(d.diff)}`;
+        }
+        return `<div class="dday-item ${cls}">
+          <span class="dday-icon">${d.icon||'📅'}</span>
+          <span class="dday-title">${d.title}</span>
+          <span class="dday-count">${txt}</span>
+        </div>`;
+      });
+
+    const bar = document.getElementById('ddayBar');
+    if (items.length) { bar.innerHTML = items.join(''); bar.classList.add('show'); }
+    else bar.classList.remove('show');
+  });
+
+  // 금주 학사일정
+  db.collection('schoolEvents').orderBy('date').onSnapshot(snap => {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const day = today.getDay();
+    const offsetToMon = (day === 0) ? -6 : (1 - day);
+    const monday = new Date(today); monday.setDate(today.getDate() + offsetToMon);
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23,59,59,999);
+
+    const dayKor = ['일','월','화','수','목','금','토'];
+    const events = snap.docs
+      .map(d => ({id:d.id, ...d.data()}))
+      .filter(e => e.isActive !== false)
+      .map(e => ({...e, dateObj: e.date?.toDate ? e.date.toDate() : new Date()}))
+      .filter(e => e.dateObj >= monday && e.dateObj <= sunday)
+      .sort((a,b) => a.dateObj - b.dateObj);
+
+    const el = document.getElementById('eventsContent');
+    if (!events.length) {
+      el.innerHTML = '<div class="events-empty">이번 주 일정이 없습니다</div>';
+      return;
+    }
+
+    el.innerHTML = events.map(e => {
+      const d = e.dateObj;
+      const ed = new Date(d); ed.setHours(0,0,0,0);
+      const isToday = ed.getTime() === today.getTime();
+      const isPast  = ed < today;
+      const cls = isToday ? 'today' : (isPast ? 'past' : '');
+      return `<div class="event-item ${cls}">
+        <div class="event-date">${d.getMonth()+1}/${d.getDate()}(${dayKor[d.getDay()]})</div>
+        <div class="event-info">
+          <div class="event-title">${e.icon||'📅'} ${e.title}</div>
+          ${e.description ? `<div class="event-desc">${e.description}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  });
+
+  // 긴급 공지
+  db.collection('emergency').doc('current').onSnapshot(snap => {
+    const overlay = document.getElementById('emergencyOverlay');
+    if (snap.exists) {
+      const d = snap.data();
+      const tg = d.targetGrades  || ['all'];
+      const tc = d.targetClasses || ['all'];
+      if (d.isActive &&
+          (tg.includes('all')||tg.includes(grade)) &&
+          (tc.includes('all')||tc.includes(cls))) {
+        document.getElementById('emergencyTitle').textContent   = d.title   || '긴급 공지';
+        document.getElementById('emergencyMessage').textContent = d.message || '';
+        overlay.classList.add('active'); return;
+      }
+    }
+    overlay.classList.remove('active');
+  });
+
+  // ============================================================
+  // 양산 날씨 + 미세먼지 (Open-Meteo, 무료·키 불필요)
+  // ============================================================
+  const YANGSAN_LAT = 35.3350;
+  const YANGSAN_LON = 129.0345;
+
+  function weatherEmoji(code) {
+    if (code === 0) return '☀️';
+    if (code <= 2) return '🌤️';
+    if (code === 3) return '☁️';
+    if (code <= 48) return '🌫️';
+    if (code <= 57) return '🌦️';
+    if (code <= 67) return '🌧️';
+    if (code <= 77) return '❄️';
+    if (code <= 82) return '🌧️';
+    if (code <= 86) return '🌨️';
+    if (code <= 99) return '⛈️';
+    return '🌤️';
+  }
+  function weatherDesc(code) {
+    if (code === 0) return '맑음';
+    if (code <= 2) return '대체로 맑음';
+    if (code === 3) return '흐림';
+    if (code <= 48) return '안개';
+    if (code <= 57) return '이슬비';
+    if (code <= 67) return '비';
+    if (code <= 77) return '눈';
+    if (code <= 82) return '소나기';
+    if (code <= 86) return '눈 소나기';
+    if (code <= 99) return '천둥번개';
+    return '';
+  }
+  // 미세먼지(PM10) 등급
+  function pm10Level(v) {
+    if (v <= 30)  return { txt:'좋음',     cls:'aq-good' };
+    if (v <= 80)  return { txt:'보통',     cls:'aq-moderate' };
+    if (v <= 150) return { txt:'나쁨',     cls:'aq-bad' };
+    return                { txt:'매우나쁨', cls:'aq-very-bad' };
+  }
+  // 초미세먼지(PM2.5) 등급
+  function pm25Level(v) {
+    if (v <= 15)  return { txt:'좋음',     cls:'aq-good' };
+    if (v <= 35)  return { txt:'보통',     cls:'aq-moderate' };
+    if (v <= 75)  return { txt:'나쁨',     cls:'aq-bad' };
+    return                { txt:'매우나쁨', cls:'aq-very-bad' };
+  }
+
+  async function fetchWeather() {
+    const el = document.getElementById('weatherContent');
+    try {
+      const wUrl = `https://api.open-meteo.com/v1/forecast?latitude=${YANGSAN_LAT}&longitude=${YANGSAN_LON}` +
+        `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code&timezone=Asia%2FSeoul`;
+      const aUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${YANGSAN_LAT}&longitude=${YANGSAN_LON}` +
+        `&current=pm10,pm2_5&timezone=Asia%2FSeoul`;
+
+      const [wRes, aRes] = await Promise.all([fetch(wUrl), fetch(aUrl)]);
+      const wData = await wRes.json();
+      const aData = await aRes.json();
+
+      const w = wData.current;
+      const a = aData.current;
+      const code  = w.weather_code;
+      const temp  = Math.round(w.temperature_2m);
+      const feels = Math.round(w.apparent_temperature);
+      const hum   = w.relative_humidity_2m;
+      const pm10  = Math.round(a.pm10  || 0);
+      const pm25  = Math.round(a.pm2_5 || 0);
+      const p10   = pm10Level(pm10);
+      const p25   = pm25Level(pm25);
+
+      el.innerHTML = `
+        <div class="weather-main">
+          <div class="weather-icon">${weatherEmoji(code)}</div>
+          <div class="weather-temp-block">
+            <div class="weather-temp">${temp}°C</div>
+            <div class="weather-desc">${weatherDesc(code)}</div>
+          </div>
+        </div>
+        <div class="weather-rows">
+          <div class="weather-row"><span class="weather-row-label">체감 온도</span><span class="weather-row-val">${feels}°C</span></div>
+          <div class="weather-row"><span class="weather-row-label">습도</span><span class="weather-row-val">${hum}%</span></div>
+          <div class="weather-row"><span class="weather-row-label">미세먼지</span><span class="weather-row-val ${p10.cls}">${p10.txt} · ${pm10}㎍</span></div>
+          <div class="weather-row"><span class="weather-row-label">초미세먼지</span><span class="weather-row-val ${p25.cls}">${p25.txt} · ${pm25}㎍</span></div>
+        </div>`;
+    } catch (e) {
+      el.innerHTML = '<div style="color:#475569;">날씨 정보를 불러올 수 없습니다</div>';
+    }
+  }
+
+  // ============================================================
+  // 초기 실행 (모든 함수·상수 정의가 완료된 후 호출)
+  // ============================================================
+  const initDay = getWeekdayIdx();
+  renderDayTabs(initDay);
+  fetchLunch();
+  setInterval(fetchLunch, 60*60*1000);
+
+  fetchWeather();
+  setInterval(fetchWeather, 10*60*1000); // 10분마다 갱신
+
+  // 시계 시작
+  updateClock();
+  setInterval(updateClock, 1000);
+</script>
+</body>
+</html>

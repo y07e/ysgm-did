@@ -1,0 +1,19 @@
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Node
+node_modules/
+npm-debug.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# 환경 설정 (config.js는 Firebase 키가 포함되므로 공개 여부 신중히 결정)
+# config.local.js
