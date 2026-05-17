@@ -42,9 +42,10 @@ service cloud.firestore {
     }
 
     // 일일 시간표 변경 (날짜별 오버라이드)
+    // 관리자 + 담임교사 모두 변경 가능 (행정원/담임이 분담)
     match /timetableOverrides/{date} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isTeacher();
     }
 
     // 긴급 공지

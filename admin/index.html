@@ -1499,7 +1499,8 @@ const ADMIN_TABS = [
   },
 ];
 const TEACHER_TABS = [
-  { key:'classboard', label:'📋 내 학급 게시판' },
+  { key:'classboard',     label:'📋 내 학급 게시판' },
+  { key:'timetable-daily', label:'📋 시간표 변경' },
 ];
 
 function buildTabBar() {
@@ -3451,6 +3452,12 @@ function initDailyOverrideTab() {
   if (!gSel.options.length) {
     gSel.innerHTML = Object.keys(GC).map(g => `<option value="${g}">${g}학년</option>`).join('');
     buildClassSelect('dailyGrade','dailyClass', gSel.value);
+  }
+  // 담임 로그인 시 본인 학년/반 자동 선택
+  if (currentRole === 'teacher' && myTeacherData && myTeacherData.grade && myTeacherData.class) {
+    gSel.value = String(myTeacherData.grade);
+    buildClassSelect('dailyGrade','dailyClass', gSel.value);
+    document.getElementById('dailyClass').value = String(myTeacherData.class);
   }
   // 항상 오늘 날짜로 기본 설정
   setDailyDate(new Date());
