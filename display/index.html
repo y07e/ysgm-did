@@ -50,7 +50,7 @@
       overflow: hidden;
     }
     .school-logo img { width: 100%; height: 100%; object-fit: cover; }
-    .school-name { font-size: 1.4rem; color: #f1f5f9; font-weight: 700; letter-spacing: -0.3px; }
+    .school-name { font-size: 1.4rem; color: #f1f5f9; font-weight: 700; letter-spacing: -0.3px; white-space: nowrap; }
     /* ===== 배지 + 부제목 통합 그룹 (시각적으로 하나로 연결) ===== */
     .class-section {
       display: inline-flex;
@@ -936,9 +936,9 @@
         flex-wrap: wrap;
         gap: 8px;
       }
-      .school-info { order: 1; flex: 1; min-width: 0; }
+      .school-info { order: 1; flex: 0 1 auto; min-width: 0; }
       .school-logo { width: 32px; height: 32px; font-size: 0.95rem; }
-      .school-name { font-size: 0.95rem; }
+      .school-name { font-size: 0.95rem; letter-spacing: -0.5px; }
       .class-section { order: 2; border-radius: 11px; }
       .class-badge { padding: 4px 0; }
       .badge-section { padding: 2px 13px; gap: 4px; }
