@@ -2,57 +2,161 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="2; url=https://ysgm-did.web.app/start/">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>전자칠판 셋업 바로가기</title>
+  <title>양산여자중학교 전자칠판 셋업</title>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, 'Noto Sans KR', sans-serif;
-      background: #0f172a; color: #f1f5f9;
-      margin: 0; min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #f1f5f9;
+      min-height: 100vh;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      padding: 24px; text-align: center;
+      padding: 30px 20px;
+      -webkit-text-size-adjust: 100%;
     }
-    .icon { font-size: 4rem; margin-bottom: 16px; }
-    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
-    p { color: #94a3b8; margin-bottom: 24px; }
-    .spinner {
-      width: 36px; height: 36px;
-      border: 4px solid #334155;
-      border-top-color: #38bdf8;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 18px;
+    .container {
+      max-width: 720px; width: 100%;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 24px;
+      padding: 40px 32px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      text-align: center;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    a {
-      color: #38bdf8; text-decoration: none;
-      padding: 12px 24px; background: #1e293b;
-      border-radius: 10px; font-weight: 700;
-      display: inline-block; margin-top: 12px;
+    .icon {
+      font-size: 5rem;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 4px 12px rgba(56, 189, 248, 0.4));
     }
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+      color: #f1f5f9;
+      letter-spacing: -0.02em;
+    }
+    .subtitle {
+      color: #94a3b8;
+      font-size: 1.05rem;
+      margin-bottom: 28px;
+    }
+
+    .go-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+      color: white;
+      text-decoration: none;
+      padding: 18px 48px;
+      border-radius: 14px;
+      font-size: 1.25rem;
+      font-weight: 800;
+      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+      margin-bottom: 12px;
+    }
+    .go-btn:hover, .go-btn:active {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(14, 165, 233, 0.6);
+    }
+
     .url {
-      font-family: monospace;
+      font-family: 'Menlo', 'Consolas', monospace;
       background: #1e293b;
-      padding: 8px 14px; border-radius: 8px;
-      font-size: 0.9rem;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.95rem;
       color: #93c5fd;
-      margin: 12px 0;
+      margin: 18px auto;
+      display: inline-block;
       word-break: break-all;
+      border: 1px solid rgba(147, 197, 253, 0.2);
+    }
+
+    .steps {
+      margin-top: 32px;
+      text-align: left;
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 14px;
+      padding: 22px 24px;
+      border-left: 4px solid #38bdf8;
+    }
+    .steps h2 {
+      font-size: 1.05rem;
+      color: #38bdf8;
+      margin-bottom: 14px;
+      font-weight: 700;
+    }
+    .steps ol {
+      padding-left: 22px;
+      color: #cbd5e1;
+      font-size: 0.95rem;
+      line-height: 1.85;
+    }
+    .steps ol li {
+      margin-bottom: 4px;
+    }
+    .steps strong {
+      color: #f1f5f9;
+      font-weight: 700;
+    }
+    .hl {
+      background: rgba(56, 189, 248, 0.15);
+      color: #7dd3fc;
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-weight: 700;
+    }
+
+    .footer {
+      margin-top: 24px;
+      font-size: 0.82rem;
+      color: #64748b;
+      line-height: 1.7;
+    }
+    .footer a {
+      color: #93c5fd;
+      text-decoration: none;
+    }
+
+    @media (max-width: 480px) {
+      .container { padding: 30px 20px; }
+      h1 { font-size: 1.4rem; }
+      .icon { font-size: 4rem; }
+      .go-btn { padding: 16px 36px; font-size: 1.1rem; }
+      .steps { padding: 18px 18px; }
+      .steps ol { font-size: 0.9rem; }
     }
   </style>
 </head>
 <body>
-  <div class="icon">📺</div>
-  <h1>양산여자중학교 전자칠판 셋업</h1>
-  <p>잠시 후 셋업 페이지로 자동 이동합니다…</p>
-  <div class="spinner"></div>
-  <div class="url">https://ysgm-did.web.app/start/</div>
-  <a href="https://ysgm-did.web.app/start/">지금 바로 이동 →</a>
-  <p style="margin-top:30px;font-size:0.78rem;color:#475569;">
-    이 파일을 USB에 담아 각 교실 전자칠판에서 열어주세요.<br>
-    Chrome 브라우저로 열면 자동으로 셋업 페이지가 표시됩니다.
-  </p>
+  <div class="container">
+    <div class="icon">📺</div>
+    <h1>양산여자중학교 전자칠판 DID</h1>
+    <p class="subtitle">우리 반 전자칠판에 학급 정보 시스템을 설치합니다</p>
+
+    <a href="https://ysgm-did.web.app/start/" class="go-btn">▶ 셋업 페이지 열기</a>
+
+    <div class="url">https://ysgm-did.web.app/start/</div>
+
+    <div class="steps">
+      <h2>📌 전자칠판 설치 순서</h2>
+      <ol>
+        <li>위 <strong>"셋업 페이지 열기"</strong> 버튼을 누른다</li>
+        <li>학년 / 반 선택 후 <span class="hl">이 학급으로 설정</span> 클릭</li>
+        <li>디스플레이 화면이 자동으로 열리면, Chrome 우측 상단 <strong>⋮ (점 3개) 메뉴</strong>를 누른다</li>
+        <li>"<strong>홈 화면에 추가</strong>" 또는 "<strong>북마크 추가</strong>" 선택</li>
+        <li>이름은 "<strong>○학년 ○반 전자칠판</strong>"으로 저장</li>
+        <li>다음부터 홈 화면 아이콘을 누르면 바로 실행됩니다 ✨</li>
+      </ol>
+    </div>
+
+    <p class="footer">
+      💡 <strong>학급 변경이 필요할 때</strong><br>
+      디스플레이 화면 우측 상단의 학급명을 클릭하거나,<br>
+      위 셋업 페이지에 다시 접속해 "재설정" 버튼을 누르세요.
+    </p>
+  </div>
 </body>
 </html>
