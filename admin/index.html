@@ -771,6 +771,21 @@
 
     <!-- ===== 시간표 ===== -->
     <div class="tab-panel" id="tab-timetable">
+      <!-- NEIS 시간표 일괄 업로드 -->
+      <div class="card">
+        <div class="card-title">📤 나이스(NEIS) 시간표 엑셀 업로드</div>
+        <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;line-height:1.6;">
+          나이스에서 다운로드한 학년별 시간표 엑셀 파일(.xlsx)을 업로드하면
+          <b>해당 학년 전 학급의 월~금 시간표가 자동으로 입력</b>됩니다.<br>
+          학년별로 따로 업로드하세요 (1학년 / 2학년 / 3학년 각각 1개 파일).
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <input type="file" id="neisFile" accept=".xlsx,.xls" style="flex:1;min-width:200px;">
+          <button class="btn btn-secondary btn-sm" id="btnParseNeis">🔍 미리보기 (파일 분석)</button>
+        </div>
+        <div id="neisPreview" style="margin-top:14px;"></div>
+      </div>
+
       <div class="card">
         <div class="card-title">시간표 편집</div>
         <div class="tt-header">
@@ -1329,6 +1344,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<!-- SheetJS (XLSX 파싱 — NEIS 시간표 업로드용) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>
 // ============================================================
@@ -2456,6 +2473,167 @@ document.getElementById('btnSaveTT').addEventListener('click', async () => {
   );
   showToast('✅ 시간표 저장 — 전자칠판 즉시 반영');
 });
+
+// ============================================================
+// 📤 NEIS 엑셀 시간표 업로드 + 자동 파싱
+// ============================================================
+let _neisParsed = null;  // { grade, classes: {classNum: {mon:[], tue:[], ...}} }
+
+function parseNeisExcel(workbook) {
+  // NEIS 시간표 구조:
+  // Row 5(idx 4): 요일 헤더 (월/화/수/목/금) — 각 요일이 여러 컬럼 차지
+  // Row 6(idx 5): 교시 번호 (1.0, 2.0, ... 각 셀)
+  // Row 7+: 각 학급 행
+  //   col C: "N(N학년) M반)" 형태
+  //   이후: 과목(교사) 형태
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header:1, defval:'' });
+
+  const dayHeaderRowIdx = 4;   // 5번째 행 (0-indexed 4)
+  const periodNumRowIdx = 5;   // 6번째 행
+  const dataStartRowIdx = 6;   // 7번째 행부터 학급 데이터
+
+  if (rows.length < 8) return { error: '엑셀 형식이 맞지 않습니다 (행 부족)' };
+
+  const dayHeaderRow = rows[dayHeaderRowIdx];
+  const periodNumRow = rows[periodNumRowIdx];
+
+  // 요일별 열 범위 찾기 (월요일 시작 컬럼 ~ 다음 요일 시작 컬럼-1)
+  const DAY_KOR = ['월','화','수','목','금'];
+  const DAY_KEYS = ['mon','tue','wed','thu','fri'];
+  const dayColumns = {};  // { mon: [col1, col2, ...], tue: [...] }
+  let currentDay = null;
+  for (let c = 0; c < dayHeaderRow.length; c++) {
+    const cell = String(dayHeaderRow[c] || '').trim();
+    if (DAY_KOR.includes(cell)) {
+      currentDay = DAY_KEYS[DAY_KOR.indexOf(cell)];
+      dayColumns[currentDay] = [];
+    } else if (currentDay && periodNumRow[c]) {
+      const periodNum = parseInt(periodNumRow[c], 10);
+      if (periodNum && periodNum >= 1 && periodNum <= 9) {
+        dayColumns[currentDay].push({ col: c, period: periodNum });
+      }
+    }
+  }
+
+  // 학급 데이터 추출
+  const classes = {};
+  let detectedGrade = null;
+  for (let r = dataStartRowIdx; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row || !row.length) continue;
+    // col C (idx 2) 에서 "N(G학년) M반)" 형태 추출
+    const labelCell = String(row[2] || '').trim();
+    const m = labelCell.match(/\(\s*(\d+)\s*학년\s*\)\s*\s*(\d+)\s*반/);
+    if (!m) continue;
+    const grade = parseInt(m[1], 10);
+    const classNum = parseInt(m[2], 10);
+    if (!grade || !classNum) continue;
+    if (detectedGrade === null) detectedGrade = grade;
+
+    classes[classNum] = {};
+    for (const dayKey of DAY_KEYS) {
+      const cols = dayColumns[dayKey] || [];
+      // 가장 큰 period 번호까지 빈 슬롯 채우기
+      const maxP = cols.reduce((mx, c) => Math.max(mx, c.period), 0);
+      const slots = Array(maxP).fill('');
+      for (const { col, period } of cols) {
+        const v = String(row[col] || '').trim();
+        if (v) slots[period - 1] = v;
+      }
+      classes[classNum][dayKey] = slots;
+    }
+  }
+
+  if (!Object.keys(classes).length) return { error: '학급 데이터를 찾지 못했습니다' };
+  return { grade: detectedGrade, classes };
+}
+
+document.getElementById('btnParseNeis').addEventListener('click', async () => {
+  const fileEl = document.getElementById('neisFile');
+  const file = fileEl.files[0];
+  if (!file) return showToast('엑셀 파일을 선택하세요');
+  if (typeof XLSX === 'undefined') return showToast('XLSX 라이브러리 로드 실패 — 새로고침 후 다시 시도');
+
+  const previewEl = document.getElementById('neisPreview');
+  previewEl.innerHTML = '<div style="color:#94a3b8;">⏳ 파일 분석 중...</div>';
+
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const result = parseNeisExcel(wb);
+    if (result.error) {
+      previewEl.innerHTML = `<div style="color:#dc2626;font-weight:700;padding:10px;background:#fee2e2;border-radius:8px;">❌ ${result.error}</div>`;
+      return;
+    }
+    _neisParsed = result;
+    const classNums = Object.keys(result.classes).sort((a,b) => +a - +b);
+    let html = `<div style="background:#ecfdf5;border:1px solid #10b981;border-radius:10px;padding:14px;">
+      <div style="font-weight:800;color:#047857;margin-bottom:10px;">✅ 파싱 성공 — ${result.grade}학년, ${classNums.length}개 학급</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+        <thead><tr style="background:#d1fae5;">
+          <th style="padding:6px;border:1px solid #6ee7b7;">반</th>
+          <th style="padding:6px;border:1px solid #6ee7b7;">월요일 (교시별)</th>
+          <th style="padding:6px;border:1px solid #6ee7b7;">화요일 (교시별)</th>
+        </tr></thead><tbody>`;
+    for (const cn of classNums.slice(0, 5)) {
+      const mon = (result.classes[cn].mon || []).map((s,i) => s ? `${i+1}.${s.split('(')[0].slice(0,4)}` : '').filter(Boolean).join(' ');
+      const tue = (result.classes[cn].tue || []).map((s,i) => s ? `${i+1}.${s.split('(')[0].slice(0,4)}` : '').filter(Boolean).join(' ');
+      html += `<tr><td style="padding:5px;border:1px solid #6ee7b7;text-align:center;font-weight:700;">${cn}반</td>
+        <td style="padding:5px;border:1px solid #6ee7b7;font-size:0.74rem;">${mon||'-'}</td>
+        <td style="padding:5px;border:1px solid #6ee7b7;font-size:0.74rem;">${tue||'-'}</td></tr>`;
+    }
+    if (classNums.length > 5) html += `<tr><td colspan="3" style="padding:5px;text-align:center;color:#64748b;font-style:italic;">... 외 ${classNums.length-5}개 반</td></tr>`;
+    html += `</tbody></table>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="applyNeisToFirestore()">💾 전체 학급에 적용 (Firestore 저장)</button>
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('neisPreview').innerHTML=''; _neisParsed=null;">취소</button>
+      </div>
+      <p style="font-size:0.76rem;color:#64748b;margin-top:10px;">
+        ⚠️ 저장 시 ${result.grade}학년 ${classNums.length}개 학급의 기존 시간표를 덮어씁니다.
+        '변경' 표시는 초기화됩니다.
+      </p>
+    </div>`;
+    previewEl.innerHTML = html;
+  } catch (e) {
+    previewEl.innerHTML = `<div style="color:#dc2626;font-weight:700;padding:10px;background:#fee2e2;border-radius:8px;">❌ 파일 분석 실패: ${e.message}</div>`;
+  }
+});
+
+window.applyNeisToFirestore = async () => {
+  if (!_neisParsed) return showToast('먼저 파일을 미리보기 하세요');
+  const { grade, classes } = _neisParsed;
+  const classNums = Object.keys(classes);
+  if (!confirm(`${grade}학년 ${classNums.length}개 학급의 시간표를 일괄 저장합니다.\n기존 시간표는 덮어쓰여집니다. 계속할까요?`)) return;
+
+  const previewEl = document.getElementById('neisPreview');
+  previewEl.innerHTML = '<div style="color:#94a3b8;padding:10px;">⏳ 저장 중... (' + classNums.length + '개 학급)</div>';
+
+  let success = 0, failed = 0;
+  for (const cn of classNums) {
+    const key = `${grade}-${cn}`;
+    try {
+      await db.collection('timetable').doc(key).set({
+        ...classes[cn],
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      success++;
+    } catch (e) {
+      console.error(`Failed to save ${key}:`, e);
+      failed++;
+    }
+  }
+  previewEl.innerHTML = `<div style="background:${failed?'#fef3c7':'#ecfdf5'};border:1px solid ${failed?'#f59e0b':'#10b981'};border-radius:10px;padding:14px;font-weight:700;color:${failed?'#92400e':'#047857'};">
+    ✅ 저장 완료 — 성공 ${success}개${failed ? `, 실패 ${failed}개` : ''} (전자칠판 즉시 반영됨)
+  </div>`;
+  showToast(`✅ ${grade}학년 ${success}개 학급 시간표 저장 완료`);
+  // 현재 편집 중인 학급이라면 다시 로드
+  if (currentTTGrade == grade && classes[currentTTClass]) {
+    loadTimetable();
+  }
+  _neisParsed = null;
+  document.getElementById('neisFile').value = '';
+};
 
 document.getElementById('btnCopyTT').addEventListener('click', async () => {
   const src     = DAY_NAMES[DAY_KEYS.indexOf(currentTTDay)];
