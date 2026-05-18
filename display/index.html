@@ -2450,14 +2450,18 @@
   function _getRotatedStartClass(floor, schedule, targetDate) {
     const order = _getFloorOrder(floor);
     if (!order.length || !floor.startClass) return floor.startClass;
-    if (!floor.weeklyRotation || !schedule.startDate) return floor.startClass;
-    const anchor = _getMondayOf(_parseLocalDate(schedule.startDate));
+    if (!floor.weeklyRotation) return floor.startClass;
+    // 순환 기준일: rotationAnchorDate (이전 운영기간 이어받기) > startDate
+    const anchorStr = schedule.rotationAnchorDate || schedule.startDate;
+    if (!anchorStr) return floor.startClass;
+    const anchor = _getMondayOf(_parseLocalDate(anchorStr));
     const tgt    = _getMondayOf(targetDate);
     const weeks  = Math.round((tgt - anchor) / (7 * 86400000));
     const anchorIdx = order.indexOf(floor.startClass);
     if (anchorIdx === -1) return floor.startClass;
     const len = order.length;
-    return order[((anchorIdx + weeks) % len + len) % len];
+    // 매주 -1 (역방향): 1주차 마지막 학급이 다음 주 첫번째로 (admin과 동일)
+    return order[((anchorIdx - weeks) % len + len) % len];
   }
   function _calcFloorTimes(floor, opts) {
     opts = opts || {};
