@@ -1311,60 +1311,91 @@
 
     /* 모바일 세로 (640px 이하) */
     @media (max-width: 640px) {
+      /* ===== 모바일 헤더 — Grid 레이아웃 (학교/시계 한줄 + 알림판 중앙) ===== */
       .header {
+        display: grid !important;
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+          "info  right"
+          "class class";
+        gap: 10px 8px;
         padding: 10px 14px;
-        flex-wrap: wrap;
-        gap: 8px;
       }
-      .school-info { order: 1; flex: 0 1 auto; min-width: 0; }
-      .school-logo { width: 32px; height: 32px; font-size: 0.95rem; }
-      .school-name { font-size: 0.95rem; letter-spacing: -0.5px; }
-      .class-section { order: 2; border-radius: 11px; }
-      .class-badge { padding: 4px 0; }
-      .badge-section { padding: 2px 13px; gap: 4px; }
-      .badge-num { font-size: 1.15rem; }
-      .badge-label { font-size: 1rem; }
-      .board-title { font-size: 1rem; padding: 4px 14px; }
-      .header-right {
-        order: 3;
-        width: 100%;
-        align-items: flex-start;
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: baseline;
+      .school-info { grid-area: info; min-width: 0; }
+      .header-right { grid-area: right; }
+      .class-section {
+        grid-area: class;
+        justify-self: center;  /* 가로 가운데 정렬 */
+        border-radius: 12px;
       }
-      .clock { font-size: 1.7rem; }
-      .date-info { font-size: 0.9rem; margin-top: 0; }
 
-      /* 모바일 톱바 — 세로로 쌓이게 */
+      .school-info { display: flex; align-items: center; gap: 10px; }
+      .school-logo { width: 34px; height: 34px; font-size: 1rem; flex-shrink: 0; }
+      .school-name { font-size: 1.05rem; letter-spacing: -0.5px; }
+
+      .header-right {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0;
+      }
+      .clock { font-size: 1.3rem; line-height: 1.1; }
+      .date-info { font-size: 0.75rem; margin-top: 1px; }
+
+      .board-title { font-size: 1rem; padding: 5px 16px; }
+      .class-badge { padding: 5px 0; }
+      .badge-section { padding: 3px 14px; gap: 5px; }
+      .badge-num { font-size: 1.15rem; }
+      .badge-label { font-size: 0.95rem; }
+
+      /* ===== 모바일 톱바 — D-day / 양산날씨 위아래 카드 분리 ===== */
       .dday-bar {
+        display: flex !important;
         flex-direction: column !important;
         align-items: stretch !important;
-        gap: 6px !important;
-        padding: 8px 12px !important;
+        gap: 8px !important;
+        padding: 10px 12px !important;
       }
+      /* 마스크 페이드 제거 (모바일에선 잘림 없이 보이게) */
       .dday-bar .dday-items {
-        flex-wrap: wrap; gap: 6px;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        padding-right: 0 !important;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.5);
+        border-radius: 10px;
+        padding: 7px 10px !important;
+        border: 1px solid #334155;
+        mask-image: none !important;
+        -webkit-mask-image: none !important;
       }
       .dday-bar .dday-title {
-        font-size: 0.78rem; padding-right: 6px; margin-right: 2px;
+        font-size: 0.85rem;
+        padding-right: 8px;
+        margin-right: 2px;
+        border-right: 1px solid #475569;
       }
       .dday-item {
-        padding: 4px 11px; font-size: 0.78rem;
+        padding: 4px 11px;
+        font-size: 0.78rem;
       }
-      .top-weather {
-        font-size: 0.76rem;
-        padding: 4px 9px;
-        gap: 8px;
-        overflow-x: auto;
-        scrollbar-width: none;
-      }
-      .top-weather::-webkit-scrollbar { display: none; }
-      .top-weather .tw-title { font-size: 0.78rem; }
-      .top-weather .tw-icon { font-size: 1.1rem; }
-      .top-weather .tw-temp { font-size: 0.92rem; }
-      .top-weather .tw-label { font-size: 0.65rem; }
 
+      .top-weather {
+        flex-wrap: wrap;
+        font-size: 0.78rem !important;
+        padding: 7px 10px !important;
+        gap: 9px !important;
+        background: rgba(15, 23, 42, 0.5) !important;
+        box-shadow: none !important;
+        justify-content: flex-start;
+      }
+      .top-weather .tw-title { font-size: 0.85rem !important; }
+      .top-weather .tw-icon { font-size: 1.15rem !important; }
+      .top-weather .tw-temp { font-size: 0.95rem !important; }
+      .top-weather .tw-label { font-size: 0.65rem !important; }
+      .top-weather .tw-val { font-size: 0.76rem !important; }
+
+      /* ===== 모바일 패널 ===== */
       .panel { padding: 14px 16px; }
       .panel-title { font-size: 1rem; margin-bottom: 10px; }
       .ann-title { font-size: 1.15rem; }
@@ -1372,7 +1403,7 @@
       .class-ann-item-title { font-size: 1.05rem; }
       .class-ann-item-body  { font-size: 0.85rem; }
 
-      /* 모바일 시간표 — 전체 교시가 한눈에 보이게 */
+      /* 모바일 시간표 — 전체 교시가 한눈에 */
       .timetable-panel { min-height: auto; padding: 12px; }
       .periods-list { overflow: visible !important; max-height: none !important; gap: 4px; }
       .period-item { padding: 7px 10px; }
@@ -1380,6 +1411,17 @@
       .subject-teacher { font-size: 0.8rem; }
       .period-time { font-size: 0.72rem; }
       .period-num { width: 20px; font-size: 0.82rem; }
+
+      /* 모바일 LED 게시판 */
+      .ann-led-title { font-size: 1.3rem !important; }
+      .ann-led-marquee { font-size: 1.05rem !important; }
+      .class-led-title { font-size: 1rem !important; }
+      .class-led-marquee { font-size: 0.92rem !important; }
+
+      /* 모바일 급식 — 가운데 카드형 */
+      .lunch-today { padding: 12px 14px; gap: 8px; }
+      .lunch-today-date { font-size: 1rem; }
+      .lunch-today-item { padding: 5px 12px; font-size: 0.88rem; }
 
       .lunch-items { gap: 5px; }
       .lunch-item { font-size: 0.82rem; padding: 3px 10px; }
