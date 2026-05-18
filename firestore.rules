@@ -61,6 +61,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 단축 수업 일 — 특정 날짜의 교시 시각 오버라이드
+    match /classTimeOverrides/{date} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // D-Day 카운터
     match /dDays/{id} {
       allow read: if true;

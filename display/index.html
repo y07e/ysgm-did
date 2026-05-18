@@ -544,6 +544,24 @@
     .period-time  { font-size: 0.72rem; color: #64748b; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .period-item.current .period-time { color: #6ee7b7; }
 
+    /* 단축수업 배지 (시간표 제목 옆) */
+    .short-day-badge {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 2px 10px;
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 800;
+      border-radius: 10px;
+      letter-spacing: -0.2px;
+      animation: shortDayPulse 2.5s ease-in-out infinite;
+    }
+    @keyframes shortDayPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.85; transform: scale(0.98); }
+    }
+
     /* 점심시간 행 — 가운데에 단일 배지 */
     .period-item.lunch-row {
       justify-content: center;
@@ -2232,12 +2250,47 @@
     fetchLunch();
   });
 
-  // 수업 시간 설정
+  // 수업 시간 설정 (기초)
+  let _baseClassTimes = [...SCHOOL_CONFIG.defaultPeriods];
+  let _classTimeOverridesAll = {};
+
+  function applyClassTimes() {
+    // 오늘 날짜에 단축 수업 오버라이드가 있으면 적용, 없으면 기초 시간
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    const ov = _classTimeOverridesAll[todayStr];
+
+    // 시간표 패널 제목 갱신
+    const titleEl = document.querySelector('.timetable-panel .panel-title');
+    if (ov && Array.isArray(ov.periods) && ov.periods.length) {
+      classTimes = ov.periods;
+      if (titleEl) {
+        const noteText = ov.note ? ` · ${ov.note}` : '';
+        titleEl.innerHTML = `오늘 시간표 <span class="short-day-badge">⚡ 단축 수업${noteText}</span>`;
+      }
+    } else {
+      classTimes = _baseClassTimes;
+      if (titleEl) titleEl.textContent = '오늘 시간표';
+    }
+    // 시간표 다시 렌더
+    if (typeof renderPeriods === 'function' && typeof getWeekdayIdx === 'function') {
+      renderPeriods(getWeekdayIdx());
+    }
+  }
+
   db.collection('settings').doc('classTimes').onSnapshot(snap => {
     if (snap.exists) {
       const d = snap.data();
-      if (d.periods) classTimes = d.periods;
+      if (d.periods) _baseClassTimes = d.periods;
     }
+    applyClassTimes();
+  });
+
+  // 단축 수업 일 오버라이드 (날짜별)
+  db.collection('classTimeOverrides').onSnapshot(snap => {
+    _classTimeOverridesAll = {};
+    snap.docs.forEach(d => _classTimeOverridesAll[d.id] = d.data());
+    applyClassTimes();
   });
 
   // 학급별 급식 시간 (수동 설정 / 3차 fallback)

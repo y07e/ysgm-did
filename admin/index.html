@@ -1031,9 +1031,9 @@
     <!-- ===== 설정 ===== -->
     <div class="tab-panel" id="tab-settings">
       <div class="card">
-        <div class="card-title">수업 시간 설정</div>
+        <div class="card-title">⏰ 기초 수업 시간 설정</div>
         <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;">
-          저장 즉시 모든 교실에 반영됩니다. 학교 일정에 맞춰 교시 추가·삭제 가능.
+          평소 일반 수업일의 교시 시각입니다. 저장 즉시 모든 교실에 반영되며, 학교 일정에 맞춰 교시 추가·삭제 가능합니다.
         </p>
         <div class="sp-grid" style="margin-bottom:6px;font-size:0.75rem;color:#64748b;font-weight:600;">
           <span>교시</span><span>시작</span><span>종료</span><span></span>
@@ -1043,6 +1043,52 @@
           <button class="btn btn-success btn-sm" id="btnAddPeriod">➕ 교시 추가</button>
           <button class="btn btn-primary" id="btnSaveSp">💾 설정 저장</button>
         </div>
+      </div>
+
+      <!-- ===== 단축 수업 일 시간 설정 ===== -->
+      <div class="card">
+        <div class="card-title">📅 단축 수업 일 시간 설정</div>
+        <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;">
+          학교 행사, 체육대회 등 특정 날짜의 단축 수업 시간을 따로 설정합니다.
+          해당 날짜에는 기초 시간 대신 이 시간이 자동 적용됩니다.
+        </p>
+
+        <div class="form-grid cols2" style="margin-bottom:12px;">
+          <div class="form-row">
+            <label>📅 날짜 선택</label>
+            <input type="date" id="ctoDate">
+          </div>
+          <div class="form-row">
+            <label>📝 메모 (선택)</label>
+            <input type="text" id="ctoNote" placeholder="예: 학교 축제, 체육대회">
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" id="btnCtoLoadBase">📋 기초 시간 불러오기</button>
+          <button class="btn btn-secondary btn-sm" id="btnCtoLoadDate">🔍 이 날짜 단축 시간 불러오기</button>
+        </div>
+
+        <div class="sp-grid" style="margin-bottom:6px;font-size:0.75rem;color:#64748b;font-weight:600;">
+          <span>교시</span><span>시작</span><span>종료</span><span></span>
+        </div>
+        <div id="ctoRows">
+          <div class="empty-state" style="text-align:center;padding:14px;color:#94a3b8;font-size:0.85rem;">
+            날짜를 선택하고 '기초 시간 불러오기'를 눌러주세요
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:10px;justify-content:space-between;">
+          <button class="btn btn-success btn-sm" id="btnCtoAddPeriod">➕ 교시 추가</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-danger btn-sm" id="btnCtoDelete">🗑 이 날짜 단축 삭제</button>
+            <button class="btn btn-primary" id="btnCtoSave">💾 단축 수업 저장</button>
+          </div>
+        </div>
+
+        <hr style="margin:18px 0;border:none;border-top:1px solid #e2e8f0;">
+
+        <div class="card-title" style="font-size:0.92rem;">📋 등록된 단축 수업 일정</div>
+        <div id="ctoList"><div class="empty-state" style="color:#94a3b8;">등록된 단축 수업 없음</div></div>
       </div>
     </div>
 
@@ -1559,7 +1605,7 @@ const ADMIN_TABS = [
     key: 'config', label: '⚙️ 설정',
     sub: [
       { key:'school',    label:'🏫 학교 설정' },
-      { key:'settings',  label:'⏰ 수업 시간' },
+      { key:'settings',  label:'⏰ 수업 시간 설정' },
       { key:'teachers',  label:'👥 교사 관리' },
       { key:'urls',      label:'🔗 교실 URL' },
       { key:'backup',    label:'💾 백업·복원' },
@@ -4009,8 +4055,175 @@ document.getElementById('btnAddPeriod').addEventListener('click', () => addPerio
 document.getElementById('btnSaveSp').addEventListener('click', async () => {
   const periods = syncSpPeriodsFromUI();
   await db.collection('settings').doc('classTimes').set({ periods });
-  showToast(`✅ 수업 시간 설정 저장됨 (총 ${periods.length}교시)`);
+  showToast(`✅ 기초 수업 시간 저장됨 (총 ${periods.length}교시)`);
 });
+
+// ============================================================
+// 📅 단축 수업 일 시간 설정 (classTimeOverrides/{YYYY-MM-DD})
+// ============================================================
+let ctoCurrentPeriods = [];  // 현재 편집 중인 단축 시간
+let ctoOverridesData = {};   // 전체 단축 일정 캐시
+
+function renderCtoRows() {
+  const el = document.getElementById('ctoRows');
+  if (!ctoCurrentPeriods.length) {
+    el.innerHTML = '<div class="empty-state" style="text-align:center;padding:14px;color:#94a3b8;font-size:0.85rem;">교시 정보가 없습니다 — 기초 시간을 불러오거나 추가하세요</div>';
+    return;
+  }
+  el.innerHTML = ctoCurrentPeriods.map((p,i)=>`
+    <div class="sp-row">
+      <div class="sp-label">${p.period}교시</div>
+      <input type="text" id="cto_s${i}" value="${p.start}" style="margin-bottom:0;">
+      <input type="text" id="cto_e${i}" value="${p.end}"   style="margin-bottom:0;">
+      ${ctoCurrentPeriods.length > 1 ? `<button class="sp-del-btn" onclick="removeCtoPeriod(${i})">🗑</button>` : '<span></span>'}
+    </div>`).join('');
+}
+
+function syncCtoPeriodsFromUI() {
+  return ctoCurrentPeriods.map((p,i)=>({
+    period: p.period,
+    start: document.getElementById(`cto_s${i}`)?.value.trim() || p.start,
+    end:   document.getElementById(`cto_e${i}`)?.value.trim() || p.end
+  }));
+}
+
+window.removeCtoPeriod = (idx) => {
+  ctoCurrentPeriods = syncCtoPeriodsFromUI();
+  if (ctoCurrentPeriods.length <= 1) return showToast('최소 1교시는 남겨야 합니다');
+  ctoCurrentPeriods.splice(idx, 1);
+  ctoCurrentPeriods.forEach((p, i) => { p.period = i + 1; });
+  renderCtoRows();
+};
+
+document.getElementById('btnCtoAddPeriod').addEventListener('click', () => {
+  ctoCurrentPeriods = syncCtoPeriodsFromUI();
+  const last = ctoCurrentPeriods[ctoCurrentPeriods.length - 1];
+  let newStart = '15:45', newEnd = '16:30';
+  if (last) {
+    const [eh, em] = last.end.split(':').map(Number);
+    const startMin = eh * 60 + em + 10;
+    const endMin = startMin + 35;
+    const fmt = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+    newStart = fmt(startMin);
+    newEnd = fmt(endMin);
+  }
+  ctoCurrentPeriods.push({
+    period: (last?.period || 0) + 1,
+    start: newStart,
+    end: newEnd
+  });
+  renderCtoRows();
+});
+
+document.getElementById('btnCtoLoadBase').addEventListener('click', () => {
+  const base = spPeriods.length ? spPeriods : SCHOOL_CONFIG.defaultPeriods;
+  ctoCurrentPeriods = JSON.parse(JSON.stringify(base));
+  renderCtoRows();
+  showToast('✅ 기초 수업 시간을 불러왔습니다 — 시간 수정 후 저장하세요');
+});
+
+document.getElementById('btnCtoLoadDate').addEventListener('click', () => {
+  const date = document.getElementById('ctoDate').value;
+  if (!date) return showToast('날짜를 먼저 선택하세요');
+  const ov = ctoOverridesData[date];
+  if (!ov) {
+    showToast(`${date}에 등록된 단축 수업 없음 — 기초 시간 불러오기로 새로 만들 수 있어요`);
+    return;
+  }
+  ctoCurrentPeriods = JSON.parse(JSON.stringify(ov.periods || []));
+  document.getElementById('ctoNote').value = ov.note || '';
+  renderCtoRows();
+  showToast(`✅ ${date} 단축 수업 불러옴`);
+});
+
+document.getElementById('btnCtoSave').addEventListener('click', async () => {
+  const date = document.getElementById('ctoDate').value;
+  const note = document.getElementById('ctoNote').value.trim();
+  if (!date) return showToast('날짜를 선택하세요');
+  const periods = syncCtoPeriodsFromUI();
+  if (!periods.length) return showToast('교시를 1개 이상 추가하세요');
+  // 시간 검증
+  for (const p of periods) {
+    if (!p.start.match(/^\d{1,2}:\d{2}$/) || !p.end.match(/^\d{1,2}:\d{2}$/)) {
+      return showToast(`${p.period}교시 시간 형식 오류 (HH:MM)`);
+    }
+  }
+  try {
+    await db.collection('classTimeOverrides').doc(date).set({
+      periods, note,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast(`✅ ${date} 단축 수업 저장됨`);
+  } catch (e) {
+    showToast('저장 실패: ' + e.message);
+  }
+});
+
+document.getElementById('btnCtoDelete').addEventListener('click', async () => {
+  const date = document.getElementById('ctoDate').value;
+  if (!date) return showToast('날짜를 선택하세요');
+  if (!ctoOverridesData[date]) return showToast('등록된 단축 수업 없음');
+  if (!confirm(`${date}의 단축 수업 설정을 삭제하시겠습니까?`)) return;
+  await db.collection('classTimeOverrides').doc(date).delete();
+  ctoCurrentPeriods = [];
+  document.getElementById('ctoNote').value = '';
+  renderCtoRows();
+  showToast(`🗑 ${date} 단축 수업 삭제됨`);
+});
+
+// 단축 일정 목록 실시간 동기화
+db.collection('classTimeOverrides').onSnapshot(snap => {
+  ctoOverridesData = {};
+  snap.docs.forEach(d => ctoOverridesData[d.id] = d.data());
+  renderCtoList();
+});
+
+function renderCtoList() {
+  const el = document.getElementById('ctoList');
+  const dates = Object.keys(ctoOverridesData).sort();
+  if (!dates.length) {
+    el.innerHTML = '<div class="empty-state" style="color:#94a3b8;">등록된 단축 수업 없음</div>';
+    return;
+  }
+  const todayStr = formatDateYMD(new Date());
+  el.innerHTML = dates.map(date => {
+    const o = ctoOverridesData[date];
+    const d = parseLocalDate(date);
+    const dayKor = ['일','월','화','수','목','금','토'];
+    const dateStr = `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} (${dayKor[d.getDay()]})`;
+    const isPast = date < todayStr;
+    const isToday = date === todayStr;
+    const periodCount = (o.periods || []).length;
+    return `<div class="list-item" style="${isPast ? 'opacity:0.5;' : ''}">
+      <div style="flex:1;">
+        <strong>${dateStr}</strong>
+        ${isToday ? '<span style="background:#10b981;color:white;font-size:0.7rem;padding:2px 8px;border-radius:6px;margin-left:6px;font-weight:700;">오늘</span>' : ''}
+        <span style="color:#64748b;font-size:0.82rem;margin-left:8px;">— ${periodCount}교시${o.note ? ` · ${o.note}` : ''}</span>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-secondary btn-sm" onclick="loadCtoForEdit('${date}')">수정</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCtoByDate('${date}')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.loadCtoForEdit = (date) => {
+  document.getElementById('ctoDate').value = date;
+  const ov = ctoOverridesData[date];
+  ctoCurrentPeriods = JSON.parse(JSON.stringify(ov.periods || []));
+  document.getElementById('ctoNote').value = ov.note || '';
+  renderCtoRows();
+  showToast(`📝 ${date} 단축 수업 편집 중`);
+  // 편집 영역으로 스크롤
+  document.getElementById('ctoDate').scrollIntoView({behavior:'smooth', block:'center'});
+};
+
+window.deleteCtoByDate = async (date) => {
+  if (!confirm(`${date}의 단축 수업 설정을 삭제하시겠습니까?`)) return;
+  await db.collection('classTimeOverrides').doc(date).delete();
+  showToast(`🗑 ${date} 단축 수업 삭제됨`);
+};
 
 // ============================================================
 // 교사 관리
