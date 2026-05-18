@@ -2520,7 +2520,14 @@
           };
           const times = _calcFloorTimes(floor, opts);
           const me = times.find(t => t.classKey === myKey);
-          if (me) { myLunch = { start: me.start, end: me.end }; return; }
+          if (me) {
+            // 단축수업일에는 점심 끝 시간은 학교 전체 점심 종료(고정)로 통일
+            const endTime = (shortDay && shortDay.lunch && shortDay.lunch.end)
+              ? shortDay.lunch.end
+              : me.end;
+            myLunch = { start: me.start, end: endTime };
+            return;
+          }
         }
       }
     }
