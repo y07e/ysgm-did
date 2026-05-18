@@ -521,7 +521,8 @@
   }
 
   function goToDisplay(grade, cls) {
-    window.location.href = `/display/?grade=${grade}&class=${cls}`;
+    // 전자칠판/IFP는 모바일로 잡혀 단일컬럼 되는 경우가 있어 항상 데스크탑 모드 강제
+    window.location.href = `/display/?grade=${grade}&class=${cls}&desktop=1`;
   }
 
   function resetClassroom() {

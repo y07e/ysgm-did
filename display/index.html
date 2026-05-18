@@ -911,7 +911,8 @@
        반응형 — 태블릿·모바일 지원
        ============================================================ */
     /* 태블릿 / 모바일 가로 (1023px 이하) */
-    @media (max-width: 1023px) {
+    /* 태블릿/모바일용 단일 컬럼 레이아웃 — 큰 IFP에서는 데스크탑 유지되게 900으로 낮춤 */
+    @media (max-width: 900px) {
       body { height: auto; min-height: 100vh; overflow-y: auto; }
       .main {
         grid-template-columns: 1fr;
@@ -927,6 +928,19 @@
       }
       .panel { min-height: 180px; }
       .periods-list { overflow-y: visible; }
+    }
+
+    /* 강제 데스크탑 모드 (?desktop=1) — 전자칠판/IFP용 */
+    body.force-desktop .main {
+      grid-template-columns: 300px 1fr !important;
+      grid-template-rows: 1fr !important;
+      height: auto;
+    }
+    body.force-desktop {
+      height: auto; min-height: 100vh; overflow-y: auto;
+    }
+    body.force-desktop .right-panel {
+      grid-template-rows: minmax(0,1fr) minmax(0,1fr) auto !important;
     }
 
     /* 모바일 세로 (640px 이하) */
@@ -1112,6 +1126,11 @@
   const params = new URLSearchParams(window.location.search);
   const grade = params.get('grade') || SCHOOL_CONFIG.example.grade;
   const cls   = params.get('class') || SCHOOL_CONFIG.example.class;
+
+  // 강제 데스크탑 모드 (?desktop=1) — 전자칠판/IFP에서 모바일 레이아웃으로 잘못 잡힐 때 사용
+  if (params.get('desktop') === '1') {
+    document.body.classList.add('force-desktop');
+  }
   // 학년·반 배지 (학년별 색상 + 카드형 디자인)
   const badgeEl = document.getElementById('classBadge');
   badgeEl.className = `class-badge grade-${grade}`;
