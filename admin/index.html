@@ -653,8 +653,8 @@
         <select id="loginTeacherName"><option value="">— 학년·반 먼저 선택 —</option></select>
       </div>
       <div class="login-field">
-        <label>4자리 PIN</label>
-        <input type="password" id="loginPin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="● ● ● ●" class="pin-input">
+        <label>PIN (4~8자리)</label>
+        <input type="password" id="loginPin" maxlength="8" inputmode="numeric" pattern="[0-9]*" placeholder="● ● ● ● ● ●" class="pin-input">
       </div>
       <button class="btn-teacher-login" id="btnTeacherLogin">로그인</button>
     </div>
@@ -1294,8 +1294,8 @@
             </div>
           </div>
           <div class="form-row" id="tPinRow">
-            <label>4자리 PIN <span style="color:#94a3b8;font-weight:400;font-size:0.78rem;">(담임 로그인용)</span></label>
-            <input type="text" id="tPin" placeholder="예: 1234" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+            <label>PIN <span style="color:#94a3b8;font-weight:400;font-size:0.78rem;">(4~8자리, 6자리 이상 권장 · 담임 로그인용)</span></label>
+            <input type="text" id="tPin" placeholder="예: 123456" maxlength="8" inputmode="numeric" pattern="[0-9]*">
           </div>
         </div>
         <button class="btn btn-primary" id="btnAddTeacher">교사 등록</button>
@@ -1355,13 +1355,47 @@ firebase.initializeApp(SCHOOL_CONFIG.firebase);
 const db   = firebase.firestore();
 const auth = firebase.auth();
 
+// ============================================================
+// 🛡️ XSS 방지 유틸 — 모든 사용자 입력은 escape 후 innerHTML
+// ============================================================
+function escapeHtml(v) {
+  if (v == null) return '';
+  return String(v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+function safeUrl(u) {
+  if (!u) return '';
+  const s = String(u).trim();
+  if (/^data:image\//i.test(s)) return s;
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.startsWith('/')) return s;
+  return '';
+}
+// 로고를 안전하게 element에 주입 (innerHTML 사용 X)
+function setLogoSafe(el, url, fallbackChar) {
+  if (!el) return;
+  el.innerHTML = '';
+  const safe = safeUrl(url);
+  if (safe) {
+    const img = document.createElement('img');
+    img.src = safe; img.alt = 'logo';
+    el.appendChild(img);
+  } else if (fallbackChar) {
+    el.textContent = fallbackChar;
+  }
+}
+
 document.getElementById('loginSchoolName').textContent = SCHOOL_CONFIG.schoolName + ' 전자칠판 DID';
 document.getElementById('topbarTitle').textContent = SCHOOL_CONFIG.schoolName + ' 전자칠판 DID 관리';
 
-// 학교 로고 적용 (config.js의 schoolLogo 값에 따라)
+// 학교 로고 적용 (XSS 안전)
 if (SCHOOL_CONFIG.schoolLogo) {
-  document.getElementById('loginLogo').innerHTML  = `<img src="${SCHOOL_CONFIG.schoolLogo}" alt="logo">`;
-  document.getElementById('topbarLogo').innerHTML = `<img src="${SCHOOL_CONFIG.schoolLogo}" alt="logo">`;
+  setLogoSafe(document.getElementById('loginLogo'), SCHOOL_CONFIG.schoolLogo);
+  setLogoSafe(document.getElementById('topbarLogo'), SCHOOL_CONFIG.schoolLogo);
 } else {
   document.getElementById('topbarLogo').textContent = SCHOOL_CONFIG.schoolName.charAt(0);
 }
@@ -1462,7 +1496,7 @@ function refreshLoginTeacherNames() {
   if (!list.length) {
     nSel.innerHTML = '<option value="">— 등록된 담임 없음 —</option>';
   } else {
-    nSel.innerHTML = list.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    nSel.innerHTML = list.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
   }
 }
 function showLoginErr(msg) {
@@ -1483,7 +1517,7 @@ document.getElementById('btnTeacherLogin').addEventListener('click', async () =>
   const teacherId = document.getElementById('loginTeacherName').value;
   const pin = document.getElementById('loginPin').value.trim();
   if (!teacherId) return showLoginErr('담임을 선택하세요');
-  if (!pin.match(/^\d{4}$/)) return showLoginErr('4자리 숫자 PIN을 입력하세요');
+  if (!pin.match(/^\d{4,8}$/)) return showLoginErr('4~8자리 숫자 PIN을 입력하세요');
 
   const teacher = (_teacherCache || []).find(t => t.id === teacherId);
   if (!teacher) return showLoginErr('교사 정보를 찾을 수 없습니다');
@@ -1559,22 +1593,14 @@ auth.onAuthStateChanged(async user => {
   currentUser = user;
 
   // 관리자 권한 확인 (Google 로그인용)
-  let roleData = await detectRole(user);
+  const roleData = await detectRole(user);
   if (!roleData) {
-    // 등록되지 않은 Google 사용자 → 자동으로 관리자 등록 (uid를 doc ID로)
-    try {
-      await ensureAdminTeacherDoc(user, 'auto-google-login');
-      roleData = {
-        role: 'admin',
-        email: user.email,
-        name: user.displayName || user.email
-      };
-    } catch (e) {
-      alert('관리자 등록 실패: ' + e.message);
-      document.getElementById('noAuthMsg').style.display = 'block';
-      auth.signOut();
-      return;
-    }
+    // 등록되지 않은 사용자 — 자동 admin 부여 금지 (보안)
+    alert('등록되지 않은 계정입니다.\n관리자에게 등록을 요청하세요.\n\n' + (user.email || ''));
+    const msg = document.getElementById('noAuthMsg');
+    if (msg) msg.style.display = 'block';
+    await auth.signOut();
+    return;
   }
   showApp(roleData.role, roleData, user.displayName || user.email);
 });
@@ -1619,12 +1645,7 @@ async function detectRole(user) {
     return data;
   }
 
-  // 4. teachers 컬렉션이 비어있으면 첫 사용자에게 admin 부여
-  const countSnap = await db.collection('teachers').limit(1).get();
-  if (countSnap.empty) {
-    await ensureAdminTeacherDoc(user, 'first-user');
-    return { role: 'admin', email: user.email, name: user.displayName };
-  }
+  // 등록되지 않은 사용자 → null 반환 (자동 admin 부여 제거됨, 보안)
   return null;
 }
 
@@ -1960,12 +1981,12 @@ function renderDDList() {
     const isEditing = (d.id === editingDDId);
     return `<div class="list-item" ${isEditing ? 'style="background:#fef3c7;border-color:#fbbf24;"' : ''}>
       <div class="list-item-body">
-        <div class="list-item-title">${d.icon||'📅'} ${d.title} <span style="color:#3b82f6;font-weight:800;margin-left:8px;font-size:1rem;">${calcDday(td)}</span> ${isEditing ? '<span class="badge badge-blue">수정 중</span>' : ''}</div>
-        <div class="list-item-meta">${dateStr}</div>
+        <div class="list-item-title">${escapeHtml(d.icon||'📅')} ${escapeHtml(d.title)} <span style="color:#3b82f6;font-weight:800;margin-left:8px;font-size:1rem;">${escapeHtml(calcDday(td))}</span> ${isEditing ? '<span class="badge badge-blue">수정 중</span>' : ''}</div>
+        <div class="list-item-meta">${escapeHtml(dateStr)}</div>
       </div>
       <div class="list-item-actions">
-        <button class="btn btn-warning btn-sm" onclick="editDD('${d.id}')">✏ 수정</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteDD('${d.id}')">삭제</button>
+        <button class="btn btn-warning btn-sm" onclick="editDD('${escapeHtml(d.id)}')">✏ 수정</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteDD('${escapeHtml(d.id)}')">삭제</button>
       </div>
     </div>`;
   }).join('');
@@ -2051,12 +2072,12 @@ function renderEvList() {
     const isEditing = (e.id === editingEvId);
     return `<div class="list-item" ${isEditing ? 'style="background:#fef3c7;border-color:#fbbf24;"' : ''}>
       <div class="list-item-body">
-        <div class="list-item-title">${e.icon||'📅'} ${e.title} ${isEditing ? '<span class="badge badge-blue">수정 중</span>' : ''}</div>
-        <div class="list-item-meta">${dateStr}${e.description?' · '+e.description:''}</div>
+        <div class="list-item-title">${escapeHtml(e.icon||'📅')} ${escapeHtml(e.title)} ${isEditing ? '<span class="badge badge-blue">수정 중</span>' : ''}</div>
+        <div class="list-item-meta">${escapeHtml(dateStr)}${e.description?' · '+escapeHtml(e.description):''}</div>
       </div>
       <div class="list-item-actions">
-        <button class="btn btn-warning btn-sm" onclick="editEv('${e.id}')">✏ 수정</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteEv('${e.id}')">삭제</button>
+        <button class="btn btn-warning btn-sm" onclick="editEv('${escapeHtml(e.id)}')">✏ 수정</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEv('${escapeHtml(e.id)}')">삭제</button>
       </div>
     </div>`;
   }).join('');
@@ -2163,14 +2184,14 @@ function renderAnnList() {
     const editStyle = isEditing ? ' style="background:#fef3c7;border-color:#fbbf24;"' : '';
     return `<div class="list-item${a.isActive?'':' inactive'}"${editStyle}>
       <div class="list-item-body">
-        <div class="list-item-title">${a.title}${status}${editTag}</div>
-        <div class="list-item-meta">${date} · ${(a.targetGrades||['all']).join(',')}학년</div>
-        <div class="list-item-preview">${a.content.substring(0,60)}${a.content.length>60?'…':''}</div>
+        <div class="list-item-title">${escapeHtml(a.title)}${status}${editTag}</div>
+        <div class="list-item-meta">${escapeHtml(date)} · ${escapeHtml((a.targetGrades||['all']).join(','))}학년</div>
+        <div class="list-item-preview">${escapeHtml(a.content.substring(0,60))}${a.content.length>60?'…':''}</div>
       </div>
       <div class="list-item-actions">
-        <button class="btn btn-warning btn-sm" onclick="editAnn('${a.id}')">✏ 수정</button>
-        <button class="btn btn-secondary btn-sm" onclick="toggleAnn('${a.id}',${a.isActive})">${a.isActive?'비활성화':'활성화'}</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteAnn('${a.id}')">삭제</button>
+        <button class="btn btn-warning btn-sm" onclick="editAnn('${escapeHtml(a.id)}')">✏ 수정</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleAnn('${escapeHtml(a.id)}',${a.isActive})">${a.isActive?'비활성화':'활성화'}</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteAnn('${escapeHtml(a.id)}')">삭제</button>
       </div>
     </div>`;
   }).join('');
@@ -2302,14 +2323,14 @@ function renderCbList(anns) {
     const editStyle = isEditing ? ' style="background:#fef3c7;border-color:#fbbf24;"' : '';
     return `<div class="list-item${a.isActive?'':' inactive'}"${editStyle}>
       <div class="list-item-body">
-        <div class="list-item-title">${a.title}${status}${editTag}</div>
-        <div class="list-item-meta">${date}${a.teacherName?' · '+a.teacherName:''}</div>
-        <div class="list-item-preview">${a.content.substring(0,60)}${a.content.length>60?'…':''}</div>
+        <div class="list-item-title">${escapeHtml(a.title)}${status}${editTag}</div>
+        <div class="list-item-meta">${escapeHtml(date)}${a.teacherName?' · '+escapeHtml(a.teacherName):''}</div>
+        <div class="list-item-preview">${escapeHtml(a.content.substring(0,60))}${a.content.length>60?'…':''}</div>
       </div>
       <div class="list-item-actions">
-        <button class="btn btn-warning btn-sm" onclick="editCb('${a.id}')">✏ 수정</button>
-        <button class="btn btn-secondary btn-sm" onclick="toggleCb('${a.id}',${a.isActive})">${a.isActive?'비활성화':'활성화'}</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCb('${a.id}')">삭제</button>
+        <button class="btn btn-warning btn-sm" onclick="editCb('${escapeHtml(a.id)}')">✏ 수정</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleCb('${escapeHtml(a.id)}',${a.isActive})">${a.isActive?'비활성화':'활성화'}</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCb('${escapeHtml(a.id)}')">삭제</button>
       </div>
     </div>`;
   }).join('');
@@ -2717,7 +2738,6 @@ db.collection('emergencyHistory').orderBy('sentAt','desc').limit(20)
     }).join('');
   });
 
-window._emHistCache = {};
 window.loadEmHistory = async (id) => {
   // 캐시에 없으면 직접 조회
   let data;
@@ -4564,15 +4584,20 @@ function renderTeacherList(teachers) {
     const pinBadge = t.role === 'teacher'
       ? (t.pinHash ? '<span class="badge badge-on">PIN ✓</span>' : '<span class="badge badge-off">PIN 미설정</span>')
       : '';
+    const safeName = escapeHtml(t.name||'');
+    const safeEmail = escapeHtml(t.email||'');
+    const safeId = escapeHtml(t.id);
+    // onclick에 들어갈 이름은 JS 문자열로 안전하게 — JSON.stringify로 따옴표/스크립트 차단
+    const safeNameJs = JSON.stringify(t.name||'');
     return `<div class="teacher-card">
-      <div class="teacher-avatar">${(t.name||'?')[0]}</div>
+      <div class="teacher-avatar">${escapeHtml((t.name||'?')[0])}</div>
       <div class="teacher-info">
-        <div class="teacher-name">${t.name||'(이름없음)'} ${pinBadge}</div>
-        <div class="teacher-meta">${t.email||'(이메일 없음)'} · <span style="color:${roleColor};font-weight:600;">${roleTxt}</span></div>
+        <div class="teacher-name">${safeName||'(이름없음)'} ${pinBadge}</div>
+        <div class="teacher-meta">${safeEmail||'(이메일 없음)'} · <span style="color:${roleColor};font-weight:600;">${escapeHtml(roleTxt)}</span></div>
       </div>
       <div class="teacher-actions">
-        ${t.role==='teacher' ? `<button class="btn btn-warning btn-sm" onclick="resetTeacherPin('${t.id}','${t.name}')">PIN 재설정</button>` : ''}
-        <button class="btn btn-danger btn-sm" onclick="deleteTeacher('${t.id}')">삭제</button>
+        ${t.role==='teacher' ? `<button class="btn btn-warning btn-sm" onclick='resetTeacherPin(${JSON.stringify(safeId)}, ${safeNameJs})'>PIN 재설정</button>` : ''}
+        <button class="btn btn-danger btn-sm" onclick='deleteTeacher(${JSON.stringify(safeId)})'>삭제</button>
       </div>
     </div>`;
   }).join('');
@@ -4587,7 +4612,7 @@ document.getElementById('btnAddTeacher').addEventListener('click', async () => {
   const pin   = document.getElementById('tPin').value.trim();
   if (!name) return showToast('이름을 입력하세요');
   if (role==='admin' && !email) return showToast('관리자는 Google 이메일 입력 필요');
-  if (role==='teacher' && (!pin || !pin.match(/^\d{4}$/))) return showToast('담임은 4자리 PIN 입력 필요');
+  if (role==='teacher' && (!pin || !pin.match(/^\d{4,8}$/))) return showToast('담임은 4~8자리 숫자 PIN 입력 필요 (6자리 이상 권장)');
 
   const data = { name, email, role, addedAt: firebase.firestore.FieldValue.serverTimestamp() };
   if (role==='teacher') {
@@ -4601,9 +4626,9 @@ document.getElementById('btnAddTeacher').addEventListener('click', async () => {
 });
 
 window.resetTeacherPin = async (id, name) => {
-  const newPin = prompt(`${name} 선생님의 새 4자리 PIN을 입력하세요`);
+  const newPin = prompt(`${name} 선생님의 새 PIN을 입력하세요 (4~8자리 숫자, 6자리 이상 권장)`);
   if (!newPin) return;
-  if (!newPin.match(/^\d{4}$/)) { showToast('4자리 숫자만 입력 가능'); return; }
+  if (!newPin.match(/^\d{4,8}$/)) { showToast('4~8자리 숫자만 입력 가능'); return; }
   const pinHash = await hashPin(newPin);
   await db.collection('teachers').doc(id).update({ pinHash });
   showToast(`✅ ${name} 선생님 PIN 변경됨`);
@@ -4809,7 +4834,10 @@ document.getElementById('btnSaveSchool').addEventListener('click', async () => {
 // ============================================================
 const BACKUP_COLLECTIONS = [
   'announcements', 'classAnnouncements', 'emergency',
-  'timetable', 'settings', 'teachers',
+  'emergencyHistory',
+  'timetable', 'timetableOverrides',
+  'classTimeOverrides',
+  'settings', 'teachers',
   'dDays', 'schoolEvents'
 ];
 

@@ -1689,12 +1689,42 @@
   firebase.initializeApp(SCHOOL_CONFIG.firebase);
   const db = firebase.firestore();
 
+  // ============================================================
+  // 🛡️ XSS 방지 유틸 — 모든 사용자 입력은 이 함수로 escape
+  // ============================================================
+  function escapeHtml(v) {
+    if (v == null) return '';
+    return String(v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+  // URL 화이트리스트 — 데이터 URL(이미지) 또는 https/relative만 허용
+  function safeUrl(u) {
+    if (!u) return '';
+    const s = String(u).trim();
+    if (/^data:image\//i.test(s)) return s;
+    if (/^https?:\/\//i.test(s)) return s;
+    if (s.startsWith('/')) return s;
+    return '';
+  }
+
   document.getElementById('schoolName').textContent = SCHOOL_CONFIG.schoolName;
 
-  // 학교 로고 — 이미지 URL이 있으면 이미지, 없으면 학교명 첫 글자
+  // 학교 로고 — 이미지 URL이 있으면 이미지, 없으면 학교명 첫 글자 (XSS 안전)
   const logoEl = document.getElementById('schoolLogo');
   if (SCHOOL_CONFIG.schoolLogo) {
-    logoEl.innerHTML = `<img src="${SCHOOL_CONFIG.schoolLogo}" alt="logo">`;
+    const url = safeUrl(SCHOOL_CONFIG.schoolLogo);
+    if (url) {
+      logoEl.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = url; img.alt = 'logo';
+      logoEl.appendChild(img);
+    } else {
+      logoEl.textContent = SCHOOL_CONFIG.schoolName.charAt(0);
+    }
   } else {
     logoEl.textContent = SCHOOL_CONFIG.schoolName.charAt(0);
   }
@@ -2052,28 +2082,8 @@
   }
 
   // ========== 스마트 슬라이드 빌더 ==========
-  // 짧은 공지(60자 미만)는 2개씩 묶고, 긴 공지는 단독 표시
-  let schoolSlides = []; // [[ann1], [ann2, ann3], [ann4]]
-  const SHORT_THRESHOLD = 60;
-
-  function buildSchoolSlides() {
-    schoolSlides = [];
-    let i = 0;
-    while (i < schoolAnns.length) {
-      const a = schoolAnns[i];
-      const aLen = (a.title||'').length + (a.content||'').length;
-      if (aLen < SHORT_THRESHOLD && i + 1 < schoolAnns.length) {
-        const b = schoolAnns[i + 1];
-        const bLen = (b.title||'').length + (b.content||'').length;
-        if (bLen < SHORT_THRESHOLD) {
-          schoolSlides.push([a, b]);
-          i += 2; continue;
-        }
-      }
-      schoolSlides.push([a]);
-      i++;
-    }
-  }
+  // 학교 공지 슬라이드 (LED 통일 후 1개씩만 표시 — buildSchoolSlides 함수는 제거됨)
+  let schoolSlides = [];
 
   function showSchoolSlide(idx) {
     const wrap   = document.getElementById('schoolAnnWrap');
@@ -2102,9 +2112,9 @@
         <span class="ann-led-tag">★ SCHOOL BOARD ★</span>
         <span class="ann-led-live">LIVE</span>
       </div>
-      <div class="ann-led-title">${a.title}</div>
+      <div class="ann-led-title">${escapeHtml(a.title)}</div>
       <div class="ann-led-marquee-wrap">
-        <div class="ann-led-marquee">${contentLine} &nbsp;&nbsp;&nbsp; ✦ ${dateStr} &nbsp;&nbsp;&nbsp;</div>
+        <div class="ann-led-marquee">${escapeHtml(contentLine)} &nbsp;&nbsp;&nbsp; ✦ ${escapeHtml(dateStr)} &nbsp;&nbsp;&nbsp;</div>
       </div>
     </div>`;
     dateEl.textContent = dateStr;
@@ -2123,9 +2133,6 @@
       }
     }
   }
-
-  // 호환용 별칭
-  function showSchoolAnn(idx) { showSchoolSlide(idx); }
 
   function startSchoolSlideshow() {
     if (schoolAnnTimer) { clearInterval(schoolAnnTimer); schoolAnnTimer = null; }
@@ -2176,9 +2183,9 @@
 
     list.innerHTML = `
       <div class="class-led-ann">
-        <div class="class-led-title">📋 ${a.title}</div>
+        <div class="class-led-title">📋 ${escapeHtml(a.title)}</div>
         <div class="class-led-marquee-wrap">
-          <div class="class-led-marquee">${contentLine} &nbsp;&nbsp;&nbsp; ✦ ${date} &nbsp;&nbsp;&nbsp;</div>
+          <div class="class-led-marquee">${escapeHtml(contentLine)} &nbsp;&nbsp;&nbsp; ✦ ${escapeHtml(date)} &nbsp;&nbsp;&nbsp;</div>
         </div>
       </div>`;
 
@@ -2211,25 +2218,7 @@
     return data?.mealServiceDietInfo?.[1]?.row?.[0];
   }
 
-  function renderMealMenu(row, label) {
-    const el = document.getElementById('lunchContent');
-    const items = row.DDISH_NM.split('<br/>')
-      .map(s => s.replace(/[0-9.()\s]+$/,'').trim())
-      .filter(Boolean);
-    el.innerHTML = `
-      ${label ? `<div class="lunch-label">${label}</div>` : ''}
-      <div class="lunch-items">${items.map(i=>`<div class="lunch-item">${i}</div>`).join('')}</div>
-      ${row.CAL_INFO ? `<div class="lunch-cal">열량: ${row.CAL_INFO}</div>` : ''}`;
-  }
-
-  function renderMealEmpty(icon, msg, sub) {
-    document.getElementById('lunchContent').innerHTML = `
-      <div class="lunch-empty">
-        <div class="lunch-empty-icon">${icon}</div>
-        <div class="lunch-empty-msg">${msg}</div>
-        ${sub ? `<div class="lunch-empty-sub">${sub}</div>` : ''}
-      </div>`;
-  }
+  // (renderMealMenu/renderMealEmpty 제거됨 — fetchLunch가 직접 lunch-today 렌더)
 
   async function fetchLunch() {
     const el = document.getElementById('lunchContent');
@@ -2292,11 +2281,19 @@
     if (d.neisOfficeCode) SCHOOL_CONFIG.neis.officeCode = d.neisOfficeCode;
     if (d.gradeClasses)   SCHOOL_CONFIG.gradeClasses = d.gradeClasses;
 
-    // 헤더 학교명·로고 즉시 갱신
+    // 헤더 학교명·로고 즉시 갱신 (XSS 안전)
     document.getElementById('schoolName').textContent = SCHOOL_CONFIG.schoolName;
     const logoEl = document.getElementById('schoolLogo');
     if (SCHOOL_CONFIG.schoolLogo) {
-      logoEl.innerHTML = `<img src="${SCHOOL_CONFIG.schoolLogo}" alt="logo">`;
+      const url = safeUrl(SCHOOL_CONFIG.schoolLogo);
+      logoEl.innerHTML = '';
+      if (url) {
+        const img = document.createElement('img');
+        img.src = url; img.alt = 'logo';
+        logoEl.appendChild(img);
+      } else {
+        logoEl.textContent = SCHOOL_CONFIG.schoolName.charAt(0);
+      }
     } else {
       logoEl.textContent = SCHOOL_CONFIG.schoolName.charAt(0);
     }
@@ -2677,9 +2674,9 @@
           txt = `D+${Math.abs(d.diff)}`;
         }
         return `<div class="dday-item ${cls}">
-          <span class="dday-icon">${d.icon||'📅'}</span>
-          <span class="dday-title">${d.title}</span>
-          <span class="dday-count">${txt}</span>
+          <span class="dday-icon">${escapeHtml(d.icon||'📅')}</span>
+          <span class="dday-title">${escapeHtml(d.title)}</span>
+          <span class="dday-count">${escapeHtml(txt)}</span>
         </div>`;
       });
 
@@ -2733,8 +2730,8 @@
       return `<div class="event-item ${cls}">
         <div class="event-date">${d.getMonth()+1}/${d.getDate()}(${dayKor[d.getDay()]})</div>
         <div class="event-info">
-          <div class="event-title">${e.icon||'📅'} ${e.title}</div>
-          ${e.description ? `<div class="event-desc">${e.description}</div>` : ''}
+          <div class="event-title">${escapeHtml(e.icon||'📅')} ${escapeHtml(e.title)}</div>
+          ${e.description ? `<div class="event-desc">${escapeHtml(e.description)}</div>` : ''}
         </div>
       </div>`;
     }).join('');

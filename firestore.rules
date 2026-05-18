@@ -6,33 +6,51 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAnonymous() {
+      return isLoggedIn() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
     function getUserData() {
       return get(/databases/$(database)/documents/teachers/$(request.auth.uid)).data;
     }
 
     function isAdmin() {
-      return isLoggedIn() &&
+      return isLoggedIn() && !isAnonymous() &&
         exists(/databases/$(database)/documents/teachers/$(request.auth.uid)) &&
         getUserData().role == 'admin';
     }
 
     function isTeacher() {
-      return isLoggedIn() &&
+      return isLoggedIn() && !isAnonymous() &&
         exists(/databases/$(database)/documents/teachers/$(request.auth.uid));
+    }
+
+    // 데이터 검증 유틸
+    function validString(field, maxLen) {
+      return field is string && field.size() <= maxLen;
     }
 
     // ===== 전자칠판 표시 페이지는 인증 없이 읽기 가능 =====
 
-    // 공지사항
+    // 공지사항 (관리자 전용 쓰기)
     match /announcements/{id} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
     // 학급 게시판
+    // 담임 PIN 로그인은 익명 인증을 사용하므로 isLoggedIn으로 허용
+    // (서버 사이드 학급 분리는 Cloud Functions 도입 시 추가 가능)
+    // 데이터 검증: title/content 길이 제한
     match /classAnnouncements/{id} {
       allow read: if true;
-      allow create, update, delete: if isLoggedIn();
+      allow create: if isLoggedIn()
+        && validString(request.resource.data.title, 200)
+        && validString(request.resource.data.content, 5000);
+      allow update: if isLoggedIn()
+        && validString(request.resource.data.title, 200)
+        && validString(request.resource.data.content, 5000);
+      allow delete: if isLoggedIn();
     }
 
     // 시간표 (기초)
@@ -42,17 +60,18 @@ service cloud.firestore {
     }
 
     // 일일 시간표 변경 (날짜별 오버라이드)
-    // 관리자 + 담임교사 모두 변경 가능 (담임은 익명 인증이므로 isLoggedIn 으로 허용)
-    // PIN 게이트는 UI 레이어에서 처리됨 (classAnnouncements와 동일 패턴)
+    // 관리자 + 담임교사가 변경 (담임은 익명 인증)
     match /timetableOverrides/{date} {
       allow read: if true;
       allow write: if isLoggedIn();
     }
 
-    // 긴급 공지
+    // 긴급 공지 (관리자 전용)
     match /emergency/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin()
+        && (!('title' in request.resource.data) || validString(request.resource.data.title, 200))
+        && (!('message' in request.resource.data) || validString(request.resource.data.message, 5000));
     }
 
     // 긴급 공지 이력 (관리자 전용)
@@ -85,12 +104,26 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // 교사 컬렉션 — 익명 포함 로그인 사용자 읽기 가능 (담임 로그인용)
-    // 관리자는 모든 문서 쓰기, 본인 문서는 본인이 생성/수정 가능 (자동 가입)
+    // 교사 컬렉션
+    // 읽기: 익명 포함 로그인 사용자 (담임 PIN 로그인용 — name/grade/class 매칭)
+    //       ⚠️ 알려진 한계: pinHash가 익명 사용자에게도 노출됨
+    //       (Cloud Function PIN 검증으로 마이그레이션 권장)
+    // 쓰기:
+    //   - create: 본인 uid 문서만 (역할 변조 방지)
+    //   - update/delete: 관리자 또는 본인
     match /teachers/{docId} {
       allow read: if isLoggedIn();
-      allow create: if isLoggedIn();
-      allow update, delete: if isAdmin() || request.auth.uid == docId;
+      allow create: if isLoggedIn()
+        && request.auth.uid == docId
+        && (!('role' in request.resource.data)
+            || request.resource.data.role == 'teacher'
+            || (request.resource.data.role == 'admin' && isAdmin()));
+      allow update: if isAdmin()
+        || (request.auth.uid == docId
+            && !isAnonymous()
+            && (!('role' in request.resource.data)
+                || request.resource.data.role == resource.data.role));
+      allow delete: if isAdmin();
     }
   }
 }

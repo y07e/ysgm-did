@@ -6,7 +6,11 @@
       "firestore.rules",
       ".gitignore",
       "README.md",
-      "node_modules"
+      "node_modules",
+      "**/*.xlsx",
+      "**/*.pdf",
+      "**/*.pptx",
+      "**/*.docx"
     ],
     "rewrites": [],
     "headers": [
@@ -14,6 +18,18 @@
         "source": "**",
         "headers": [
           { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        ]
+      },
+      {
+        "source": "/icons/**",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=86400" }
+        ]
+      },
+      {
+        "source": "/logo.png",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=86400" }
         ]
       }
     ]

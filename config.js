@@ -61,12 +61,6 @@ const SCHOOL_CONFIG = {
     'y07eda@gmail.com',
   ],
 
-  // 관리자 자동 가입 초대 코드
-  // 본인이 신뢰하는 사람에게만 알려주세요. Google 로그인 후 이 코드를 입력하면
-  // 자동으로 teachers 컬렉션에 관리자(role:admin)로 등록됩니다.
-  // (한 번 등록되면 이후 로그인 시 코드 불필요)
-  adminInviteCode: 'ysgm-admin-2026',
-
   // 예시 교실 (개발·테스트용 기본값) — 1학년 9반
   example: { grade: '1', class: '9' }
 };
