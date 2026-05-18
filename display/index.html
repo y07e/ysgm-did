@@ -656,21 +656,22 @@
       display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
     }
     .ann-footer {
-      display: flex; justify-content: center; align-items: center;
-      margin-top: 6px;
+      display: flex; justify-content: flex-end; align-items: center;
+      margin-top: 4px;
+      flex-shrink: 0;
+      min-height: 10px;
     }
     .ann-date { font-size: 0.72rem; color: #475569; }
-    .ann-dots { display: flex; gap: 7px; }
+    .ann-dots { display: flex; gap: 5px; }
     .dot {
-      width: 9px; height: 9px; border-radius: 50%;
-      background: #64748b;
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #94a3b8;
       transition: all 0.3s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      flex-shrink: 0;
     }
     .dot.active {
       background: #38bdf8;
-      box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
-      transform: scale(1.15);
+      box-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
     }
     .empty-msg { display: flex; align-items: center; justify-content: center; flex: 1; color: #334155; font-size: 0.9rem; gap: 6px; }
 
@@ -713,9 +714,9 @@
     .class-ann-meta { font-size: 0.65rem; color: #475569; margin-top: 2px; }
     .class-ann-item.solo .class-ann-meta { font-size: 0.72rem; margin-top: 4px; }
     .class-ann-dots {
-      display: flex; gap: 7px;
-      justify-content: center;
-      padding-top: 6px;
+      display: flex; gap: 5px;
+      justify-content: flex-end;
+      padding-top: 4px;
       margin-top: auto;
     }
     /* 학급 게시판 패널 자체 padding 축소 */
@@ -1248,6 +1249,9 @@
     }
     body.force-desktop .ann-led-marquee { font-size: 1.05rem !important; line-height: 1.4; }
     body.force-desktop .ann-style-2 .ann-body-wrap { padding: 6px 10px !important; }
+    /* 도트 푸터가 LED 박스에 잘려 안 보이는 문제 방지 */
+    body.force-desktop .ann-footer { min-height: 10px !important; }
+    body.force-desktop .ann-footer .dot { width: 6px; height: 6px; }
 
     /* 학급 게시판 (LED) — 마키 영역 가시성 보장 */
     body.force-desktop .class-led-title { font-size: 0.85rem !important; margin-bottom: 3px !important; }
