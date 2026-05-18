@@ -930,18 +930,61 @@
       .periods-list { overflow-y: visible; }
     }
 
-    /* 강제 데스크탑 모드 (?desktop=1) — 전자칠판/IFP용 */
-    body.force-desktop .main {
-      grid-template-columns: 300px 1fr !important;
-      grid-template-rows: 1fr !important;
-      height: auto;
-    }
+    /* ============================================================
+       🖥️ 강제 데스크탑 / 키오스크 모드 (?desktop=1)
+       전자칠판/IFP: 한 페이지에 모든 정보 일목요연하게 표시
+       ============================================================ */
     body.force-desktop {
-      height: auto; min-height: 100vh; overflow-y: auto;
+      height: 100vh !important;
+      min-height: 100vh !important;
+      overflow: hidden !important;
+      font-size: 18px;  /* IFP는 더 큰 베이스 폰트 (rem 단위 모두 비례 확대) */
+    }
+    body.force-desktop .main {
+      display: grid !important;
+      grid-template-columns: 32% 1fr !important;
+      grid-template-rows: 1fr !important;
+      height: auto !important;
+      gap: 16px !important;
+      padding: 16px !important;
+      overflow: hidden !important;
+    }
+    body.force-desktop .left-panel {
+      display: grid !important;
+      grid-template-rows: minmax(0,1fr) auto auto !important;
+      gap: 14px !important;
+      overflow: hidden !important;
     }
     body.force-desktop .right-panel {
-      grid-template-rows: minmax(0,1fr) minmax(0,1fr) auto !important;
+      display: grid !important;
+      grid-template-rows: 1.4fr 0.6fr 0.9fr !important;
+      gap: 14px !important;
+      overflow: hidden !important;
     }
+    body.force-desktop .panel {
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+    body.force-desktop .timetable-panel {
+      min-height: 0 !important;
+    }
+    body.force-desktop .periods-list {
+      overflow-y: auto !important;
+    }
+
+    /* 키오스크 모드 폰트 살짝 키우기 (IFP에서 잘 보이도록) */
+    body.force-desktop .school-name { font-size: 1.5rem; }
+    body.force-desktop .badge-num { font-size: 1.5rem; }
+    body.force-desktop .badge-label { font-size: 1.05rem; }
+    body.force-desktop .board-title { font-size: 1.4rem; }
+    body.force-desktop .clock { font-size: 2.2rem; }
+    body.force-desktop .panel-title { font-size: 1.15rem; }
+    body.force-desktop .subject-name { font-size: 1.25rem; }
+    body.force-desktop .subject-teacher { font-size: 0.9rem; }
+    body.force-desktop .period-time { font-size: 0.85rem; }
+    body.force-desktop .ann-title { font-size: 1.5rem; }
+    body.force-desktop .ann-body { font-size: 1.1rem; }
+    body.force-desktop .lunch-item { font-size: 1rem; }
 
     /* 모바일 세로 (640px 이하) */
     @media (max-width: 640px) {
