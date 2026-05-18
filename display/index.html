@@ -995,9 +995,17 @@
     }
     body.force-desktop .dday-bar .dday-items {
       display: flex; gap: 8px; flex: 1; min-width: 0;
+      align-items: center;
       overflow-x: auto; scrollbar-width: none;
     }
     body.force-desktop .dday-bar .dday-items::-webkit-scrollbar { display: none; }
+    body.force-desktop .dday-bar .dday-title {
+      color: #fbbf24; font-weight: 800; font-size: 0.92rem;
+      letter-spacing: -0.2px; padding-right: 8px;
+      flex-shrink: 0;
+      border-right: 1px solid #334155;
+      margin-right: 4px;
+    }
 
     /* 톱바용 컴팩트 날씨 위젯 */
     body.force-desktop .top-weather {
@@ -2016,6 +2024,7 @@
     if (isKiosk) {
       // 키오스크: D-Day items + 날씨 위젯을 한 줄에
       let html = '<div class="dday-items">';
+      html += '<span class="dday-title">🎯 D-day 안내</span>';
       html += items.length ? items.join('') : '<span style="color:#475569;font-size:0.82rem;">D-Day 없음</span>';
       html += '</div>';
       html += '<div class="top-weather" id="topWeather"><span style="color:#475569;">날씨 불러오는 중...</span></div>';
