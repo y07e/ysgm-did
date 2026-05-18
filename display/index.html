@@ -974,105 +974,144 @@
       min-height: 100dvh !important;
       max-height: 100dvh !important;
       overflow: hidden !important;
-      font-size: 17px;
+      font-size: 16px;
     }
 
-    /* 헤더 컴팩트 */
+    /* 전체화면 진입 버튼 (우측 상단 떠있음) */
+    body.force-desktop .fullscreen-btn {
+      position: fixed; top: 12px; right: 12px; z-index: 200;
+      background: rgba(56, 189, 248, 0.95);
+      color: #0f172a; font-weight: 800; font-size: 0.85rem;
+      padding: 7px 14px; border: none; border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      animation: fsBtnPulse 1.5s ease-in-out infinite;
+    }
+    body.force-desktop .fullscreen-btn:hover { background: rgba(125, 211, 252, 1); }
+    body.force-desktop.is-fullscreen .fullscreen-btn { display: none; }
+    @keyframes fsBtnPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 4px 12px rgba(56,189,248,0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 4px 20px rgba(56,189,248,0.7); }
+    }
+
+    /* 헤더 초컴팩트 */
     body.force-desktop .header {
-      padding: 6px 18px !important;
+      padding: 4px 16px !important;
     }
     body.force-desktop .school-logo {
-      width: 36px !important; height: 36px !important;
+      width: 32px !important; height: 32px !important;
     }
-    body.force-desktop .school-name { font-size: 1.3rem; }
-    body.force-desktop .badge-num { font-size: 1.3rem; }
-    body.force-desktop .badge-label { font-size: 0.95rem; }
-    body.force-desktop .board-title { font-size: 1.2rem; padding: 0 18px !important; }
-    body.force-desktop .badge-section { padding: 3px 16px !important; }
-    body.force-desktop .clock { font-size: 1.8rem; line-height: 1.1; }
-    body.force-desktop .date-info { font-size: 0.85rem; margin-top: 0 !important; }
+    body.force-desktop .school-name { font-size: 1.15rem; }
+    body.force-desktop .badge-num { font-size: 1.15rem; }
+    body.force-desktop .badge-label { font-size: 0.88rem; }
+    body.force-desktop .board-title { font-size: 1.05rem; padding: 0 14px !important; }
+    body.force-desktop .badge-section { padding: 2px 12px !important; }
+    body.force-desktop .clock { font-size: 1.55rem; line-height: 1; }
+    body.force-desktop .date-info { font-size: 0.78rem; margin-top: 0 !important; }
 
-    /* D-Day 바 컴팩트 */
+    /* 톱바 초컴팩트 */
     body.force-desktop .dday-bar {
-      padding: 5px 14px !important;
+      padding: 4px 12px !important;
       gap: 8px !important;
     }
 
     /* 메인 그리드 */
     body.force-desktop .main {
       display: grid !important;
-      grid-template-columns: 33% 1fr !important;
+      grid-template-columns: 34% 1fr !important;
       grid-template-rows: 1fr !important;
       height: auto !important;
-      gap: 10px !important;
-      padding: 10px !important;
+      gap: 8px !important;
+      padding: 8px !important;
       overflow: hidden !important;
       min-height: 0 !important;
     }
     body.force-desktop .left-panel {
       display: grid !important;
-      /* 날씨 패널은 톱바로 이동 → 좌측은 시간표(크게) + 학사일정 2행만 */
-      grid-template-rows: minmax(0,2.3fr) minmax(0,0.7fr) !important;
-      gap: 8px !important;
+      grid-template-rows: minmax(0,2.6fr) minmax(0,0.55fr) !important;
+      gap: 6px !important;
       overflow: hidden !important;
       min-height: 0 !important;
     }
     /* 좌측 날씨 패널 — 톱바로 이동했으므로 항상 숨김 */
     .weather-panel { display: none !important; }
 
-    /* 키오스크 모드 — 톱바 컴팩트 패딩만 추가 (기본 스타일은 전역) */
-    body.force-desktop .dday-bar { padding: 6px 16px !important; gap: 12px !important; }
+    /* 키오스크 모드 — 톱바 컴팩트 패딩 */
+    body.force-desktop .dday-bar { padding: 4px 14px !important; gap: 10px !important; }
     body.force-desktop .right-panel {
       display: grid !important;
-      grid-template-rows: minmax(0,1.3fr) minmax(0,0.7fr) minmax(0,1fr) !important;
-      gap: 8px !important;
+      grid-template-rows: minmax(0,1fr) minmax(0,0.85fr) minmax(0,1.15fr) !important;
+      gap: 6px !important;
       overflow: hidden !important;
       min-height: 0 !important;
     }
 
-    /* 패널 공통 — 패딩 압축 */
+    /* 패널 공통 — 극단 압축 */
     body.force-desktop .panel,
     body.force-desktop .timetable-panel {
-      padding: 10px 14px !important;
+      padding: 7px 12px !important;
       min-height: 0 !important;
       overflow: hidden !important;
     }
     body.force-desktop .panel-title {
-      font-size: 1rem !important;
-      margin-bottom: 6px !important;
+      font-size: 0.92rem !important;
+      margin-bottom: 4px !important;
     }
 
-    /* 시간표 항목 컴팩트 */
-    body.force-desktop .day-tabs { margin-bottom: 4px !important; }
+    /* 시간표 — 8교시 한눈에 (스크롤 없음) */
+    body.force-desktop .day-tabs { margin-bottom: 3px !important; gap: 2px !important; }
+    body.force-desktop .day-tab { padding: 2px 1px !important; font-size: 0.7rem !important; }
     body.force-desktop .periods-list {
-      gap: 3px !important;
-      overflow-y: auto !important;
+      gap: 2px !important;
+      overflow: hidden !important;
       min-height: 0 !important;
     }
     body.force-desktop .period-item {
-      padding: 4px 9px !important;
+      padding: 3px 9px !important;
+      gap: 8px !important;
     }
-    body.force-desktop .subject-name { font-size: 1.05rem; line-height: 1.15; }
-    body.force-desktop .subject-teacher { font-size: 0.75rem; }
-    body.force-desktop .period-time { font-size: 0.72rem; }
+    body.force-desktop .subject-name { font-size: 1rem; line-height: 1.1; }
+    body.force-desktop .subject-teacher { font-size: 0.72rem; line-height: 1.1; }
+    body.force-desktop .period-time { font-size: 0.7rem; }
     body.force-desktop .period-num { font-size: 0.78rem; }
 
-    /* 학교 공지 */
-    body.force-desktop .ann-title { font-size: 1.2rem; margin-bottom: 4px !important; }
-    body.force-desktop .ann-body { font-size: 0.92rem; line-height: 1.45; }
+    /* 학교 공지 (LED) */
+    body.force-desktop .ann-led-header { padding-bottom: 4px !important; margin-bottom: 6px !important; font-size: 0.78rem; }
+    body.force-desktop .ann-led-tag { letter-spacing: 1px !important; }
+    body.force-desktop .ann-led-title { font-size: 1.4rem !important; margin-bottom: 6px !important; }
+    body.force-desktop .ann-led-marquee { font-size: 1.15rem !important; }
+    body.force-desktop .ann-style-2 .ann-body-wrap { padding: 8px 12px !important; }
 
     /* 학급 게시판 (LED) */
-    body.force-desktop .class-ann-item-title { font-size: 1rem; }
-    body.force-desktop .class-ann-item-body { font-size: 0.85rem; }
+    body.force-desktop .class-led-title { font-size: 0.92rem !important; margin-bottom: 4px !important; }
+    body.force-desktop .class-led-marquee { font-size: 0.85rem !important; }
+    body.force-desktop .class-board-panel.led .class-ann-list { padding: 6px 10px !important; }
 
-    /* 급식 */
-    body.force-desktop .lunch-item { font-size: 0.88rem; padding: 2px 8px !important; }
-    body.force-desktop .lunch-day { padding: 4px 8px !important; }
+    /* 급식 — 매우 컴팩트 (5일 깔끔하게) */
+    body.force-desktop .lunch-day {
+      padding: 3px 8px !important;
+      gap: 6px !important;
+      min-height: 0 !important;
+    }
+    body.force-desktop .lunch-day-head { min-width: 64px !important; gap: 3px !important; }
+    body.force-desktop .lunch-day-date { font-size: 0.7rem; }
+    body.force-desktop .lunch-day-tag { font-size: 0.55rem !important; padding: 0 5px !important; }
+    body.force-desktop .lunch-day-menu {
+      font-size: 0.7rem !important;
+      line-height: 1.25 !important;
+      -webkit-line-clamp: 1 !important;
+    }
+    body.force-desktop .lunch-day.today .lunch-day-menu {
+      font-size: 0.78rem !important;
+      -webkit-line-clamp: 2 !important;
+    }
+    body.force-desktop .lunch-day.today { flex: 1.5 !important; }
+    body.force-desktop .lunch-day-empty { font-size: 0.68rem !important; }
 
-    /* 학사일정 / 날씨 - 컴팩트 */
-    body.force-desktop .event-item { padding: 4px 8px !important; }
-    body.force-desktop .event-date, body.force-desktop .event-title { font-size: 0.85rem; }
-    body.force-desktop .event-desc { font-size: 0.75rem; }
+    /* 학사일정 — 컴팩트 */
+    body.force-desktop .event-item { padding: 3px 7px !important; gap: 8px !important; }
+    body.force-desktop .event-date, body.force-desktop .event-title { font-size: 0.78rem; }
+    body.force-desktop .event-desc { font-size: 0.7rem; }
 
     /* 모바일 세로 (640px 이하) */
     @media (max-width: 640px) {
@@ -1294,38 +1333,35 @@
   if (params.get('desktop') === '1' && window.innerWidth >= 900) {
     document.body.classList.add('force-desktop');
 
-    // 첫 터치/클릭 시 전체화면 자동 진입 (브라우저 주소창 제거)
-    // 안드로이드 Chrome은 사용자 제스처가 있어야 fullscreen 허용
-    const enterFullscreen = () => {
+    // 전체화면 진입/탈출 함수
+    const requestFs = () => {
       const el = document.documentElement;
       const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
-      if (req) {
-        req.call(el).catch(() => {});
-      }
-      document.removeEventListener('click', enterFullscreen);
-      document.removeEventListener('touchstart', enterFullscreen);
+      if (req) return req.call(el);
     };
-    document.addEventListener('click', enterFullscreen, { once: true });
-    document.addEventListener('touchstart', enterFullscreen, { once: true });
 
-    // 전체화면 진입 안내 배너 (5초 후 사라짐)
-    const banner = document.createElement('div');
-    banner.style.cssText = `
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(15, 23, 42, 0.95); color: #f1f5f9;
-      padding: 18px 32px; border-radius: 14px;
-      font-size: 1rem; font-weight: 700;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      z-index: 9999; text-align: center; line-height: 1.5;
-      border: 2px solid #38bdf8;
-      animation: bannerFade 5s forwards;
-    `;
-    banner.innerHTML = '👆 화면을 한 번 터치하면<br>전체화면으로 전환됩니다';
-    document.body.appendChild(banner);
-    const style = document.createElement('style');
-    style.textContent = '@keyframes bannerFade { 0%,80% { opacity:1; } 100% { opacity:0; pointer-events:none; } }';
-    document.head.appendChild(style);
-    setTimeout(() => banner.remove(), 5000);
+    // 우측 상단 "🔳 전체화면" 펄스 버튼 (사용자가 못 보고 지나칠 수 없게)
+    const fsBtn = document.createElement('button');
+    fsBtn.className = 'fullscreen-btn';
+    fsBtn.innerHTML = '🔳 전체화면';
+    fsBtn.addEventListener('click', () => {
+      requestFs()?.catch(() => {});
+    });
+    document.body.appendChild(fsBtn);
+
+    // 전체화면 진입/탈출 감지하여 버튼 숨김/표시
+    document.addEventListener('fullscreenchange', () => {
+      document.body.classList.toggle('is-fullscreen', !!document.fullscreenElement);
+    });
+
+    // 첫 터치/클릭 어디서나 자동으로 전체화면 진입 시도 (한 번만)
+    const tryAutoFs = () => {
+      requestFs()?.catch(() => {});
+      document.removeEventListener('touchstart', tryAutoFs);
+      document.removeEventListener('click', tryAutoFs);
+    };
+    document.addEventListener('touchstart', tryAutoFs, { once: true });
+    document.addEventListener('click', tryAutoFs, { once: true });
   }
   // 학년·반 배지 (학년별 색상 + 카드형 디자인)
   const badgeEl = document.getElementById('classBadge');
