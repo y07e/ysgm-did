@@ -229,6 +229,62 @@
     .check-label:has(input:checked) { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
     .check-label input { display: none; }
 
+    /* ===== 토글 스위치 (Apple/iOS 스타일) ===== */
+    .toggle-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: 12px;
+      background: #f8fafc; border: 1.5px solid #e2e8f0;
+      cursor: pointer; transition: all 0.2s;
+      user-select: none;
+    }
+    .toggle-row:hover { background: #f1f5f9; }
+    .toggle-row.on {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border-color: #10b981;
+    }
+    .toggle-row.on .toggle-text { color: #047857; font-weight: 700; }
+    .toggle-row.off .toggle-text { color: #64748b; }
+
+    .toggle-switch {
+      position: relative;
+      width: 52px; height: 30px;
+      background: #cbd5e1;
+      border-radius: 15px;
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+    .toggle-switch::after {
+      content: ''; position: absolute;
+      top: 3px; left: 3px;
+      width: 24px; height: 24px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .toggle-row.on .toggle-switch {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+    .toggle-row.on .toggle-switch::after {
+      transform: translateX(22px);
+    }
+    .toggle-switch input { display: none; }
+
+    .toggle-content { flex: 1; min-width: 0; }
+    .toggle-title { font-size: 0.92rem; font-weight: 700; display: block; }
+    .toggle-desc { font-size: 0.78rem; color: #64748b; margin-top: 2px; display: block; }
+    .toggle-row.on .toggle-desc { color: #059669; }
+    .toggle-badge {
+      font-size: 0.7rem; font-weight: 800;
+      padding: 3px 10px; border-radius: 10px;
+      background: #cbd5e1; color: #475569;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .toggle-row.on .toggle-badge {
+      background: #10b981; color: white;
+    }
+
     /* ===== ANNOUNCEMENT LIST ===== */
     .item-list { display: flex; flex-direction: column; gap: 9px; }
     .list-item {
@@ -2581,12 +2637,18 @@ function renderFloorCard(scheduleIdx, floorIdx, f) {
         <input type="text" data-sch="${scheduleIdx}" data-floor="${floorIdx}" class="floor-duration" value="${f.duration||30}">
       </div>
     </div>
-    <div style="margin-top:8px;">
-      <label class="check-label" style="cursor:pointer;">
+    <label class="toggle-row ${f.weeklyRotation ? 'on' : 'off'}" style="margin-top:10px;">
+      <span class="toggle-switch">
         <input type="checkbox" class="floor-rotation" data-sch="${scheduleIdx}" data-floor="${floorIdx}" ${f.weeklyRotation ? 'checked' : ''}>
-        🔄 매주 자동 순환 (매주 월요일마다 시작 학급이 한 칸씩 이동)
-      </label>
-    </div>
+      </span>
+      <div class="toggle-content">
+        <span class="toggle-title">🔄 매주 자동 순환</span>
+        <span class="toggle-desc">${f.weeklyRotation
+          ? '매주 월요일마다 시작 학급이 자동으로 한 칸씩 회전됩니다.'
+          : '시작 학급이 매주 고정됩니다. 자동 순환하려면 켜주세요.'}</span>
+      </div>
+      <span class="toggle-badge">${f.weeklyRotation ? '켜짐' : '꺼짐'}</span>
+    </label>
   </div>`;
 }
 
@@ -2688,6 +2750,18 @@ function attachScheduleListeners() {
   document.querySelectorAll('.floor-rotation').forEach(el => {
     el.addEventListener('change', () => {
       schedulesData[parseInt(el.dataset.sch, 10)].floors[parseInt(el.dataset.floor, 10)].weeklyRotation = el.checked;
+      // 토글 시각 상태 + 설명/배지 즉시 갱신
+      const row = el.closest('.toggle-row');
+      if (row) {
+        row.classList.toggle('on', el.checked);
+        row.classList.toggle('off', !el.checked);
+        const desc = row.querySelector('.toggle-desc');
+        const badge = row.querySelector('.toggle-badge');
+        if (desc) desc.textContent = el.checked
+          ? '매주 월요일마다 시작 학급이 자동으로 한 칸씩 회전됩니다.'
+          : '시작 학급이 매주 고정됩니다. 자동 순환하려면 켜주세요.';
+        if (badge) badge.textContent = el.checked ? '켜짐' : '꺼짐';
+      }
     });
   });
 
