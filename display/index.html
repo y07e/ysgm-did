@@ -1106,8 +1106,9 @@
     }
     body.force-desktop .left-panel {
       display: grid !important;
-      grid-template-rows: minmax(0,2.6fr) minmax(0,0.55fr) !important;
-      gap: 6px !important;
+      /* 시간표를 더 크게 — 7~8교시 모두 보이게 */
+      grid-template-rows: minmax(0,3.5fr) minmax(0,0.5fr) !important;
+      gap: 5px !important;
       overflow: hidden !important;
       min-height: 0 !important;
     }
@@ -1118,8 +1119,8 @@
     body.force-desktop .dday-bar { padding: 4px 14px !important; gap: 10px !important; }
     body.force-desktop .right-panel {
       display: grid !important;
-      /* 급식이 1일치만 표시되므로 학교공지/학급게시판에 공간 양보 */
-      grid-template-rows: minmax(0,1.3fr) minmax(0,1fr) minmax(0,0.85fr) !important;
+      /* 학급게시판 줄이고 급식에 공간 양보 — 메뉴 칩 다 보이게 */
+      grid-template-rows: minmax(0,1.2fr) minmax(0,0.55fr) minmax(0,1.3fr) !important;
       gap: 6px !important;
       overflow: hidden !important;
       min-height: 0 !important;
@@ -1137,22 +1138,22 @@
       margin-bottom: 4px !important;
     }
 
-    /* 시간표 — 8교시 한눈에 (스크롤 없음) */
-    body.force-desktop .day-tabs { margin-bottom: 3px !important; gap: 2px !important; }
-    body.force-desktop .day-tab { padding: 2px 1px !important; font-size: 0.7rem !important; }
+    /* 시간표 — 7~8교시 한눈에 (더 컴팩트) */
+    body.force-desktop .day-tabs { margin-bottom: 2px !important; gap: 2px !important; }
+    body.force-desktop .day-tab { padding: 2px 1px !important; font-size: 0.68rem !important; }
     body.force-desktop .periods-list {
       gap: 2px !important;
       overflow: hidden !important;
       min-height: 0 !important;
     }
     body.force-desktop .period-item {
-      padding: 3px 9px !important;
-      gap: 8px !important;
+      padding: 2px 8px !important;
+      gap: 7px !important;
     }
-    body.force-desktop .subject-name { font-size: 1rem; line-height: 1.1; }
-    body.force-desktop .subject-teacher { font-size: 0.72rem; line-height: 1.1; }
-    body.force-desktop .period-time { font-size: 0.7rem; }
-    body.force-desktop .period-num { font-size: 0.78rem; }
+    body.force-desktop .subject-name { font-size: 0.9rem; line-height: 1.1; }
+    body.force-desktop .subject-teacher { font-size: 0.68rem; line-height: 1.05; }
+    body.force-desktop .period-time { font-size: 0.66rem; }
+    body.force-desktop .period-num { font-size: 0.72rem; width: 18px !important; }
 
     /* 학교 공지 (LED) — 마키 영역 가시성 보장 */
     body.force-desktop .ann-led-header { padding-bottom: 3px !important; margin-bottom: 4px !important; font-size: 0.7rem; }
@@ -1170,17 +1171,20 @@
     body.force-desktop .class-led-marquee { font-size: 0.85rem !important; line-height: 1.4; }
     body.force-desktop .class-board-panel.led .class-ann-list { padding: 5px 10px !important; }
 
-    /* 오늘의 급식 (1일 큼직) — 키오스크 컴팩트 */
-    body.force-desktop .lunch-today { padding: 8px 12px !important; gap: 6px !important; }
+    /* 오늘의 급식 (1일 큼직) — 키오스크 컴팩트 (메뉴 칩 다 보이게) */
+    body.force-desktop .lunch-today { padding: 7px 10px !important; gap: 5px !important; }
     body.force-desktop .lunch-today-head { padding-bottom: 4px !important; gap: 8px !important; }
-    body.force-desktop .lunch-today-date { font-size: 0.92rem !important; }
+    body.force-desktop .lunch-today-date { font-size: 0.88rem !important; }
     body.force-desktop .lunch-today-tag,
-    body.force-desktop .lunch-today-tag-soft { font-size: 0.65rem !important; padding: 1px 8px !important; }
-    body.force-desktop .lunch-today-cal { font-size: 0.7rem !important; }
-    body.force-desktop .lunch-today-items { gap: 5px 8px !important; }
+    body.force-desktop .lunch-today-tag-soft { font-size: 0.62rem !important; padding: 1px 7px !important; }
+    body.force-desktop .lunch-today-cal { font-size: 0.68rem !important; }
+    body.force-desktop .lunch-today-items {
+      gap: 4px 6px !important;
+      overflow: visible !important;
+    }
     body.force-desktop .lunch-today-item {
-      padding: 4px 10px !important;
-      font-size: 0.82rem !important;
+      padding: 3px 8px !important;
+      font-size: 0.76rem !important;
     }
 
     /* 학사일정 — 컴팩트 */
