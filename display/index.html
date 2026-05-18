@@ -1143,8 +1143,8 @@
     body.force-desktop .top-weather .tw-sep { height: 14px !important; }
     body.force-desktop .right-panel {
       display: grid !important;
-      /* 학급게시판 줄이고 급식에 공간 양보 — 메뉴 칩 다 보이게 */
-      grid-template-rows: minmax(0,1.2fr) minmax(0,0.55fr) minmax(0,1.3fr) !important;
+      /* 학교공지 : 학급게시판 : 급식 — 학급게시판 제목 잘림 방지로 0.55 → 0.85 확장 */
+      grid-template-rows: minmax(0,1.1fr) minmax(0,0.85fr) minmax(0,1.15fr) !important;
       gap: 6px !important;
       overflow: hidden !important;
       min-height: 0 !important;
