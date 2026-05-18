@@ -1823,8 +1823,13 @@
     if (cur >= toMin(myLunch.start) && cur < toMin(myLunch.end))
       return { type:'lunch', end: myLunch.end };
 
+    // 점심이 어느 교시 후에 오는지 (단축수업이면 그 위치, 평소 4교시 후)
+    const lunchAfterP = (window._shortLunchOverride && window._shortLunchOverride.afterPeriod != null)
+      ? window._shortLunchOverride.afterPeriod
+      : 4;
     for (let i = 0; i < classTimes.length-1; i++) {
-      if (classTimes[i].period === 4) continue;
+      // 점심 직전 교시는 lunch 영역이므로 break로 잡지 않음
+      if (classTimes[i].period === lunchAfterP) continue;
       const bStart = toMin(classTimes[i].end);
       const bEnd   = toMin(classTimes[i+1].start);
       if (cur >= bStart && cur < bEnd)
@@ -1904,7 +1909,15 @@
       }
 
       let lunchRow = '';
-      if (p.period === 4) {
+      // 점심 위치: 단축 수업 일이면 오버라이드된 위치, 평소엔 4교시 후
+      const lunchAfter = (window._shortLunchOverride && window._shortLunchOverride.afterPeriod != null)
+        ? window._shortLunchOverride.afterPeriod
+        : 4;
+      // 점심 위치가 null/0이면 점심 행 미표시 (단축에서 "점심 없음" 선택 시)
+      const showLunch = lunchAfter > 0 && (
+        !window._shortLunchOverride || (window._shortLunchOverride.afterPeriod != null)
+      );
+      if (showLunch && p.period === lunchAfter) {
         let lCls = 'period-item lunch lunch-row';
         let lDot = '';
         if (isToday && state.type==='lunch') { lCls+=' current'; lDot='<div class="pulse-dot"></div>'; }
@@ -2254,6 +2267,9 @@
   let _baseClassTimes = [...SCHOOL_CONFIG.defaultPeriods];
   let _classTimeOverridesAll = {};
 
+  // 단축 수업일 점심 오버라이드 정보 (전역)
+  window._shortLunchOverride = null;  // { afterPeriod, start, end } | null
+
   function applyClassTimes() {
     // 오늘 날짜에 단축 수업 오버라이드가 있으면 적용, 없으면 기초 시간
     const today = new Date();
@@ -2264,13 +2280,22 @@
     const titleEl = document.querySelector('.timetable-panel .panel-title');
     if (ov && Array.isArray(ov.periods) && ov.periods.length) {
       classTimes = ov.periods;
+      // 단축 수업의 점심 정보 적용
+      window._shortLunchOverride = ov.lunch || null;
       if (titleEl) {
         const noteText = ov.note ? ` · ${ov.note}` : '';
         titleEl.innerHTML = `오늘 시간표 <span class="short-day-badge">⚡ 단축 수업${noteText}</span>`;
       }
+      // 점심이 단축에 따로 정의되어 있으면 myLunch도 그 시간으로 교체
+      if (ov.lunch && ov.lunch.start && ov.lunch.end) {
+        myLunch = { start: ov.lunch.start, end: ov.lunch.end };
+      }
     } else {
       classTimes = _baseClassTimes;
+      window._shortLunchOverride = null;
       if (titleEl) titleEl.textContent = '오늘 시간표';
+      // 기초로 돌아가면 점심도 정상 재계산
+      if (typeof applyMyLunch === 'function') applyMyLunch();
     }
     // 시간표 다시 렌더
     if (typeof renderPeriods === 'function' && typeof getWeekdayIdx === 'function') {

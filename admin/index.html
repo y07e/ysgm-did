@@ -1064,6 +1064,36 @@
           </div>
         </div>
 
+        <!-- 점심 시간 설정 -->
+        <div style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+          <div style="font-weight:700;color:#0f766e;margin-bottom:8px;font-size:0.92rem;">🍽️ 단축 수업 점심 시간 설정</div>
+          <div class="form-grid cols3" style="gap:10px;">
+            <div class="form-row" style="margin:0;">
+              <label style="font-size:0.78rem;">점심 위치 (몇 교시 후)</label>
+              <select id="ctoLunchAfter">
+                <option value="">— 점심 없음 —</option>
+                <option value="2">2교시 후</option>
+                <option value="3">3교시 후</option>
+                <option value="4" selected>4교시 후 (기본)</option>
+                <option value="5">5교시 후</option>
+                <option value="6">6교시 후</option>
+              </select>
+            </div>
+            <div class="form-row" style="margin:0;">
+              <label style="font-size:0.78rem;">점심 시작</label>
+              <input type="text" id="ctoLunchStart" placeholder="예: 11:50">
+            </div>
+            <div class="form-row" style="margin:0;">
+              <label style="font-size:0.78rem;">점심 종료</label>
+              <input type="text" id="ctoLunchEnd" placeholder="예: 12:50">
+            </div>
+          </div>
+          <p style="font-size:0.75rem;color:#64748b;margin-top:8px;line-height:1.5;">
+            ※ 3교시 후 점심·4교시 후 점심 등 단축 일정에 맞게 설정.
+            점심 위치를 '없음'으로 하면 점심 시간 행이 표시되지 않습니다.
+          </p>
+        </div>
+
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
           <button class="btn btn-secondary btn-sm" id="btnCtoLoadBase">📋 기초 시간 불러오기</button>
           <button class="btn btn-secondary btn-sm" id="btnCtoLoadDate">🔍 이 날짜 단축 시간 불러오기</button>
@@ -4119,6 +4149,10 @@ document.getElementById('btnCtoLoadBase').addEventListener('click', () => {
   const base = spPeriods.length ? spPeriods : SCHOOL_CONFIG.defaultPeriods;
   ctoCurrentPeriods = JSON.parse(JSON.stringify(base));
   renderCtoRows();
+  // 점심 시간 기본값 — 기존 default lunch
+  document.getElementById('ctoLunchAfter').value = '4';
+  document.getElementById('ctoLunchStart').value = SCHOOL_CONFIG.defaultLunch?.start || '12:10';
+  document.getElementById('ctoLunchEnd').value = SCHOOL_CONFIG.defaultLunch?.end || '13:00';
   showToast('✅ 기초 수업 시간을 불러왔습니다 — 시간 수정 후 저장하세요');
 });
 
@@ -4132,6 +4166,11 @@ document.getElementById('btnCtoLoadDate').addEventListener('click', () => {
   }
   ctoCurrentPeriods = JSON.parse(JSON.stringify(ov.periods || []));
   document.getElementById('ctoNote').value = ov.note || '';
+  // 점심 정보 불러오기
+  const l = ov.lunch || {};
+  document.getElementById('ctoLunchAfter').value = (l.afterPeriod != null ? String(l.afterPeriod) : '4');
+  document.getElementById('ctoLunchStart').value = l.start || '';
+  document.getElementById('ctoLunchEnd').value = l.end || '';
   renderCtoRows();
   showToast(`✅ ${date} 단축 수업 불러옴`);
 });
@@ -4148,12 +4187,27 @@ document.getElementById('btnCtoSave').addEventListener('click', async () => {
       return showToast(`${p.period}교시 시간 형식 오류 (HH:MM)`);
     }
   }
+  // 점심 정보 수집
+  const lunchAfterStr = document.getElementById('ctoLunchAfter').value;
+  const lunchStart = document.getElementById('ctoLunchStart').value.trim();
+  const lunchEnd = document.getElementById('ctoLunchEnd').value.trim();
+  let lunch = null;
+  if (lunchAfterStr) {
+    if (!lunchStart.match(/^\d{1,2}:\d{2}$/) || !lunchEnd.match(/^\d{1,2}:\d{2}$/)) {
+      return showToast('점심 시작·종료 시간 형식 오류 (HH:MM)');
+    }
+    lunch = {
+      afterPeriod: parseInt(lunchAfterStr, 10),
+      start: lunchStart,
+      end: lunchEnd
+    };
+  }
   try {
     await db.collection('classTimeOverrides').doc(date).set({
-      periods, note,
+      periods, note, lunch,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    showToast(`✅ ${date} 단축 수업 저장됨`);
+    showToast(`✅ ${date} 단축 수업 저장됨${lunch ? ` (점심: ${lunch.afterPeriod}교시 후)` : ''}`);
   } catch (e) {
     showToast('저장 실패: ' + e.message);
   }
@@ -4213,9 +4267,12 @@ window.loadCtoForEdit = (date) => {
   const ov = ctoOverridesData[date];
   ctoCurrentPeriods = JSON.parse(JSON.stringify(ov.periods || []));
   document.getElementById('ctoNote').value = ov.note || '';
+  const l = ov.lunch || {};
+  document.getElementById('ctoLunchAfter').value = (l.afterPeriod != null ? String(l.afterPeriod) : '4');
+  document.getElementById('ctoLunchStart').value = l.start || '';
+  document.getElementById('ctoLunchEnd').value = l.end || '';
   renderCtoRows();
   showToast(`📝 ${date} 단축 수업 편집 중`);
-  // 편집 영역으로 스크롤
   document.getElementById('ctoDate').scrollIntoView({behavior:'smooth', block:'center'});
 };
 
