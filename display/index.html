@@ -2575,22 +2575,16 @@
     if (activeSch) {
       for (const floor of (activeSch.floors || [])) {
         if ((floor.classes || []).includes(myKey)) {
-          // 시작 시간 우선순위:
-          // 0. 단축수업 점심 시작 (그날 학교 전체 점심 시작) → 회전식 계산 적용
-          // 1. 날짜 오버라이드
-          // 2. floor 기본 시작 시간
-          const startTimeOverride =
-            shortLunchStart ||
-            (override ? override.startTime : null) ||
-            floor.startTime;
+          // floor.startTime은 회전 시작 시각(예: 12:12)으로 고정
+          // shortDay.lunch.start(12:10)는 학교 전체 점심 시작 안내용 — 회전 계산에 영향 X
           const opts = {
             startClass: _getRotatedStartClass(floor, activeSch, today),
-            startTime: startTimeOverride
+            startTime: (override ? override.startTime : null) || floor.startTime
           };
           const times = _calcFloorTimes(floor, opts);
           const me = times.find(t => t.classKey === myKey);
           if (me) {
-            // 단축수업일에는 점심 끝 시간은 학교 전체 점심 종료(고정)로 통일
+            // 단축수업일에는 점심 끝 시간을 학교 전체 점심 종료(고정)로 통일
             const endTime = (shortDay && shortDay.lunch && shortDay.lunch.end)
               ? shortDay.lunch.end
               : me.end;
