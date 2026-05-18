@@ -161,27 +161,62 @@
       overflow: hidden;
     }
 
-    /* ===== LEFT PANEL — 시간표 + 날씨 + 학사일정 3행 ===== */
+    /* ===== LEFT PANEL — 시간표 + 학사일정 2행 (날씨는 톱바로 이동) ===== */
     .left-panel {
       display: grid;
-      grid-template-rows: minmax(0,1fr) auto auto;
+      grid-template-rows: minmax(0,1fr) auto;
       gap: 12px;
       overflow: hidden;
     }
 
-    /* ===== D-Day 바 ===== */
+    /* ===== 톱바 (D-Day + 날씨 통합) — 모든 환경 공통 ===== */
     .dday-bar {
       display: none;
-      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
       padding: 8px 14px;
       background: #1e293b;
       border-bottom: 1px solid #334155;
-      overflow-x: auto;
-      scrollbar-width: none;
       flex-shrink: 0;
     }
     .dday-bar.show { display: flex; }
-    .dday-bar::-webkit-scrollbar { display: none; }
+    .dday-bar .dday-items {
+      display: flex; gap: 8px; flex: 1; min-width: 0;
+      align-items: center;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .dday-bar .dday-items::-webkit-scrollbar { display: none; }
+    .dday-bar .dday-title {
+      color: #fbbf24; font-weight: 800; font-size: 0.92rem;
+      letter-spacing: -0.2px; padding-right: 8px;
+      flex-shrink: 0;
+      border-right: 1px solid #334155;
+      margin-right: 4px;
+    }
+
+    /* 컴팩트 날씨 위젯 */
+    .top-weather {
+      display: flex; align-items: center; gap: 14px;
+      padding: 4px 12px;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 10px;
+      border: 1px solid #334155;
+      flex-shrink: 0;
+      white-space: nowrap;
+      font-size: 0.88rem;
+    }
+    .top-weather .tw-main { display: flex; align-items: center; gap: 6px; font-weight: 700; }
+    .top-weather .tw-icon { font-size: 1.4rem; }
+    .top-weather .tw-temp { font-size: 1.05rem; font-weight: 900; color: #f1f5f9; }
+    .top-weather .tw-sep { width: 1px; height: 18px; background: #334155; }
+    .top-weather .tw-item { display: flex; gap: 4px; align-items: baseline; }
+    .top-weather .tw-label { color: #94a3b8; font-size: 0.72rem; }
+    .top-weather .tw-val { color: #cbd5e1; font-weight: 700; }
+    .top-weather .tw-title {
+      color: #7dd3fc; font-weight: 800; font-size: 0.92rem;
+      letter-spacing: -0.2px;
+    }
     .dday-item {
       display: flex;
       align-items: center;
@@ -982,66 +1017,11 @@
       overflow: hidden !important;
       min-height: 0 !important;
     }
-    /* 좌측 날씨 패널 — 키오스크에서는 톱바로 이동했으므로 숨김 */
-    body.force-desktop .weather-panel { display: none !important; }
+    /* 좌측 날씨 패널 — 톱바로 이동했으므로 항상 숨김 */
+    .weather-panel { display: none !important; }
 
-    /* === 톱바 (D-Day + 날씨) 가로 통합 === */
-    body.force-desktop .dday-bar {
-      display: flex !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-      padding: 6px 16px !important;
-      gap: 12px !important;
-    }
-    body.force-desktop .dday-bar .dday-items {
-      display: flex; gap: 8px; flex: 1; min-width: 0;
-      align-items: center;
-      overflow-x: auto; scrollbar-width: none;
-    }
-    body.force-desktop .dday-bar .dday-items::-webkit-scrollbar { display: none; }
-    body.force-desktop .dday-bar .dday-title {
-      color: #fbbf24; font-weight: 800; font-size: 0.92rem;
-      letter-spacing: -0.2px; padding-right: 8px;
-      flex-shrink: 0;
-      border-right: 1px solid #334155;
-      margin-right: 4px;
-    }
-
-    /* 톱바용 컴팩트 날씨 위젯 */
-    body.force-desktop .top-weather {
-      display: flex; align-items: center; gap: 14px;
-      padding: 4px 12px;
-      background: rgba(15, 23, 42, 0.6);
-      border-radius: 10px;
-      border: 1px solid #334155;
-      flex-shrink: 0;
-      white-space: nowrap;
-      font-size: 0.88rem;
-    }
-    body.force-desktop .top-weather .tw-main {
-      display: flex; align-items: center; gap: 6px;
-      font-weight: 700;
-    }
-    body.force-desktop .top-weather .tw-icon { font-size: 1.4rem; }
-    body.force-desktop .top-weather .tw-temp {
-      font-size: 1.05rem; font-weight: 900; color: #f1f5f9;
-    }
-    body.force-desktop .top-weather .tw-sep {
-      width: 1px; height: 18px; background: #334155;
-    }
-    body.force-desktop .top-weather .tw-item {
-      display: flex; gap: 4px; align-items: baseline;
-    }
-    body.force-desktop .top-weather .tw-label {
-      color: #94a3b8; font-size: 0.72rem;
-    }
-    body.force-desktop .top-weather .tw-val {
-      color: #cbd5e1; font-weight: 700;
-    }
-    body.force-desktop .top-weather .tw-title {
-      color: #7dd3fc; font-weight: 800; font-size: 0.92rem;
-      letter-spacing: -0.2px;
-    }
+    /* 키오스크 모드 — 톱바 컴팩트 패딩만 추가 (기본 스타일은 전역) */
+    body.force-desktop .dday-bar { padding: 6px 16px !important; gap: 12px !important; }
     body.force-desktop .right-panel {
       display: grid !important;
       grid-template-rows: minmax(0,1.3fr) minmax(0,0.7fr) minmax(0,1fr) !important;
@@ -1120,6 +1100,35 @@
       }
       .clock { font-size: 1.7rem; }
       .date-info { font-size: 0.9rem; margin-top: 0; }
+
+      /* 모바일 톱바 — 세로로 쌓이게 */
+      .dday-bar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 6px !important;
+        padding: 8px 12px !important;
+      }
+      .dday-bar .dday-items {
+        flex-wrap: wrap; gap: 6px;
+      }
+      .dday-bar .dday-title {
+        font-size: 0.78rem; padding-right: 6px; margin-right: 2px;
+      }
+      .dday-item {
+        padding: 4px 11px; font-size: 0.78rem;
+      }
+      .top-weather {
+        font-size: 0.76rem;
+        padding: 4px 9px;
+        gap: 8px;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      .top-weather::-webkit-scrollbar { display: none; }
+      .top-weather .tw-title { font-size: 0.78rem; }
+      .top-weather .tw-icon { font-size: 1.1rem; }
+      .top-weather .tw-temp { font-size: 0.92rem; }
+      .top-weather .tw-label { font-size: 0.65rem; }
 
       .panel { padding: 14px 16px; }
       .panel-title { font-size: 1rem; margin-bottom: 10px; }
@@ -2019,25 +2028,19 @@
         </div>`;
       });
 
+    // 톱바 (D-Day 안내 + 양산 날씨) — 모든 환경 공통 (모바일/PC/IFP)
     const bar = document.getElementById('ddayBar');
-    const isKiosk = document.body.classList.contains('force-desktop');
-    if (isKiosk) {
-      // 키오스크: D-Day items + 날씨 위젯을 한 줄에
-      let html = '<div class="dday-items">';
-      html += '<span class="dday-title">🎯 D-day 안내</span>';
-      html += items.length ? items.join('') : '<span style="color:#475569;font-size:0.82rem;">D-Day 없음</span>';
-      html += '</div>';
-      html += '<div class="top-weather" id="topWeather"><span style="color:#475569;">날씨 불러오는 중...</span></div>';
-      bar.innerHTML = html;
-      bar.classList.add('show');
-      // 이미 받아진 날씨 데이터가 있으면 즉시 표시
-      if (window._lastWeatherHtml) {
-        const tw = document.getElementById('topWeather');
-        if (tw) tw.innerHTML = window._lastWeatherHtml;
-      }
-    } else {
-      if (items.length) { bar.innerHTML = items.join(''); bar.classList.add('show'); }
-      else bar.classList.remove('show');
+    let html = '<div class="dday-items">';
+    html += '<span class="dday-title">🎯 D-day 안내</span>';
+    html += items.length ? items.join('') : '<span style="color:#475569;font-size:0.82rem;">D-Day 없음</span>';
+    html += '</div>';
+    html += '<div class="top-weather" id="topWeather"><span style="color:#475569;">날씨 불러오는 중...</span></div>';
+    bar.innerHTML = html;
+    bar.classList.add('show');
+    // 이미 받아진 날씨 데이터가 있으면 즉시 표시
+    if (window._lastWeatherHtml) {
+      const tw = document.getElementById('topWeather');
+      if (tw) tw.innerHTML = window._lastWeatherHtml;
     }
   });
 
