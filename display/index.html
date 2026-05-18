@@ -1570,81 +1570,58 @@
     const dateEl = document.getElementById('schoolAnnDate');
     const dotsEl = document.getElementById('schoolAnnDots');
 
-    panel.classList.remove('ann-style-1','ann-style-2','ann-style-3','ann-style-4','ann-style-dual');
+    panel.classList.remove('ann-style-1','ann-style-3','ann-style-4','ann-style-dual');
 
     if (!schoolSlides.length) {
       wrap.innerHTML = '<div class="empty-msg">📋 공지사항이 없습니다</div>';
       dateEl.textContent = ''; dotsEl.innerHTML = ''; return;
     }
 
+    // 학교 공지 — LED 스타일로 통일 (학급 게시판과 동일한 UX)
+    panel.classList.add('ann-style-2');
+
+    // dual 슬라이드도 1개씩 분리해서 표시 (LED는 한 번에 하나)
     const slide = schoolSlides[idx];
-    let html = '';
+    const a = slide[0];  // 첫 번째 공지만
+    const dateStr = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
+    const contentLine = (a.content || '').replace(/\n/g, ' · ');
 
-    if (slide.length === 2) {
-      // 짧은 공지 2개 → 듀얼 카드
-      panel.classList.add('ann-style-dual');
-      html = slide.map(a => {
-        const date = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
-        return `<div class="ann-dual-item">
-          <div class="ann-dual-icon">📬</div>
-          <div class="ann-dual-content">
-            <div class="ann-dual-title">${a.title}</div>
-            <div class="ann-dual-body">${a.content}</div>
-          </div>
-        </div>`;
-      }).join('');
-      dateEl.textContent = `${slide.length}개 공지`;
-    } else {
-      // 단독 공지 — 짝수 인덱스: Style 4(알림카드), 홀수: Style 2(LED 전광판)
-      const a = slide[0];
-      const dateStr = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
-      const content = a.content.replace(/\n/g,'<br>');
-      const contentLine = a.content.replace(/\n/g,' · ');
-      const styleNum = (idx % 2 === 0) ? 4 : 2;
-      panel.classList.add('ann-style-' + styleNum);
+    wrap.innerHTML = `<div class="ann-led">
+      <div class="ann-led-header">
+        <span class="ann-led-tag">★ SCHOOL BOARD ★</span>
+        <span class="ann-led-live">LIVE</span>
+      </div>
+      <div class="ann-led-title">${a.title}</div>
+      <div class="ann-led-marquee-wrap">
+        <div class="ann-led-marquee">${contentLine} &nbsp;&nbsp;&nbsp; ✦ ${dateStr} &nbsp;&nbsp;&nbsp;</div>
+      </div>
+    </div>`;
+    dateEl.textContent = dateStr;
 
-      if (styleNum === 4) {
-        html = `<div class="ann-notif">
-          <div class="ann-notif-icon">📬</div>
-          <div class="ann-notif-content">
-            <div class="ann-notif-tag">NEW · ${dateStr}</div>
-            <div class="ann-notif-title">${a.title}</div>
-            <div class="ann-notif-body">${content}</div>
-          </div>
-        </div>`;
-      } else {
-        html = `<div class="ann-led">
-          <div class="ann-led-header">
-            <span class="ann-led-tag">★ SCHOOL BOARD ★</span>
-            <span class="ann-led-live">LIVE</span>
-          </div>
-          <div class="ann-led-title">${a.title}</div>
-          <div class="ann-led-marquee-wrap">
-            <div class="ann-led-marquee">${contentLine} &nbsp;&nbsp;&nbsp; ※ ${a.title}</div>
-          </div>
-        </div>`;
-      }
-      dateEl.textContent = dateStr;
-    }
-
-    wrap.innerHTML = html;
     dotsEl.innerHTML = schoolSlides.map((_,i) =>
       `<div class="dot${i===idx?' active':''}"></div>`).join('');
+
+    // 마키 한 바퀴(왼쪽 끝까지) 완료 시 다음 공지로 자동 전환
+    if (schoolSlides.length > 1) {
+      const marqueeEl = wrap.querySelector('.ann-led-marquee');
+      if (marqueeEl) {
+        marqueeEl.addEventListener('animationiteration', () => {
+          schoolAnnIdx = (schoolAnnIdx + 1) % schoolSlides.length;
+          showSchoolSlide(schoolAnnIdx);
+        }, { once: true });
+      }
+    }
   }
 
   // 호환용 별칭
   function showSchoolAnn(idx) { showSchoolSlide(idx); }
 
   function startSchoolSlideshow() {
-    if (schoolAnnTimer) clearInterval(schoolAnnTimer);
-    buildSchoolSlides();
+    if (schoolAnnTimer) { clearInterval(schoolAnnTimer); schoolAnnTimer = null; }
+    // 학교 공지도 학급 게시판처럼 항상 1개씩만 표시 (LED 슬라이드 일관성)
+    schoolSlides = schoolAnns.map(a => [a]);
     schoolAnnIdx = 0;
     showSchoolSlide(schoolAnnIdx);
-    if (schoolSlides.length > 1)
-      schoolAnnTimer = setInterval(() => {
-        schoolAnnIdx = (schoolAnnIdx+1) % schoolSlides.length;
-        showSchoolSlide(schoolAnnIdx);
-      }, 7000);
   }
 
   // ============================================================
