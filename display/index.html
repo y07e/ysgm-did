@@ -1703,6 +1703,9 @@
   const grade = params.get('grade') || SCHOOL_CONFIG.example.grade;
   const cls   = params.get('class') || SCHOOL_CONFIG.example.class;
 
+  // 브라우저 탭 제목에 학급 정보 표시 (예: "1학년 7반 · 양산여중 DID")
+  document.title = `${grade}학년 ${cls}반 · 양산여중 DID`;
+
   // 강제 데스크탑 모드 (?desktop=1) — 전자칠판/IFP에서 모바일 레이아웃으로 잘못 잡힐 때 사용
   // 단, 실제 화면 폭이 900px 미만(모바일)이면 적용 안 함 — 모바일은 스크롤 가능한 자연스러운 레이아웃 유지
   if (params.get('desktop') === '1' && window.innerWidth >= 900) {
