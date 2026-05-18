@@ -2459,6 +2459,7 @@
   db.collection('settings').doc('lunchTimes').onSnapshot(snap => {
     lunchTimesDoc = snap.exists ? snap.data() : {};
     applyMyLunch();
+    showShortDayDebug();
   });
 
   // 운영 기간 (2차 우선순위)
@@ -2466,6 +2467,10 @@
   db.collection('settings').doc('lunchSchedules').onSnapshot(snap => {
     schedulesDoc = (snap.exists && Array.isArray(snap.data().schedules)) ? snap.data().schedules : [];
     applyMyLunch();
+    if (typeof renderPeriods === 'function' && typeof getWeekdayIdx === 'function') {
+      renderPeriods(getWeekdayIdx());
+    }
+    showShortDayDebug();
   });
 
   // 날짜 오버라이드 (1차 - 최우선)
@@ -2473,6 +2478,10 @@
   db.collection('settings').doc('lunchOverrides').onSnapshot(snap => {
     overridesDoc = (snap.exists && snap.data().overrides) ? snap.data().overrides : {};
     applyMyLunch();
+    if (typeof renderPeriods === 'function' && typeof getWeekdayIdx === 'function') {
+      renderPeriods(getWeekdayIdx());
+    }
+    showShortDayDebug();
   });
 
   // ===== 헬퍼 =====
