@@ -3574,11 +3574,27 @@ function openWeeklyPrint(weekMonday) {
   // 오버라이드 있는 날: 별도 페이지로 인쇄
   const pages = [];
 
+  // 진단 정보 계산 (인쇄 페이지에 표시)
+  const anchorMonday = getMondayOf(parseLocalDate(sch.startDate));
+  const weeksDiff = Math.round((weekMonday - anchorMonday) / (7 * 86400000));
+  const weekNum = weeksDiff + 1;   // 1주차부터 시작
+
   if (overridesInWeek.length === 0) {
     // 단일 페이지 — 주 전체
     pages.push({
       title: `학급별 급식 순서 (${weekMonday.getMonth()+1}월 ${weekMonday.getDate()}일 ~ ${friday.getMonth()+1}월 ${friday.getDate()}일)`,
       note: '',
+      diagnostic: {
+        scheduleName: sch.name || '',
+        startDate: sch.startDate,
+        weekNum,
+        floors: sch.floors.map(f => ({
+          name: f.name,
+          rotation: !!f.weeklyRotation,
+          anchorClass: f.startClass,
+          rotatedClass: getRotatedStartClass(f, sch, weekMonday)
+        }))
+      },
       floors: sch.floors.map(f => {
         const startClass = getRotatedStartClass(f, sch, weekMonday);
         return { floor: f, times: calcFloorTimes(f, { startClass }) };
@@ -3604,6 +3620,17 @@ function openWeeklyPrint(weekMonday) {
       pages.push({
         title: `학급별 급식 순서 (${date.getMonth()+1}월 ${date.getDate()}일)`,
         note: override.note || '',
+        diagnostic: {
+          scheduleName: sch.name || '',
+          startDate: sch.startDate,
+          weekNum,
+          floors: sch.floors.map(f => ({
+            name: f.name,
+            rotation: !!f.weeklyRotation,
+            anchorClass: f.startClass,
+            rotatedClass: getRotatedStartClass(f, sch, weekMonday)
+          }))
+        },
         floors: sch.floors.map(f => {
           const startClass = getRotatedStartClass(f, sch, weekMonday);
           return { floor: f, times: calcFloorTimes(f, { startClass, startTime: override.startTime }) };
@@ -3660,11 +3687,22 @@ function renderPrintWindow(pages) {
       font-weight: 700; cursor: pointer; font-family: inherit;
       box-shadow: 0 4px 12px rgba(30,64,175,0.3); z-index: 100;
     }
+    .diag-box {
+      background: #fef3c7;
+      border: 2px solid #f59e0b;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      font-size: 0.85rem;
+      color: #78350f;
+      line-height: 1.55;
+    }
     @media print {
       body { padding: 8mm 10mm; }
       .print-btn { display: none; }
+      .no-print { display: none !important; }  /* 진단 박스 인쇄 안 됨 */
       .page { page-break-after: avoid; padding-bottom: 0; }
-      .page:not(:first-child) { page-break-before: always; }  /* 여러 페이지일 때만 페이지 나눔 */
+      .page:not(:first-child) { page-break-before: always; }
       @page { margin: 8mm; size: A4; }
       th, td { padding: 3px 4px; font-size: 0.88rem; }
       h1 { font-size: 1.35rem; margin-bottom: 10px; }
@@ -3675,9 +3713,7 @@ function renderPrintWindow(pages) {
 <body>
   <button class="print-btn" onclick="window.print()">🖨️ 인쇄</button>
   ${pages.map(p => renderPrintPage(p)).join('')}
-  <script>
-    window.onload = () => setTimeout(() => window.print(), 600);
-  <\/script>
+  <!-- 자동 인쇄 제거 — 사용자가 진단 정보 확인 후 직접 인쇄 -->
 </body>
 </html>`;
   const w = window.open('', '_blank', 'width=900,height=1000');
@@ -3711,7 +3747,18 @@ function renderPrintPage(page) {
     <td colspan="2"></td>
   </tr>`;
 
+  const diagBox = page.diagnostic ? `
+    <div class="diag-box no-print">
+      <strong>🔍 진단 정보 (인쇄 안됨)</strong><br>
+      운영기간: <b>${page.diagnostic.scheduleName}</b> (시작일: ${page.diagnostic.startDate}) → 이번 주 = <b style="color:#dc2626;">${page.diagnostic.weekNum}주차</b><br>
+      ${page.diagnostic.floors.map(f =>
+        `${f.name || '층'} — 주간 순환: <b>${f.rotation ? 'ON ✅' : 'OFF ❌'}</b> | 기준 시작학급: <b>${f.anchorClass}</b> → 이번 주 시작학급: <b style="color:#059669;">${f.rotatedClass}</b>`
+      ).join('<br>')}
+    </div>
+  ` : '';
+
   return `<div class="page">
+    ${diagBox}
     <div class="year-label">${new Date().getFullYear()}학년도 ${page.note ? `<span class="note">${page.note}</span>` : ''}</div>
     <h1>${page.title}</h1>
     <table>
