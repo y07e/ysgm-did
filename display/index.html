@@ -1137,12 +1137,14 @@
       .class-ann-item-title { font-size: 1.05rem; }
       .class-ann-item-body  { font-size: 0.85rem; }
 
+      /* 모바일 시간표 — 전체 교시가 한눈에 보이게 */
       .timetable-panel { min-height: auto; padding: 12px; }
-      .period-item { padding: 5px 9px; }
+      .periods-list { overflow: visible !important; max-height: none !important; gap: 4px; }
+      .period-item { padding: 7px 10px; }
       .subject-name { font-size: 1.05rem; }
-      .subject-teacher { font-size: 0.75rem; }
-      .period-time { font-size: 0.65rem; }
-      .period-num { width: 18px; font-size: 0.78rem; }
+      .subject-teacher { font-size: 0.8rem; }
+      .period-time { font-size: 0.72rem; }
+      .period-num { width: 20px; font-size: 0.82rem; }
 
       .lunch-items { gap: 5px; }
       .lunch-item { font-size: 0.82rem; padding: 3px 10px; }
@@ -1288,7 +1290,8 @@
   const cls   = params.get('class') || SCHOOL_CONFIG.example.class;
 
   // 강제 데스크탑 모드 (?desktop=1) — 전자칠판/IFP에서 모바일 레이아웃으로 잘못 잡힐 때 사용
-  if (params.get('desktop') === '1') {
+  // 단, 실제 화면 폭이 900px 미만(모바일)이면 적용 안 함 — 모바일은 스크롤 가능한 자연스러운 레이아웃 유지
+  if (params.get('desktop') === '1' && window.innerWidth >= 900) {
     document.body.classList.add('force-desktop');
 
     // 첫 터치/클릭 시 전체화면 자동 진입 (브라우저 주소창 제거)
