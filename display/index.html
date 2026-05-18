@@ -2489,15 +2489,9 @@
     const today = new Date(); today.setHours(0,0,0,0);
     const todayStr = _formatDateYMD(today);
 
-    // ⭐ 0순위: 단축 수업일 점심 (가장 높은 우선순위)
+    // 단축 수업일 점심 정보 (있으면 floor 시작 시간으로 사용)
     const shortDay = _classTimeOverridesAll && _classTimeOverridesAll[todayStr];
-    if (shortDay && shortDay.lunch && shortDay.lunch.start && shortDay.lunch.end) {
-      myLunch = { start: shortDay.lunch.start, end: shortDay.lunch.end };
-      if (typeof renderPeriods === 'function' && typeof getWeekdayIdx === 'function') {
-        renderPeriods(getWeekdayIdx());
-      }
-      return;
-    }
+    const shortLunchStart = (shortDay && shortDay.lunch && shortDay.lunch.start) || null;
 
     const override = overridesDoc[todayStr];
 
@@ -2512,16 +2506,28 @@
     if (activeSch) {
       for (const floor of (activeSch.floors || [])) {
         if ((floor.classes || []).includes(myKey)) {
-          // 1순위: 날짜 오버라이드 적용 (시작 시간만 override)
+          // 시작 시간 우선순위:
+          // 0. 단축수업 점심 시작 (그날 학교 전체 점심 시작) → 회전식 계산 적용
+          // 1. 날짜 오버라이드
+          // 2. floor 기본 시작 시간
+          const startTimeOverride =
+            shortLunchStart ||
+            (override ? override.startTime : null) ||
+            floor.startTime;
           const opts = {
             startClass: _getRotatedStartClass(floor, activeSch, today),
-            startTime: override ? override.startTime : floor.startTime
+            startTime: startTimeOverride
           };
           const times = _calcFloorTimes(floor, opts);
           const me = times.find(t => t.classKey === myKey);
           if (me) { myLunch = { start: me.start, end: me.end }; return; }
         }
       }
+    }
+    // (활성 운영 기간 없을 때) 단축수업 점심 정보를 직접 사용
+    if (shortDay && shortDay.lunch && shortDay.lunch.start && shortDay.lunch.end) {
+      myLunch = { start: shortDay.lunch.start, end: shortDay.lunch.end };
+      return;
     }
     // 2순위: lunchTimes 수동
     if (lunchTimesDoc[myKey]) { myLunch = lunchTimesDoc[myKey]; return; }
