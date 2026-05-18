@@ -544,12 +544,16 @@
     .period-time  { font-size: 0.72rem; color: #64748b; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .period-item.current .period-time { color: #6ee7b7; }
 
-    /* 점심시간 — 우리반 급식 시간만 강조 표시 */
+    /* 점심시간 행 — 가운데에 단일 배지 */
+    .period-item.lunch-row {
+      justify-content: center;
+      padding: 6px 10px;
+    }
     .lunch-mygo {
       display: inline-block;
-      padding: 5px 14px;
-      background: rgba(16, 185, 129, 0.15);
-      border: 1px solid rgba(16, 185, 129, 0.4);
+      padding: 6px 18px;
+      background: rgba(16, 185, 129, 0.18);
+      border: 1px solid rgba(16, 185, 129, 0.5);
       border-radius: 10px;
       color: #6ee7b7;
       font-size: 1.1rem;
@@ -557,7 +561,7 @@
       letter-spacing: -0.3px;
       white-space: nowrap;
     }
-    .period-item.lunch.current .lunch-mygo {
+    .period-item.lunch-row.current .lunch-mygo {
       background: rgba(255, 255, 255, 0.22);
       border-color: rgba(255, 255, 255, 0.5);
       color: white;
@@ -1883,16 +1887,13 @@
 
       let lunchRow = '';
       if (p.period === 4) {
-        let lCls = 'period-item lunch';
+        let lCls = 'period-item lunch lunch-row';
         let lDot = '';
         if (isToday && state.type==='lunch') { lCls+=' current'; lDot='<div class="pulse-dot"></div>'; }
         else if (isToday && cur > toMin(myLunch.end)) lCls+=' past';
         lunchRow = `<div class="${lCls}">${lDot}
-          <div class="period-num">점</div>
-          <div class="period-subject">
-            <div class="lunch-mygo">🍽️ 우리반 급식 시간: ${myLunch.start}</div>
-          </div>
-          <div class="period-time">${myLunch.start}–${myLunch.end}</div></div>`;
+          <div class="lunch-mygo">🍽️ 우리반 급식 시간: ${myLunch.start}</div>
+        </div>`;
       }
 
       // 과목명(교사명) 파싱하여 2줄로 렌더링
