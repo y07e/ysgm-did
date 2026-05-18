@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>전자칠판 환경 진단</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, 'Noto Sans KR', sans-serif; }
+    body {
+      background: #0f172a; color: #f1f5f9;
+      padding: 30px 24px; min-height: 100vh;
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 8px; color: #38bdf8; }
+    .sub { color: #94a3b8; margin-bottom: 24px; }
+    .section {
+      background: #1e293b; padding: 20px 24px;
+      border-radius: 12px; margin-bottom: 16px;
+      border-left: 4px solid #38bdf8;
+    }
+    h2 { font-size: 1.1rem; color: #fbbf24; margin-bottom: 12px; }
+    .row {
+      display: flex; justify-content: space-between;
+      padding: 8px 0; border-bottom: 1px solid #334155;
+      font-size: 0.95rem;
+    }
+    .row:last-child { border: none; }
+    .label { color: #94a3b8; }
+    .value { color: #f1f5f9; font-weight: 700; font-family: 'Menlo', monospace; }
+    .value.big { color: #34d399; font-size: 1.1rem; }
+    .copy {
+      width: 100%; padding: 14px; margin-top: 12px;
+      background: #38bdf8; color: #0f172a;
+      border: none; border-radius: 10px;
+      font-size: 1rem; font-weight: 800; cursor: pointer;
+    }
+    .ua {
+      background: #0f172a; padding: 10px 12px; border-radius: 8px;
+      font-family: 'Menlo', monospace; font-size: 0.78rem;
+      color: #93c5fd; word-break: break-all; line-height: 1.5;
+      margin-top: 6px;
+    }
+    .tip {
+      background: rgba(56, 189, 248, 0.1); padding: 14px 18px;
+      border-radius: 10px; margin-top: 18px;
+      font-size: 0.92rem; color: #cbd5e1; line-height: 1.6;
+      border-left: 3px solid #38bdf8;
+    }
+    .preset-box {
+      background: #052e16; padding: 16px 20px;
+      border-radius: 10px; margin-top: 14px;
+      border: 1px solid #10b981;
+    }
+    .preset-row {
+      display: grid; grid-template-columns: 1fr auto;
+      gap: 10px; padding: 6px 0;
+      font-family: 'Menlo', monospace; font-size: 0.92rem;
+    }
+    .preset-label { color: #94a3b8; }
+    .preset-val { color: #6ee7b7; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>📺 전자칠판 환경 진단</h1>
+  <p class="sub">이 페이지를 <strong>전자칠판 Chrome</strong>에서 열어주세요. PC에서 같은 환경 재현에 필요한 값들이 표시됩니다.</p>
+
+  <div class="section">
+    <h2>📐 화면 크기 (CSS Pixels)</h2>
+    <div class="row"><span class="label">window.innerWidth (CSS 뷰포트 폭)</span><span class="value big" id="iw"></span></div>
+    <div class="row"><span class="label">window.innerHeight (CSS 뷰포트 높이)</span><span class="value big" id="ih"></span></div>
+    <div class="row"><span class="label">screen.width (스크린 폭)</span><span class="value" id="sw"></span></div>
+    <div class="row"><span class="label">screen.height (스크린 높이)</span><span class="value" id="sh"></span></div>
+    <div class="row"><span class="label">window.devicePixelRatio (DPR)</span><span class="value big" id="dpr"></span></div>
+    <div class="row"><span class="label">실제 물리 해상도 (계산값)</span><span class="value" id="phys"></span></div>
+  </div>
+
+  <div class="section">
+    <h2>🌐 브라우저 정보</h2>
+    <div class="row"><span class="label">사용자 에이전트 (User Agent)</span></div>
+    <div class="ua" id="ua"></div>
+    <div class="row" style="margin-top:8px;"><span class="label">플랫폼</span><span class="value" id="platform"></span></div>
+    <div class="row"><span class="label">언어</span><span class="value" id="lang"></span></div>
+    <div class="row"><span class="label">터치 지원</span><span class="value" id="touch"></span></div>
+    <div class="row"><span class="label">전체화면 API 지원</span><span class="value" id="fs"></span></div>
+  </div>
+
+  <div class="section">
+    <h2>💾 PC Chrome DevTools 설정용</h2>
+    <p style="color:#94a3b8;font-size:0.88rem;margin-bottom:8px;">아래 값들을 PC Chrome DevTools 디바이스 모드에 그대로 입력하세요:</p>
+    <div class="preset-box">
+      <div class="preset-row">
+        <span class="preset-label">Width × Height (px)</span>
+        <span class="preset-val" id="presetSize"></span>
+      </div>
+      <div class="preset-row">
+        <span class="preset-label">Device pixel ratio</span>
+        <span class="preset-val" id="presetDpr"></span>
+      </div>
+      <div class="preset-row">
+        <span class="preset-label">User agent</span>
+        <span class="preset-val" id="presetUa"></span>
+      </div>
+    </div>
+    <button class="copy" onclick="copyAll()">📋 전체 정보 복사 (휴대폰으로 공유용)</button>
+  </div>
+
+  <div class="tip">
+    💡 <strong>PC Chrome에 설정 방법</strong>:<br>
+    1. F12 (DevTools 열기) → Ctrl+Shift+M (디바이스 모드)<br>
+    2. 상단 디바이스 선택 → "Edit..." → "Add custom device"<br>
+    3. 위 값들 그대로 입력 → Save<br>
+    4. 추가한 디바이스 선택 → 정확한 IFP 환경 재현 완료
+  </div>
+
+  <p style="text-align:center;margin-top:24px;color:#475569;font-size:0.85rem;">
+    🏫 양산여자중학교 전자칠판 DID 진단 도구
+  </p>
+
+<script>
+  const iw = window.innerWidth;
+  const ih = window.innerHeight;
+  const sw = screen.width;
+  const sh = screen.height;
+  const dpr = window.devicePixelRatio;
+
+  document.getElementById('iw').textContent = iw + ' px';
+  document.getElementById('ih').textContent = ih + ' px';
+  document.getElementById('sw').textContent = sw + ' px';
+  document.getElementById('sh').textContent = sh + ' px';
+  document.getElementById('dpr').textContent = dpr;
+  document.getElementById('phys').textContent = (sw * dpr) + ' × ' + (sh * dpr) + ' px';
+
+  document.getElementById('ua').textContent = navigator.userAgent;
+  document.getElementById('platform').textContent = navigator.platform;
+  document.getElementById('lang').textContent = navigator.language;
+  document.getElementById('touch').textContent =
+    ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? '✅ 지원' : '❌ 미지원';
+  document.getElementById('fs').textContent =
+    (document.documentElement.requestFullscreen ||
+     document.documentElement.webkitRequestFullscreen) ? '✅ 지원' : '❌ 미지원';
+
+  // PC 설정용 미리보기
+  document.getElementById('presetSize').textContent = iw + ' × ' + ih;
+  document.getElementById('presetDpr').textContent = dpr;
+  document.getElementById('presetUa').textContent = navigator.userAgent.substring(0, 60) + '...';
+
+  function copyAll() {
+    const info = `전자칠판 환경 정보
+=================================
+CSS 뷰포트: ${iw} × ${ih} px
+스크린: ${sw} × ${sh} px
+DPR: ${dpr}
+실물리: ${sw*dpr} × ${sh*dpr} px
+
+User Agent:
+${navigator.userAgent}
+
+플랫폼: ${navigator.platform}
+언어: ${navigator.language}
+터치: ${'ontouchstart' in window ? '지원' : '미지원'}
+전체화면: ${document.documentElement.requestFullscreen ? '지원' : '미지원'}
+
+[PC Chrome DevTools 설정]
+- Width: ${iw}
+- Height: ${ih}
+- DPR: ${dpr}
+- UA: ${navigator.userAgent}`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(info).then(() => alert('📋 정보가 복사되었습니다!'));
+    } else {
+      // 폴백: textarea에 표시
+      const ta = document.createElement('textarea');
+      ta.value = info;
+      document.body.appendChild(ta);
+      ta.select(); document.execCommand('copy');
+      ta.remove();
+      alert('📋 정보가 복사되었습니다!');
+    }
+  }
+</script>
+</body>
+</html>
