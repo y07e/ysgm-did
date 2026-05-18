@@ -544,27 +544,24 @@
     .period-time  { font-size: 0.72rem; color: #64748b; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .period-item.current .period-time { color: #6ee7b7; }
 
-    /* 점심시간 — 우리반 급식 시간 강조 (제목 옆 인라인) */
+    /* 점심시간 — 우리반 급식 시간만 강조 표시 */
     .lunch-mygo {
       display: inline-block;
-      margin-left: 10px;
-      padding: 2px 10px;
+      padding: 5px 14px;
       background: rgba(16, 185, 129, 0.15);
       border: 1px solid rgba(16, 185, 129, 0.4);
-      border-radius: 12px;
+      border-radius: 10px;
       color: #6ee7b7;
-      font-size: 0.85rem;
-      font-weight: 700;
-      letter-spacing: -0.2px;
-      vertical-align: middle;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      white-space: nowrap;
     }
     .period-item.lunch.current .lunch-mygo {
-      background: rgba(255, 255, 255, 0.2);
-      border-color: rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.22);
+      border-color: rgba(255, 255, 255, 0.5);
       color: white;
     }
-    /* 점심 시간 행 — nowrap 해제 (인라인 배지가 들어가니까) */
-    .period-item.lunch .subject-name { white-space: normal; }
 
     .pulse-dot {
       width: 6px; height: 6px; border-radius: 50%;
@@ -1303,7 +1300,7 @@
       body.force-desktop .subject-teacher { font-size: 0.62rem !important; line-height: 1.05 !important; }
       body.force-desktop .period-time { font-size: 0.6rem !important; }
       body.force-desktop .period-num { font-size: 0.66rem !important; width: 14px !important; }
-      body.force-desktop .lunch-mygo { font-size: 0.72rem !important; padding: 1px 7px !important; margin-left: 6px !important; }
+      body.force-desktop .lunch-mygo { font-size: 0.85rem !important; padding: 3px 10px !important; }
 
       /* 학교 공지 LED */
       body.force-desktop .ann-led-header { font-size: 0.6rem !important; padding-bottom: 2px !important; margin-bottom: 3px !important; }
@@ -1483,7 +1480,7 @@
       .period-num { width: 20px; font-size: 0.82rem; }
 
       /* 모바일 점심 — 우리반 급식 시간 배지 */
-      .lunch-mygo { font-size: 0.78rem !important; padding: 1px 8px !important; margin-left: 7px !important; }
+      .lunch-mygo { font-size: 0.95rem !important; padding: 4px 12px !important; }
 
       /* 모바일 LED 게시판 */
       .ann-led-title { font-size: 1.3rem !important; }
@@ -1893,7 +1890,7 @@
         lunchRow = `<div class="${lCls}">${lDot}
           <div class="period-num">점</div>
           <div class="period-subject">
-            <div class="subject-name">점심 시간 <span class="lunch-mygo">🍽️ 우리반 급식 시간: ${myLunch.start}</span></div>
+            <div class="lunch-mygo">🍽️ 우리반 급식 시간: ${myLunch.start}</div>
           </div>
           <div class="period-time">${myLunch.start}–${myLunch.end}</div></div>`;
       }
