@@ -1638,6 +1638,52 @@
 
 <script>
   // ============================================================
+  // 🧪 미리보기 모드: ?date=YYYY-MM-DD 파라미터로 특정 날짜 시뮬레이션
+  // (모든 Date() 호출이 해당 날짜의 오전 10시로 가짜됨 — 단축수업/공지 미리보기용)
+  // ============================================================
+  (function setupMockDate() {
+    const params = new URLSearchParams(location.search);
+    const mockDateStr = params.get('date');
+    if (!mockDateStr) return;
+    const [y, m, d] = mockDateStr.split('-').map(Number);
+    if (!y || !m || !d) return;
+    // 기본 모의 시각: 오전 10시 (?time=HH:MM 으로 변경 가능)
+    const timeParam = params.get('time') || '10:00';
+    const [hh, mm] = timeParam.split(':').map(Number);
+    const mockBase = new Date(y, m-1, d, hh||10, mm||0, 0);
+    const realBase = new Date();
+    const offsetMs = mockBase.getTime() - realBase.getTime();
+    const RealDate = Date;
+    function FakeDate(...args) {
+      if (!(this instanceof FakeDate)) return new RealDate().toString();
+      if (args.length === 0) return new RealDate(RealDate.now() + offsetMs);
+      return new RealDate(...args);
+    }
+    FakeDate.prototype = RealDate.prototype;
+    FakeDate.now = () => RealDate.now() + offsetMs;
+    FakeDate.UTC = RealDate.UTC;
+    FakeDate.parse = RealDate.parse;
+    window.Date = FakeDate;
+
+    // 상단에 미리보기 모드 표시 (눈에 잘 띄게)
+    document.addEventListener('DOMContentLoaded', () => {
+      const banner = document.createElement('div');
+      banner.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+        background: linear-gradient(90deg, #f59e0b, #ef4444);
+        color: white; font-weight: 800; text-align: center;
+        padding: 8px 14px; font-size: 0.92rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        letter-spacing: -0.2px;
+      `;
+      banner.innerHTML = `🧪 미리보기 모드 — <b>${mockDateStr} ${timeParam}</b>로 가짜 시간 적용 중 · <a href="${location.pathname}${location.search.replace(/[?&]date=[^&]*/,'').replace(/[?&]time=[^&]*/,'').replace(/^&/,'?') || ''}" style="color:white;text-decoration:underline;">실제 시간으로 돌아가기</a>`;
+      document.body.appendChild(banner);
+      document.body.style.paddingTop = '38px';
+    });
+    console.log('[🧪 Mock Date]', mockDateStr, timeParam, 'offset:', Math.round(offsetMs/86400000), 'days');
+  })();
+
+  // ============================================================
   // 초기화
   // ============================================================
   firebase.initializeApp(SCHOOL_CONFIG.firebase);
