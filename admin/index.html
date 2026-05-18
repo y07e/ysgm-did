@@ -878,6 +878,15 @@
         </div>
         <button class="btn btn-danger" id="btnSendEm">🚨 즉시 전송</button>
       </div>
+
+      <!-- ===== 긴급 공지 이력 ===== -->
+      <div class="card">
+        <div class="card-title">📜 이전 전송 이력 (재사용 가능)</div>
+        <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;">
+          전송된 긴급 공지는 자동으로 저장됩니다. <b>📝 불러오기</b> 버튼으로 양식에 다시 채워 넣어 빠르게 재전송할 수 있습니다.
+        </p>
+        <div id="emHistList"><div class="empty-state">전송 이력 없음</div></div>
+      </div>
     </div>
 
     <!-- ===== D-Day ===== -->
@@ -2472,13 +2481,23 @@ document.getElementById('btnSendEm').addEventListener('click', async () => {
   const msg   = document.getElementById('emMsg').value.trim();
   if (!title||!msg) return showToast('제목과 내용을 입력하세요');
   if (!confirm('긴급 공지를 즉시 전송하시겠습니까?\n해당 교실 전자칠판에 즉시 표시됩니다.')) return;
+  const targetGrades  = getChecked('emg');
+  const targetClasses = getChecked('ec');
+  const ts = firebase.firestore.FieldValue.serverTimestamp();
+
+  // 현재 활성 긴급공지 갱신
   await db.collection('emergency').doc('current').set({
-    isActive:true, title, message:msg,
-    targetGrades:  getChecked('emg'),
-    targetClasses: getChecked('ec'),
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    isActive: true, title, message: msg,
+    targetGrades, targetClasses,
+    createdAt: ts
   });
-  showToast('🚨 긴급 공지 전송 완료');
+  // 이력 자동 저장
+  await db.collection('emergencyHistory').add({
+    title, message: msg,
+    targetGrades, targetClasses,
+    sentAt: ts
+  });
+  showToast('🚨 긴급 공지 전송 완료 (이력 저장됨)');
 });
 
 document.getElementById('btnClearEm').addEventListener('click', async () => {
@@ -2486,6 +2505,69 @@ document.getElementById('btnClearEm').addEventListener('click', async () => {
   await db.collection('emergency').doc('current').update({ isActive:false });
   showToast('긴급 공지 해제됨');
 });
+
+// 긴급 공지 이력 실시간 표시
+db.collection('emergencyHistory').orderBy('sentAt','desc').limit(20)
+  .onSnapshot(snap => {
+    const el = document.getElementById('emHistList');
+    if (!el) return;
+    if (snap.empty) {
+      el.innerHTML = '<div class="empty-state">전송 이력 없음</div>';
+      return;
+    }
+    el.innerHTML = snap.docs.map(d => {
+      const data = d.data();
+      const dt = data.sentAt?.toDate ? data.sentAt.toDate() : null;
+      const dateStr = dt ? `${dt.getMonth()+1}/${dt.getDate()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}` : '-';
+      const tg = (data.targetGrades||['all']).includes('all') ? '전체 학년' : (data.targetGrades||[]).map(g => `${g}학년`).join(',');
+      const tc = (data.targetClasses||['all']).includes('all') ? '전체 반' : (data.targetClasses||[]).map(c => `${c}반`).join(',');
+      const safeMsg = (data.message||'').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+      const safeTitle = (data.title||'').replace(/</g,'&lt;');
+      return `<div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px;">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:800;color:#0f172a;font-size:1rem;">🚨 ${safeTitle}</div>
+            <div style="font-size:0.78rem;color:#64748b;margin-top:2px;">${dateStr} · ${tg} · ${tc}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button class="btn btn-secondary btn-sm" onclick="loadEmHistory('${d.id}')">📝 불러오기</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteEmHistory('${d.id}')">🗑</button>
+          </div>
+        </div>
+        <div style="background:#fef3c7;border-left:3px solid #f59e0b;padding:8px 12px;border-radius:6px;font-size:0.88rem;color:#451a03;line-height:1.55;">${safeMsg}</div>
+      </div>`;
+    }).join('');
+  });
+
+window._emHistCache = {};
+window.loadEmHistory = async (id) => {
+  // 캐시에 없으면 직접 조회
+  let data;
+  try {
+    const doc = await db.collection('emergencyHistory').doc(id).get();
+    if (!doc.exists) return showToast('이력 항목을 찾을 수 없습니다');
+    data = doc.data();
+  } catch (e) {
+    return showToast('이력 로드 실패: ' + e.message);
+  }
+  document.getElementById('emTitle').value = data.title || '';
+  document.getElementById('emMsg').value = data.message || '';
+  // 대상 학년/반 체크박스 복원
+  document.querySelectorAll('input[name="emg"]').forEach(cb => {
+    cb.checked = (data.targetGrades||['all']).includes(cb.value);
+  });
+  document.querySelectorAll('input[name="ec"]').forEach(cb => {
+    cb.checked = (data.targetClasses||['all']).includes(cb.value);
+  });
+  document.getElementById('emTitle').scrollIntoView({behavior:'smooth', block:'center'});
+  showToast('✅ 양식에 불러왔습니다. 필요 시 수정 후 🚨 즉시 전송');
+};
+
+window.deleteEmHistory = async (id) => {
+  if (!confirm('이 이력을 삭제하시겠습니까? (다시 보내기 불가)')) return;
+  await db.collection('emergencyHistory').doc(id).delete();
+  showToast('🗑 이력 삭제됨');
+};
 
 // ============================================================
 // 학급별 급식 시간

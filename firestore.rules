@@ -55,6 +55,12 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 긴급 공지 이력 (관리자 전용)
+    match /emergencyHistory/{id} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
     // 설정 (수업시간, 급식시간, 학교설정, 운영기간, 오버라이드)
     match /settings/{docId} {
       allow read: if true;
