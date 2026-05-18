@@ -976,10 +976,59 @@
     }
     body.force-desktop .left-panel {
       display: grid !important;
-      grid-template-rows: minmax(0,1.6fr) minmax(0,0.7fr) minmax(0,0.7fr) !important;
+      /* 날씨 패널은 톱바로 이동 → 좌측은 시간표(크게) + 학사일정 2행만 */
+      grid-template-rows: minmax(0,2.3fr) minmax(0,0.7fr) !important;
       gap: 8px !important;
       overflow: hidden !important;
       min-height: 0 !important;
+    }
+    /* 좌측 날씨 패널 — 키오스크에서는 톱바로 이동했으므로 숨김 */
+    body.force-desktop .weather-panel { display: none !important; }
+
+    /* === 톱바 (D-Day + 날씨) 가로 통합 === */
+    body.force-desktop .dday-bar {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 6px 16px !important;
+      gap: 12px !important;
+    }
+    body.force-desktop .dday-bar .dday-items {
+      display: flex; gap: 8px; flex: 1; min-width: 0;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    body.force-desktop .dday-bar .dday-items::-webkit-scrollbar { display: none; }
+
+    /* 톱바용 컴팩트 날씨 위젯 */
+    body.force-desktop .top-weather {
+      display: flex; align-items: center; gap: 14px;
+      padding: 4px 12px;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 10px;
+      border: 1px solid #334155;
+      flex-shrink: 0;
+      white-space: nowrap;
+      font-size: 0.88rem;
+    }
+    body.force-desktop .top-weather .tw-main {
+      display: flex; align-items: center; gap: 6px;
+      font-weight: 700;
+    }
+    body.force-desktop .top-weather .tw-icon { font-size: 1.4rem; }
+    body.force-desktop .top-weather .tw-temp {
+      font-size: 1.05rem; font-weight: 900; color: #f1f5f9;
+    }
+    body.force-desktop .top-weather .tw-sep {
+      width: 1px; height: 18px; background: #334155;
+    }
+    body.force-desktop .top-weather .tw-item {
+      display: flex; gap: 4px; align-items: baseline;
+    }
+    body.force-desktop .top-weather .tw-label {
+      color: #94a3b8; font-size: 0.72rem;
+    }
+    body.force-desktop .top-weather .tw-val {
+      color: #cbd5e1; font-weight: 700;
     }
     body.force-desktop .right-panel {
       display: grid !important;
@@ -1982,8 +2031,24 @@
       });
 
     const bar = document.getElementById('ddayBar');
-    if (items.length) { bar.innerHTML = items.join(''); bar.classList.add('show'); }
-    else bar.classList.remove('show');
+    const isKiosk = document.body.classList.contains('force-desktop');
+    if (isKiosk) {
+      // 키오스크: D-Day items + 날씨 위젯을 한 줄에
+      let html = '<div class="dday-items">';
+      html += items.length ? items.join('') : '<span style="color:#475569;font-size:0.82rem;">D-Day 없음</span>';
+      html += '</div>';
+      html += '<div class="top-weather" id="topWeather"><span style="color:#475569;">날씨 불러오는 중...</span></div>';
+      bar.innerHTML = html;
+      bar.classList.add('show');
+      // 이미 받아진 날씨 데이터가 있으면 즉시 표시
+      if (window._lastWeatherHtml) {
+        const tw = document.getElementById('topWeather');
+        if (tw) tw.innerHTML = window._lastWeatherHtml;
+      }
+    } else {
+      if (items.length) { bar.innerHTML = items.join(''); bar.classList.add('show'); }
+      else bar.classList.remove('show');
+    }
   });
 
   // 금주 학사일정
@@ -2127,8 +2192,26 @@
           <div class="weather-row"><span class="weather-row-label">미세먼지</span><span class="weather-row-val ${p10.cls}">${p10.txt} · ${pm10}㎍</span></div>
           <div class="weather-row"><span class="weather-row-label">초미세먼지</span><span class="weather-row-val ${p25.cls}">${p25.txt} · ${pm25}㎍</span></div>
         </div>`;
+
+      // 키오스크 모드: 톱바에 컴팩트 날씨 위젯도 함께 렌더
+      const compactHtml = `
+        <div class="tw-main">
+          <span class="tw-icon">${weatherEmoji(code)}</span>
+          <span class="tw-temp">${temp}°</span>
+        </div>
+        <div class="tw-sep"></div>
+        <div class="tw-item"><span class="tw-label">체감</span><span class="tw-val">${feels}°</span></div>
+        <div class="tw-item"><span class="tw-label">습도</span><span class="tw-val">${hum}%</span></div>
+        <div class="tw-item"><span class="tw-label">미세</span><span class="tw-val ${p10.cls}">${p10.txt}</span></div>
+        <div class="tw-item"><span class="tw-label">초미세</span><span class="tw-val ${p25.cls}">${p25.txt}</span></div>
+      `;
+      window._lastWeatherHtml = compactHtml;
+      const tw = document.getElementById('topWeather');
+      if (tw) tw.innerHTML = compactHtml;
     } catch (e) {
       el.innerHTML = '<div style="color:#475569;">날씨 정보를 불러올 수 없습니다</div>';
+      const tw = document.getElementById('topWeather');
+      if (tw) tw.innerHTML = '<span style="color:#475569;font-size:0.82rem;">날씨 불러올 수 없음</span>';
     }
   }
 
