@@ -379,6 +379,69 @@
       font-style: italic;
     }
 
+    /* ===== 오늘의 급식 (하루 큼직하게) ===== */
+    .lunch-today {
+      flex: 1;
+      display: flex; flex-direction: column;
+      gap: 10px;
+      padding: 12px 14px;
+      background: linear-gradient(135deg, #052e16 0%, #0f172a 100%);
+      border: 1px solid #10b981;
+      border-radius: 12px;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .lunch-today-head {
+      display: flex; align-items: center;
+      gap: 10px; flex-shrink: 0;
+      flex-wrap: wrap;
+      padding-bottom: 6px;
+      border-bottom: 1px dashed rgba(16,185,129,0.3);
+    }
+    .lunch-today-date {
+      font-size: 1rem; font-weight: 800;
+      color: #6ee7b7;
+      letter-spacing: -0.3px;
+    }
+    .lunch-today-tag {
+      background: #10b981; color: white;
+      font-size: 0.7rem; font-weight: 800;
+      padding: 2px 10px; border-radius: 10px;
+      letter-spacing: 1px;
+    }
+    .lunch-today-tag-soft {
+      background: #64748b; color: white;
+      font-size: 0.7rem; font-weight: 700;
+      padding: 2px 10px; border-radius: 10px;
+    }
+    .lunch-today-cal {
+      margin-left: auto;
+      font-size: 0.78rem; color: #94a3b8;
+      font-weight: 600;
+    }
+    .lunch-today-items {
+      flex: 1; min-height: 0;
+      display: flex; flex-wrap: wrap;
+      gap: 6px 10px;
+      align-content: flex-start;
+      overflow: hidden;
+    }
+    .lunch-today-item {
+      display: inline-block;
+      background: rgba(15, 23, 42, 0.6);
+      color: #e2e8f0;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: 1px solid #334155;
+      white-space: nowrap;
+    }
+    .lunch-today-empty {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      color: #475569; font-size: 0.95rem; font-style: italic;
+    }
+
     /* ===== TIMETABLE ===== */
     .timetable-panel {
       background: #1e293b;
@@ -1055,7 +1118,8 @@
     body.force-desktop .dday-bar { padding: 4px 14px !important; gap: 10px !important; }
     body.force-desktop .right-panel {
       display: grid !important;
-      grid-template-rows: minmax(0,1fr) minmax(0,0.85fr) minmax(0,1.15fr) !important;
+      /* 급식이 1일치만 표시되므로 학교공지/학급게시판에 공간 양보 */
+      grid-template-rows: minmax(0,1.3fr) minmax(0,1fr) minmax(0,0.85fr) !important;
       gap: 6px !important;
       overflow: hidden !important;
       min-height: 0 !important;
@@ -1106,26 +1170,18 @@
     body.force-desktop .class-led-marquee { font-size: 0.85rem !important; line-height: 1.4; }
     body.force-desktop .class-board-panel.led .class-ann-list { padding: 5px 10px !important; }
 
-    /* 급식 — 매우 컴팩트 (5일 깔끔하게) */
-    body.force-desktop .lunch-day {
-      padding: 3px 8px !important;
-      gap: 6px !important;
-      min-height: 0 !important;
+    /* 오늘의 급식 (1일 큼직) — 키오스크 컴팩트 */
+    body.force-desktop .lunch-today { padding: 8px 12px !important; gap: 6px !important; }
+    body.force-desktop .lunch-today-head { padding-bottom: 4px !important; gap: 8px !important; }
+    body.force-desktop .lunch-today-date { font-size: 0.92rem !important; }
+    body.force-desktop .lunch-today-tag,
+    body.force-desktop .lunch-today-tag-soft { font-size: 0.65rem !important; padding: 1px 8px !important; }
+    body.force-desktop .lunch-today-cal { font-size: 0.7rem !important; }
+    body.force-desktop .lunch-today-items { gap: 5px 8px !important; }
+    body.force-desktop .lunch-today-item {
+      padding: 4px 10px !important;
+      font-size: 0.82rem !important;
     }
-    body.force-desktop .lunch-day-head { min-width: 64px !important; gap: 3px !important; }
-    body.force-desktop .lunch-day-date { font-size: 0.7rem; }
-    body.force-desktop .lunch-day-tag { font-size: 0.55rem !important; padding: 0 5px !important; }
-    body.force-desktop .lunch-day-menu {
-      font-size: 0.7rem !important;
-      line-height: 1.25 !important;
-      -webkit-line-clamp: 1 !important;
-    }
-    body.force-desktop .lunch-day.today .lunch-day-menu {
-      font-size: 0.78rem !important;
-      -webkit-line-clamp: 2 !important;
-    }
-    body.force-desktop .lunch-day.today { flex: 1.5 !important; }
-    body.force-desktop .lunch-day-empty { font-size: 0.68rem !important; }
 
     /* 학사일정 — 컴팩트 */
     body.force-desktop .event-item { padding: 3px 7px !important; gap: 8px !important; }
@@ -1293,7 +1349,7 @@
     <!-- 급식 -->
     <div class="panel lunch-panel" id="lunchPanel">
       <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-        <div class="panel-title" style="margin-bottom:0;">🍱 이번 주 급식</div>
+        <div class="panel-title" style="margin-bottom:0;">🍱 오늘의 급식</div>
         <span class="lunch-countdown" id="lunchCountdown"></span>
       </div>
       <div id="lunchContent" style="color:#475569;">불러오는 중...</div>
@@ -1865,49 +1921,42 @@
     const dayKor = ['일','월','화','수','목','금','토'];
     try {
       const now = new Date();
-      const today = new Date(now); today.setHours(0,0,0,0);
-      // 이번 주 월요일 계산
-      const day = now.getDay();
-      const offsetToMon = (day === 0) ? -6 : (1 - day);
-      const monday = new Date(today);
-      monday.setDate(today.getDate() + offsetToMon);
+      let target = new Date(now); target.setHours(0,0,0,0);
+      // 주말이면 다음 월요일 급식 표시
+      const dow = target.getDay();
+      if (dow === 0) target.setDate(target.getDate() + 1);
+      else if (dow === 6) target.setDate(target.getDate() + 2);
 
-      // 월~금 5일치 병렬 조회
-      const dates = [0,1,2,3,4].map(i => {
-        const d = new Date(monday);
-        d.setDate(monday.getDate() + i);
-        return d;
-      });
-      const meals = await Promise.all(dates.map(d => fetchMealByDate(d).catch(()=>null)));
+      const meal = await fetchMealByDate(target).catch(() => null);
+      const dateLabel = `${target.getMonth()+1}월 ${target.getDate()}일 (${dayKor[target.getDay()]})`;
+      const isWeekendShift = dow === 0 || dow === 6;
 
-      const html = dates.map((d, i) => {
-        const dd = new Date(d); dd.setHours(0,0,0,0);
-        const isPast  = dd < today;
-        const isToday = dd.getTime() === today.getTime();
-        const cls = isToday ? 'today' : (isPast ? 'past' : '');
-        const meal = meals[i];
+      if (!meal) {
+        el.innerHTML = `<div class="lunch-today">
+          <div class="lunch-today-head">
+            <span class="lunch-today-date">${dateLabel}</span>
+            ${isWeekendShift ? '<span class="lunch-today-tag-soft">예정</span>' : '<span class="lunch-today-tag">오늘</span>'}
+          </div>
+          <div class="lunch-today-empty">📋 급식 정보가 없습니다</div>
+        </div>`;
+        return;
+      }
 
-        let menuHtml;
-        if (meal) {
-          const items = meal.DDISH_NM.split('<br/>')
-            .map(s => s.replace(/[0-9.()\s]+$/,'').trim())
-            .filter(Boolean);
-          menuHtml = `<div class="lunch-day-menu">${items.join(' · ')}</div>`;
-        } else {
-          menuHtml = `<div class="lunch-day-empty">정보 없음</div>`;
-        }
+      const items = meal.DDISH_NM.split('<br/>')
+        .map(s => s.replace(/[0-9.()\s]+$/,'').trim())
+        .filter(Boolean);
+      const cal = meal.CAL_INFO || '';
 
-        return `
-          <div class="lunch-day ${cls}">
-            <div class="lunch-day-head">
-              <span class="lunch-day-date">${d.getMonth()+1}/${d.getDate()} (${dayKor[d.getDay()]})</span>
-              ${isToday ? '<span class="lunch-day-tag">오늘</span>' : ''}
-            </div>
-            ${menuHtml}
-          </div>`;
-      }).join('');
-
-      el.innerHTML = `<div class="lunch-week">${html}</div>`;
+      el.innerHTML = `<div class="lunch-today">
+        <div class="lunch-today-head">
+          <span class="lunch-today-date">${dateLabel}</span>
+          ${isWeekendShift ? '<span class="lunch-today-tag-soft">예정</span>' : '<span class="lunch-today-tag">오늘</span>'}
+          ${cal ? `<span class="lunch-today-cal">${cal}</span>` : ''}
+        </div>
+        <div class="lunch-today-items">
+          ${items.map(item => `<span class="lunch-today-item">${item}</span>`).join('')}
+        </div>
+      </div>`;
     } catch {
       el.innerHTML = '<div style="color:#475569;">급식 정보를 불러올 수 없습니다</div>';
     }
