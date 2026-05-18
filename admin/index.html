@@ -2434,6 +2434,8 @@ function getMondayOf(date) {
 }
 
 // 현재 주에 사용할 시작 학급 계산 (순환 적용)
+// 방향: 매주 역방향(-1) — 1주차 마지막 학급이 2주차 첫 번째로 올라옴
+// 예) 1주차: A B C D E → 2주차: E A B C D → 3주차: D E A B C → ...
 function getRotatedStartClass(floor, schedule, targetDate) {
   const order = getFloorOrder(floor);
   if (!order.length || !floor.startClass) return floor.startClass;
@@ -2447,7 +2449,8 @@ function getRotatedStartClass(floor, schedule, targetDate) {
   if (anchorIdx === -1) return floor.startClass;
 
   const len = order.length;
-  const currentIdx = ((anchorIdx + weeksDiff) % len + len) % len;
+  // 매주 -1 (역방향) → 마지막 학급이 다음 주 첫 번째로
+  const currentIdx = ((anchorIdx - weeksDiff) % len + len) % len;
   return order[currentIdx];
 }
 
