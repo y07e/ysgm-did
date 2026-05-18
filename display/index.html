@@ -1075,17 +1075,21 @@
     body.force-desktop .period-time { font-size: 0.7rem; }
     body.force-desktop .period-num { font-size: 0.78rem; }
 
-    /* 학교 공지 (LED) */
-    body.force-desktop .ann-led-header { padding-bottom: 4px !important; margin-bottom: 6px !important; font-size: 0.78rem; }
+    /* 학교 공지 (LED) — 마키 영역 가시성 보장 */
+    body.force-desktop .ann-led-header { padding-bottom: 3px !important; margin-bottom: 4px !important; font-size: 0.7rem; }
     body.force-desktop .ann-led-tag { letter-spacing: 1px !important; }
-    body.force-desktop .ann-led-title { font-size: 1.4rem !important; margin-bottom: 6px !important; }
-    body.force-desktop .ann-led-marquee { font-size: 1.15rem !important; }
-    body.force-desktop .ann-style-2 .ann-body-wrap { padding: 8px 12px !important; }
+    body.force-desktop .ann-led-title { font-size: 1.05rem !important; margin-bottom: 4px !important; }
+    body.force-desktop .ann-led-marquee-wrap {
+      min-height: 38px !important;
+    }
+    body.force-desktop .ann-led-marquee { font-size: 1.05rem !important; line-height: 1.4; }
+    body.force-desktop .ann-style-2 .ann-body-wrap { padding: 6px 10px !important; }
 
-    /* 학급 게시판 (LED) */
-    body.force-desktop .class-led-title { font-size: 0.92rem !important; margin-bottom: 4px !important; }
-    body.force-desktop .class-led-marquee { font-size: 0.85rem !important; }
-    body.force-desktop .class-board-panel.led .class-ann-list { padding: 6px 10px !important; }
+    /* 학급 게시판 (LED) — 마키 영역 가시성 보장 */
+    body.force-desktop .class-led-title { font-size: 0.85rem !important; margin-bottom: 3px !important; }
+    body.force-desktop .class-led-marquee-wrap { min-height: 32px !important; }
+    body.force-desktop .class-led-marquee { font-size: 0.85rem !important; line-height: 1.4; }
+    body.force-desktop .class-board-panel.led .class-ann-list { padding: 5px 10px !important; }
 
     /* 급식 — 매우 컴팩트 (5일 깔끔하게) */
     body.force-desktop .lunch-day {
