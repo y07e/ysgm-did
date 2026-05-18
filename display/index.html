@@ -1030,6 +1030,10 @@
     body.force-desktop .top-weather .tw-val {
       color: #cbd5e1; font-weight: 700;
     }
+    body.force-desktop .top-weather .tw-title {
+      color: #7dd3fc; font-weight: 800; font-size: 0.92rem;
+      letter-spacing: -0.2px;
+    }
     body.force-desktop .right-panel {
       display: grid !important;
       grid-template-rows: minmax(0,1.3fr) minmax(0,0.7fr) minmax(0,1fr) !important;
@@ -2195,6 +2199,8 @@
 
       // 키오스크 모드: 톱바에 컴팩트 날씨 위젯도 함께 렌더
       const compactHtml = `
+        <span class="tw-title">📍 양산 날씨</span>
+        <div class="tw-sep"></div>
         <div class="tw-main">
           <span class="tw-icon">${weatherEmoji(code)}</span>
           <span class="tw-temp">${temp}°</span>
