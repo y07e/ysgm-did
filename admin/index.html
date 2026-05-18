@@ -526,14 +526,23 @@
     .lunch-time-badge.default { background: #f1f5f9; color: #64748b; }
 
     /* ===== SETTINGS PERIOD ===== */
-    .sp-grid { display: grid; grid-template-columns: 70px 1fr 1fr; gap: 8px; align-items: center; }
+    .sp-grid { display: grid; grid-template-columns: 70px 1fr 1fr 40px; gap: 8px; align-items: center; }
     .sp-row {
-      display: grid; grid-template-columns: 70px 1fr 1fr;
+      display: grid; grid-template-columns: 70px 1fr 1fr 40px;
       gap: 8px; align-items: center; padding: 8px 0;
       border-bottom: 1px solid #f1f5f9;
     }
     .sp-row:last-child { border-bottom: none; }
     .sp-label { font-size: 0.84rem; font-weight: 700; color: #475569; }
+    .sp-del-btn {
+      background: #fee2e2; color: #b91c1c;
+      border: 1px solid #fecaca;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.75rem; font-weight: 700;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .sp-del-btn:hover { background: #fecaca; }
 
     /* ===== TEACHER LIST ===== */
     .teacher-card {
@@ -1023,13 +1032,16 @@
     <div class="tab-panel" id="tab-settings">
       <div class="card">
         <div class="card-title">수업 시간 설정</div>
-        <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;">저장 즉시 모든 교실에 반영됩니다.</p>
+        <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:14px;">
+          저장 즉시 모든 교실에 반영됩니다. 학교 일정에 맞춰 교시 추가·삭제 가능.
+        </p>
         <div class="sp-grid" style="margin-bottom:6px;font-size:0.75rem;color:#64748b;font-weight:600;">
-          <span>교시</span><span>시작</span><span>종료</span>
+          <span>교시</span><span>시작</span><span>종료</span><span></span>
         </div>
         <div id="spRows"></div>
-        <div class="btn-row">
-          <button class="btn btn-primary" id="btnSaveSp">설정 저장</button>
+        <div class="btn-row" style="margin-top:10px;justify-content:space-between;">
+          <button class="btn btn-success btn-sm" id="btnAddPeriod">➕ 교시 추가</button>
+          <button class="btn btn-primary" id="btnSaveSp">💾 설정 저장</button>
         </div>
       </div>
     </div>
@@ -3936,7 +3948,7 @@ db.collection('settings').doc('lunchSchedules').onSnapshot(snap => {
 // ===== (구버전 floor 시스템 제거됨 — schedule 기반으로 통합) =====
 
 // ============================================================
-// 수업 시간 설정
+// 수업 시간 설정 (동적 교시 추가/삭제 가능)
 // ============================================================
 function renderSpRows(periods) {
   document.getElementById('spRows').innerHTML = periods.map((p,i)=>`
@@ -3944,18 +3956,60 @@ function renderSpRows(periods) {
       <div class="sp-label">${p.period}교시</div>
       <input type="text" id="sp_s${i}" value="${p.start}" style="margin-bottom:0;">
       <input type="text" id="sp_e${i}" value="${p.end}"   style="margin-bottom:0;">
+      ${periods.length > 1 ? `<button class="sp-del-btn" onclick="removePeriod(${i})" title="이 교시 삭제">🗑</button>` : '<span></span>'}
     </div>`).join('');
 }
 
-document.getElementById('btnSaveSp').addEventListener('click', async () => {
-  const base = spPeriods.length ? spPeriods : SCHOOL_CONFIG.defaultPeriods;
-  const periods = base.map((p,i)=>({
+// 현재 화면 입력값을 읽어 spPeriods에 반영
+function syncSpPeriodsFromUI() {
+  const base = spPeriods.length ? spPeriods : [...SCHOOL_CONFIG.defaultPeriods];
+  return base.map((p,i)=>({
     period: p.period,
-    start: document.getElementById(`sp_s${i}`)?.value.trim()||p.start,
-    end:   document.getElementById(`sp_e${i}`)?.value.trim()||p.end
+    start: document.getElementById(`sp_s${i}`)?.value.trim() || p.start,
+    end:   document.getElementById(`sp_e${i}`)?.value.trim() || p.end
   }));
+}
+
+// 교시 추가 — 마지막 교시 + 1, 시간은 마지막+10분 간격으로 자동 제안
+window.addPeriod = () => {
+  spPeriods = syncSpPeriodsFromUI();
+  const last = spPeriods[spPeriods.length - 1];
+  let newStart = '15:45', newEnd = '16:30';
+  if (last) {
+    const [eh, em] = last.end.split(':').map(Number);
+    const startMin = eh * 60 + em + 10;
+    const endMin = startMin + 45;
+    const fmt = m => `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+    newStart = fmt(startMin);
+    newEnd = fmt(endMin);
+  }
+  spPeriods.push({
+    period: (last?.period || 0) + 1,
+    start: newStart,
+    end: newEnd
+  });
+  renderSpRows(spPeriods);
+  showToast(`➕ ${spPeriods[spPeriods.length-1].period}교시 추가됨 (저장 버튼을 눌러주세요)`);
+};
+
+// 교시 삭제 (마지막 교시만 가능 — 중간 삭제하면 번호 꼬임)
+window.removePeriod = (idx) => {
+  spPeriods = syncSpPeriodsFromUI();
+  if (spPeriods.length <= 1) return showToast('최소 1교시는 남겨야 합니다');
+  const periodNum = spPeriods[idx].period;
+  if (!confirm(`${periodNum}교시를 삭제하시겠습니까?`)) return;
+  spPeriods.splice(idx, 1);
+  // 교시 번호 재정렬 (1, 2, 3, ...)
+  spPeriods.forEach((p, i) => { p.period = i + 1; });
+  renderSpRows(spPeriods);
+};
+
+document.getElementById('btnAddPeriod').addEventListener('click', () => addPeriod());
+
+document.getElementById('btnSaveSp').addEventListener('click', async () => {
+  const periods = syncSpPeriodsFromUI();
   await db.collection('settings').doc('classTimes').set({ periods });
-  showToast('✅ 수업 시간 설정 저장됨');
+  showToast(`✅ 수업 시간 설정 저장됨 (총 ${periods.length}교시)`);
 });
 
 // ============================================================

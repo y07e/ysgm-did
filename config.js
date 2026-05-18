@@ -47,7 +47,9 @@ const SCHOOL_CONFIG = {
     { period: 4, start: '11:25', end: '12:10' },
     { period: 5, start: '13:00', end: '13:45' },
     { period: 6, start: '13:55', end: '14:40' },
-    { period: 7, start: '14:50', end: '15:35' }
+    { period: 7, start: '14:50', end: '15:35' },
+    { period: 8, start: '15:45', end: '16:30' },
+    { period: 9, start: '16:40', end: '17:25' }
   ],
 
   // 기본 점심 시간 (학급별 개별 설정 없을 때 사용)
