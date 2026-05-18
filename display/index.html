@@ -1254,7 +1254,8 @@
 
       /* 메인 — 최소 패딩/갭 */
       body.force-desktop .main { padding: 4px !important; gap: 5px !important; }
-      body.force-desktop .left-panel { gap: 4px !important; grid-template-rows: minmax(0,3.8fr) minmax(0,0.5fr) !important; }
+      /* 좌측: 8교시 불필요(7교시까지) → 시간표 줄이고 학사일정 확장 */
+      body.force-desktop .left-panel { gap: 4px !important; grid-template-rows: minmax(0,2.7fr) minmax(0,1fr) !important; }
       body.force-desktop .right-panel { gap: 4px !important; grid-template-rows: minmax(0,1.05fr) minmax(0,0.85fr) minmax(0,1.1fr) !important; }
 
       body.force-desktop .panel,
