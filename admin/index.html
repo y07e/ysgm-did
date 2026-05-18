@@ -3730,7 +3730,14 @@ function renderPrintWindow(pages) {
       padding: 12mm 15mm; color: #000;
       background: white;
     }
-    .page { padding-bottom: 10px; }
+    .page {
+      padding-bottom: 10px;
+      /* 한 페이지 전체 높이 사용해서 세로 중앙 정렬 */
+      min-height: calc(100vh - 30mm);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
     .page:last-child { page-break-after: auto; }
     .year-label {
       font-size: 0.95rem;
@@ -3772,15 +3779,25 @@ function renderPrintWindow(pages) {
       line-height: 1.55;
     }
     @media print {
-      body { padding: 8mm 10mm; }
+      body { padding: 0; }
       .print-btn { display: none; }
-      .no-print { display: none !important; }  /* 진단 박스 인쇄 안 됨 */
-      .page { page-break-after: avoid; padding-bottom: 0; }
+      .no-print { display: none !important; }
+      .page {
+        /* 인쇄 시: A4 한 페이지 가득 채우고 세로 중앙 정렬 */
+        min-height: calc(297mm - 20mm);   /* A4 297mm - @page margin 양쪽 합 */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 10mm;
+        page-break-after: avoid;
+      }
       .page:not(:first-child) { page-break-before: always; }
-      @page { margin: 8mm; size: A4; }
-      th, td { padding: 3px 4px; font-size: 0.88rem; }
-      h1 { font-size: 1.35rem; margin-bottom: 10px; }
-      .footer-note { margin-top: 8px; }
+      @page { margin: 10mm; size: A4; }
+      th, td { padding: 9px 5px; font-size: 0.92rem; }   /* 행 높이 늘려 표 균형 */
+      h1 { font-size: 1.45rem; margin-bottom: 14px; }
+      .footer-note { margin-top: 12px; }
+      .footer-bold { margin-top: 8px; font-size: 1.05rem; }
+      .year-label { font-size: 1rem; margin-bottom: 8px; }
     }
   </style>
 </head>
