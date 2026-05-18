@@ -1337,35 +1337,100 @@
   if (params.get('desktop') === '1' && window.innerWidth >= 900) {
     document.body.classList.add('force-desktop');
 
-    // 전체화면 진입/탈출 함수
-    const requestFs = () => {
-      const el = document.documentElement;
-      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
-      if (req) return req.call(el);
-    };
+    // 이미 PWA standalone 모드(홈 화면에서 실행)이면 주소창 없으니 버튼 불필요
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                          window.matchMedia('(display-mode: fullscreen)').matches ||
+                          window.navigator.standalone === true;
 
-    // 우측 상단 "🔳 전체화면" 펄스 버튼 (사용자가 못 보고 지나칠 수 없게)
-    const fsBtn = document.createElement('button');
-    fsBtn.className = 'fullscreen-btn';
-    fsBtn.innerHTML = '🔳 전체화면';
-    fsBtn.addEventListener('click', () => {
-      requestFs()?.catch(() => {});
-    });
-    document.body.appendChild(fsBtn);
+    if (!isStandalone) {
+      // 전체화면 진입 함수
+      const requestFs = () => {
+        const el = document.documentElement;
+        const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+        if (req) return req.call(el);
+        return Promise.reject('not supported');
+      };
 
-    // 전체화면 진입/탈출 감지하여 버튼 숨김/표시
-    document.addEventListener('fullscreenchange', () => {
-      document.body.classList.toggle('is-fullscreen', !!document.fullscreenElement);
-    });
+      // 우측 상단 버튼
+      const fsBtn = document.createElement('button');
+      fsBtn.className = 'fullscreen-btn';
+      fsBtn.innerHTML = '🔳 전체화면';
 
-    // 첫 터치/클릭 어디서나 자동으로 전체화면 진입 시도 (한 번만)
-    const tryAutoFs = () => {
-      requestFs()?.catch(() => {});
-      document.removeEventListener('touchstart', tryAutoFs);
-      document.removeEventListener('click', tryAutoFs);
-    };
-    document.addEventListener('touchstart', tryAutoFs, { once: true });
-    document.addEventListener('click', tryAutoFs, { once: true });
+      fsBtn.addEventListener('click', () => {
+        const p = requestFs();
+        if (p && p.catch) {
+          p.catch(() => showFsHelp());
+        } else if (!p) {
+          showFsHelp();
+        }
+      });
+      document.body.appendChild(fsBtn);
+
+      // 전체화면 진입/탈출 감지
+      document.addEventListener('fullscreenchange', () => {
+        document.body.classList.toggle('is-fullscreen', !!document.fullscreenElement);
+      });
+
+      // 첫 터치 자동 시도
+      document.addEventListener('touchstart', () => {
+        const p = requestFs();
+        if (p && p.catch) p.catch(() => {});
+      }, { once: true });
+    }
+
+    // 전체화면 API가 막혔을 때 대체 안내 팝업
+    function showFsHelp() {
+      if (document.getElementById('fsHelpOverlay')) return;
+      const overlay = document.createElement('div');
+      overlay.id = 'fsHelpOverlay';
+      overlay.style.cssText = `
+        position: fixed; inset: 0; background: rgba(15,23,42,0.92);
+        z-index: 10000; display: flex; align-items: center; justify-content: center;
+        padding: 20px;
+      `;
+      overlay.innerHTML = `
+        <div style="
+          background: #1e293b; border-radius: 16px; padding: 28px 32px;
+          max-width: 580px; color: #f1f5f9; line-height: 1.6;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.5); border: 2px solid #38bdf8;
+        ">
+          <h2 style="font-size:1.3rem; margin-bottom:14px; color:#7dd3fc;">
+            📺 전자칠판 전체화면 설정 방법
+          </h2>
+          <p style="font-size:0.95rem; color:#cbd5e1; margin-bottom:14px;">
+            이 전자칠판 브라우저는 자동 전체화면을 지원하지 않습니다.<br>
+            아래 방법 중 <b>하나</b>를 사용해주세요:
+          </p>
+          <div style="background:#0f172a; padding:14px 18px; border-radius:10px; margin-bottom:12px; border-left:3px solid #10b981;">
+            <b style="color:#34d399;">방법 1: PWA 설치 (권장 ⭐)</b><br>
+            <span style="font-size:0.88rem; color:#94a3b8;">
+              Chrome 메뉴 <b style="color:#f1f5f9;">⋮</b> → <b style="color:#f1f5f9;">"홈 화면에 추가"</b> 또는 <b style="color:#f1f5f9;">"앱 설치"</b><br>
+              → 홈 화면 아이콘으로 실행하면 주소창 사라짐
+            </span>
+          </div>
+          <div style="background:#0f172a; padding:14px 18px; border-radius:10px; margin-bottom:12px; border-left:3px solid #f59e0b;">
+            <b style="color:#fbbf24;">방법 2: Chrome 전체화면</b><br>
+            <span style="font-size:0.88rem; color:#94a3b8;">
+              Chrome 메뉴 <b style="color:#f1f5f9;">⋮</b> → <b style="color:#f1f5f9;">"전체 화면"</b> 또는 <b style="color:#f1f5f9;">"Fullscreen"</b>
+            </span>
+          </div>
+          <div style="background:#0f172a; padding:14px 18px; border-radius:10px; margin-bottom:18px; border-left:3px solid #6366f1;">
+            <b style="color:#a5b4fc;">방법 3: 안드로이드 시스템 바 숨김</b><br>
+            <span style="font-size:0.88rem; color:#94a3b8;">
+              전자칠판 설정 → 디스플레이 → 상태 바 숨김
+            </span>
+          </div>
+          <button id="fsHelpClose" style="
+            width:100%; padding:12px; background:#38bdf8; color:#0f172a;
+            border:none; border-radius:10px; font-size:1rem; font-weight:800;
+            cursor:pointer;
+          ">확인</button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      document.getElementById('fsHelpClose').onclick = () => overlay.remove();
+      overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    }
   }
   // 학년·반 배지 (학년별 색상 + 카드형 디자인)
   const badgeEl = document.getElementById('classBadge');
