@@ -951,14 +951,19 @@
       0%   { transform: translateX(100%); }
       100% { transform: translateX(-100%); }
     }
-    /* 학교 공지 LED 내부 우측 하단 슬라이드 도트 */
+    /* 학교 공지 LED 내부 우측 하단 슬라이드 도트 (absolute로 고정) */
     .ann-led-dots {
       display: flex; gap: 5px;
-      justify-content: flex-end;
-      padding-top: 4px;
-      flex-shrink: 0;
-      position: relative; z-index: 3;
+      position: absolute;
+      right: 8px; bottom: 6px;
+      z-index: 5;
+      background: rgba(10, 10, 10, 0.7);
+      padding: 3px 6px;
+      border-radius: 8px;
     }
+    .ann-led { position: relative; }
+    /* LED 박스 자체에 padding-bottom 추가 (도트 영역 확보) */
+    .ann-led-marquee-wrap { padding-right: 50px; }
 
     /* ===== Style 3: 신문 헤드라인 ===== */
     .ann-style-3 .ann-body-wrap {
@@ -2129,7 +2134,8 @@
     const contentLine = (a.content || '').replace(/\n/g, ' · ');
 
     // 도트 (LED 박스 내부 우측 하단 — 패널 footer가 잘려도 보장)
-    const dotsHtml = schoolSlides.length > 1
+    // 공지가 1개여도 위치 인지를 위해 항상 표시
+    const dotsHtml = schoolSlides.length > 0
       ? `<div class="ann-led-dots">${schoolSlides.map((_,i) => `<div class="dot${i===idx?' active':''}"></div>`).join('')}</div>`
       : '';
 
