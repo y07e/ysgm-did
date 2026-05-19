@@ -2138,46 +2138,58 @@
   let schoolSlides = [];
 
   function showSchoolSlide(idx) {
-    // 호환용 별칭 (기존 호출 보존)
-    renderAllSchoolAnns();
-  }
-
-  // 학교 공지 — 활성 공지 전체를 카드 스택으로 한 번에 표시
-  function renderAllSchoolAnns() {
     const wrap   = document.getElementById('schoolAnnWrap');
     const panel  = document.getElementById('schoolAnnPanel');
     const dateEl = document.getElementById('schoolAnnDate');
     const dotsEl = document.getElementById('schoolAnnDots');
 
-    panel.classList.remove('ann-style-1','ann-style-2','ann-style-3','ann-style-4','ann-style-dual');
-    panel.classList.add('ann-style-stack');
+    panel.classList.remove('ann-style-1','ann-style-3','ann-style-4','ann-style-dual','ann-style-stack');
 
-    if (dotsEl) dotsEl.innerHTML = '';
-    if (dateEl) dateEl.textContent = '';
-
-    if (!schoolAnns.length) {
+    if (!schoolSlides.length) {
       wrap.innerHTML = '<div class="empty-msg">📋 공지사항이 없습니다</div>';
+      if (dateEl) dateEl.textContent = '';
+      if (dotsEl) dotsEl.innerHTML = '';
       return;
     }
 
-    const cards = schoolAnns.map(a => {
-      const date = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
-      const titleSafe = escapeHtml(a.title || '');
-      // 줄바꿈 보존: \n → <br>
-      const contentSafe = escapeHtml(a.content || '').replace(/\n/g, '<br>');
-      return `<div class="ann-stack-card">
-        <div class="ann-stack-title">📢 ${titleSafe}</div>
-        <div class="ann-stack-body">${contentSafe}</div>
-        <div class="ann-stack-date">${escapeHtml(date)}</div>
-      </div>`;
-    }).join('');
+    panel.classList.add('ann-style-2');
+    const slide = schoolSlides[idx];
+    const a = slide[0];
+    const dateStr = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
+    // 줄바꿈은 마키 한 줄이므로 ' · ' 구분자로 합침
+    const contentLine = (a.content || '').replace(/\n+/g, ' · ');
 
-    wrap.innerHTML = `<div class="ann-stack-list">${cards}</div>`;
+    const dotsHtml = schoolSlides.length > 0
+      ? `<div class="ann-led-dots">${schoolSlides.map((_,i) => `<div class="dot${i===idx?' active':''}"></div>`).join('')}</div>`
+      : '';
+
+    wrap.innerHTML = `<div class="ann-led">
+      <div class="ann-led-header">
+        <span class="ann-led-tag">★ SCHOOL BOARD ★</span>
+        <span class="ann-led-live">LIVE · ${idx+1}/${schoolSlides.length}</span>
+      </div>
+      <div class="ann-led-title">${escapeHtml(a.title)}</div>
+      <div class="ann-led-marquee-wrap">
+        <div class="ann-led-marquee">${escapeHtml(contentLine)} &nbsp;&nbsp;&nbsp; ✦ ${escapeHtml(dateStr)} &nbsp;&nbsp;&nbsp;</div>
+      </div>
+      ${dotsHtml}
+    </div>`;
+    if (dateEl) dateEl.textContent = dateStr;
+    if (dotsEl) dotsEl.innerHTML = '';
   }
 
   function startSchoolSlideshow() {
     if (schoolAnnTimer) { clearInterval(schoolAnnTimer); schoolAnnTimer = null; }
-    renderAllSchoolAnns();
+    schoolSlides = schoolAnns.map(a => [a]);
+    schoolAnnIdx = 0;
+    showSchoolSlide(schoolAnnIdx);
+    // 슬라이드가 2개 이상이면 9초마다 자동 전환 (setInterval — animationiteration보다 안정적)
+    if (schoolSlides.length > 1) {
+      schoolAnnTimer = setInterval(() => {
+        schoolAnnIdx = (schoolAnnIdx + 1) % schoolSlides.length;
+        showSchoolSlide(schoolAnnIdx);
+      }, 9000);
+    }
   }
 
   // ============================================================
