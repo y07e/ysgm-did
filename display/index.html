@@ -951,6 +951,14 @@
       0%   { transform: translateX(100%); }
       100% { transform: translateX(-100%); }
     }
+    /* 학교 공지 LED 내부 우측 하단 슬라이드 도트 */
+    .ann-led-dots {
+      display: flex; gap: 5px;
+      justify-content: flex-end;
+      padding-top: 4px;
+      flex-shrink: 0;
+      position: relative; z-index: 3;
+    }
 
     /* ===== Style 3: 신문 헤드라인 ===== */
     .ann-style-3 .ann-body-wrap {
@@ -2120,6 +2128,11 @@
     const dateStr = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
     const contentLine = (a.content || '').replace(/\n/g, ' · ');
 
+    // 도트 (LED 박스 내부 우측 하단 — 패널 footer가 잘려도 보장)
+    const dotsHtml = schoolSlides.length > 1
+      ? `<div class="ann-led-dots">${schoolSlides.map((_,i) => `<div class="dot${i===idx?' active':''}"></div>`).join('')}</div>`
+      : '';
+
     wrap.innerHTML = `<div class="ann-led">
       <div class="ann-led-header">
         <span class="ann-led-tag">★ SCHOOL BOARD ★</span>
@@ -2129,11 +2142,10 @@
       <div class="ann-led-marquee-wrap">
         <div class="ann-led-marquee">${escapeHtml(contentLine)} &nbsp;&nbsp;&nbsp; ✦ ${escapeHtml(dateStr)} &nbsp;&nbsp;&nbsp;</div>
       </div>
+      ${dotsHtml}
     </div>`;
     dateEl.textContent = dateStr;
-
-    dotsEl.innerHTML = schoolSlides.map((_,i) =>
-      `<div class="dot${i===idx?' active':''}"></div>`).join('');
+    dotsEl.innerHTML = '';  // 기존 푸터 도트 비움 (LED 내부로 이동)
 
     // 마키 한 바퀴(왼쪽 끝까지) 완료 시 다음 공지로 자동 전환
     if (schoolSlides.length > 1) {
