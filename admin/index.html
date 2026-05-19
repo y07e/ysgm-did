@@ -2777,6 +2777,88 @@ window.applyNeisToFirestore = async () => {
   document.getElementById('neisFile').value = '';
 };
 
+// ============================================================
+// 👨‍🏫 교사 대체 (기간 지정 자동 적용·종료)
+// ============================================================
+let _teacherSwaps = [];
+
+db.collection('settings').doc('teacherSwaps').onSnapshot(snap => {
+  _teacherSwaps = (snap.exists && Array.isArray(snap.data().swaps)) ? snap.data().swaps : [];
+  renderSwapList();
+});
+
+function newSwapId() { return 'swap_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+
+function getSwapStatus(s) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  if (todayStr < s.startDate) return { label:'🟡 예정', color:'#f59e0b' };
+  if (todayStr > s.endDate)   return { label:'⚫ 종료', color:'#94a3b8' };
+  return { label:'🟢 적용 중', color:'#10b981' };
+}
+
+function renderSwapList() {
+  const el = document.getElementById('swapList');
+  if (!el) return;
+  if (!_teacherSwaps.length) {
+    el.innerHTML = '<div class="empty-state" style="color:#94a3b8;">등록된 교사 대체 없음</div>';
+    return;
+  }
+  el.innerHTML = _teacherSwaps.slice().sort((a,b) => (a.startDate||'').localeCompare(b.startDate||'')).map(s => {
+    const st = getSwapStatus(s);
+    const gradeLabel = s.gradeFilter ? `${s.gradeFilter}학년` : '전체';
+    return `<div class="list-item" style="${st.label.includes('종료') ? 'opacity:0.55;' : ''}">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;color:#0f172a;font-size:0.98rem;">
+          <span style="color:${st.color};">${st.label}</span>
+          <span style="margin:0 6px;color:#94a3b8;">|</span>
+          ${escapeHtml(s.from)} <span style="color:#94a3b8;">→</span>
+          <span style="color:#059669;">${escapeHtml(s.to)}</span>
+        </div>
+        <div style="font-size:0.82rem;color:#64748b;margin-top:3px;">
+          📅 ${s.startDate} ~ ${s.endDate} · ${gradeLabel}
+          ${s.note ? ` · ${escapeHtml(s.note)}` : ''}
+        </div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="window._deleteSwap('${s.id}')">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('btnAddSwap').addEventListener('click', async () => {
+  const from = document.getElementById('swapFrom').value.trim();
+  const to   = document.getElementById('swapTo').value.trim();
+  const startDate = document.getElementById('swapStart').value;
+  const endDate   = document.getElementById('swapEnd').value;
+  const gradeFilter = document.getElementById('swapGrade').value;
+  const note = document.getElementById('swapNote').value.trim();
+  if (!from || !to) return showToast('원본/대체 교사명을 입력하세요');
+  if (!startDate || !endDate) return showToast('시작일·종료일을 입력하세요');
+  if (startDate > endDate) return showToast('시작일이 종료일보다 늦습니다');
+
+  const newSwap = { id: newSwapId(), from, to, startDate, endDate, gradeFilter, note,
+    createdAt: new Date().toISOString() };
+  const newList = [..._teacherSwaps, newSwap];
+  try {
+    await db.collection('settings').doc('teacherSwaps').set({ swaps: newList });
+    document.getElementById('swapFrom').value = '';
+    document.getElementById('swapTo').value = '';
+    document.getElementById('swapStart').value = '';
+    document.getElementById('swapEnd').value = '';
+    document.getElementById('swapNote').value = '';
+    showToast(`✅ ${from} → ${to} 대체 등록 (${startDate}~${endDate})`);
+  } catch (e) {
+    showToast('저장 실패: ' + e.message);
+  }
+});
+
+window._deleteSwap = async (id) => {
+  if (!confirm('이 교사 대체를 삭제하시겠습니까?')) return;
+  const newList = _teacherSwaps.filter(s => s.id !== id);
+  await db.collection('settings').doc('teacherSwaps').set({ swaps: newList });
+  showToast('🗑 교사 대체 삭제됨');
+};
+
 
 document.getElementById('btnCopyTT').addEventListener('click', async () => {
   const src     = DAY_NAMES[DAY_KEYS.indexOf(currentTTDay)];
