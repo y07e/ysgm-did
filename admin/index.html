@@ -821,6 +821,51 @@
         <div id="neisPreview" style="margin-top:14px;"></div>
       </div>
 
+      <!-- 교사명 일괄 변경 (휴직·기간제 교체 등) -->
+      <div class="card">
+        <div class="card-title">👨‍🏫 교사명 일괄 변경 (휴직·기간제 대체)</div>
+        <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;line-height:1.6;">
+          담당 교사가 휴직/대체될 때 시간표 전체에서 교사명을 한 번에 변경.<br>
+          여러 교사 동시 처리 가능 (예: 정재윤 → 김기간제, 박은숙 → 박기간제).
+          미리보기로 변경 대상 확인 후 적용하세요.
+        </p>
+
+        <div id="renamePairs"></div>
+        <button class="btn btn-secondary btn-sm" id="btnAddRenamePair" style="margin-bottom:12px;">➕ 교사 한 명 더 추가</button>
+
+        <div class="form-grid cols2" style="margin-bottom:12px;">
+          <div class="form-row" style="margin:0;">
+            <label>적용 학년 (선택)</label>
+            <select id="renameGrade">
+              <option value="">전체 학년</option>
+              <option value="1">1학년만</option>
+              <option value="2">2학년만</option>
+              <option value="3">3학년만</option>
+            </select>
+          </div>
+          <div class="form-row" style="margin:0;">
+            <label>적용 요일 (선택)</label>
+            <select id="renameDay">
+              <option value="">전체 요일</option>
+              <option value="mon">월요일만</option>
+              <option value="tue">화요일만</option>
+              <option value="wed">수요일만</option>
+              <option value="thu">목요일만</option>
+              <option value="fri">금요일만</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" id="btnRenamePreview">🔍 변경 대상 미리보기</button>
+          <button class="btn btn-primary" id="btnRenameApply" disabled>💾 일괄 변경 적용</button>
+        </div>
+        <div id="renameResult" style="margin-top:14px;"></div>
+        <p style="font-size:0.75rem;color:#64748b;margin-top:10px;line-height:1.5;">
+          💡 휴직 끝나서 원래 교사로 되돌릴 때는 원본↔대체를 바꿔서 다시 적용하세요.
+        </p>
+      </div>
+
       <div class="card">
         <div class="card-title">시간표 편집</div>
         <div class="tt-header">
@@ -2725,6 +2770,177 @@ window.applyNeisToFirestore = async () => {
   _neisParsed = null;
   document.getElementById('neisFile').value = '';
 };
+
+// ============================================================
+// 👨‍🏫 교사명 일괄 변경 (휴직/대체)
+// ============================================================
+let _renamePairs = [{ from:'', to:'' }];
+let _renameChanges = null;
+
+function renderRenamePairs() {
+  const el = document.getElementById('renamePairs');
+  el.innerHTML = _renamePairs.map((p, i) => `
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+      <input type="text" placeholder="원본 교사명 (예: 정재윤)"
+        value="${escapeHtml(p.from)}"
+        onchange="window._updateRenamePair(${i}, 'from', this.value)"
+        style="flex:1;min-width:140px;">
+      <span style="color:#94a3b8;font-weight:700;">→</span>
+      <input type="text" placeholder="대체 교사명 (예: 김기간제)"
+        value="${escapeHtml(p.to)}"
+        onchange="window._updateRenamePair(${i}, 'to', this.value)"
+        style="flex:1;min-width:140px;">
+      ${_renamePairs.length > 1 ? `<button class="btn btn-danger btn-sm" onclick="window._removeRenamePair(${i})">🗑</button>` : '<span></span>'}
+    </div>
+  `).join('');
+}
+
+window._updateRenamePair = (idx, field, value) => {
+  if (_renamePairs[idx]) _renamePairs[idx][field] = value.trim();
+};
+window._removeRenamePair = (idx) => {
+  if (_renamePairs.length <= 1) return;
+  _renamePairs.splice(idx, 1);
+  renderRenamePairs();
+};
+
+document.getElementById('btnAddRenamePair').addEventListener('click', () => {
+  _renamePairs.push({ from:'', to:'' });
+  renderRenamePairs();
+});
+
+renderRenamePairs();  // 초기 1쌍 렌더
+
+document.getElementById('btnRenamePreview').addEventListener('click', async () => {
+  const pairs = _renamePairs.filter(p => p.from && p.to);
+  if (!pairs.length) return showToast('원본/대체 교사명을 입력하세요');
+
+  const gradeFilter = document.getElementById('renameGrade').value;
+  const dayFilter   = document.getElementById('renameDay').value;
+  const days = dayFilter ? [dayFilter] : DAY_KEYS;
+
+  const result = document.getElementById('renameResult');
+  result.innerHTML = '<div style="color:#94a3b8;">⏳ 시간표 분석 중...</div>';
+
+  try {
+    const snap = await db.collection('timetable').get();
+    const changes = [];  // {docId, day, periodIdx, oldSubject, newSubject}
+    snap.docs.forEach(doc => {
+      const docId = doc.id;
+      const [g] = docId.split('-');
+      if (gradeFilter && g !== gradeFilter) return;
+      const data = doc.data();
+      days.forEach(day => {
+        const sched = data[day];
+        if (!Array.isArray(sched)) return;
+        sched.forEach((entry, i) => {
+          const subject = typeof entry === 'object' ? (entry.s || entry.subject || '') : (entry || '');
+          if (!subject) return;
+          let newSubject = subject;
+          for (const { from, to } of pairs) {
+            // 정확한 매칭: "과목(원본교사)" 패턴
+            const pat = new RegExp(`\\(${escapeRegex(from)}\\)`, 'g');
+            newSubject = newSubject.replace(pat, `(${to})`);
+          }
+          if (newSubject !== subject) {
+            changes.push({ docId, day, periodIdx: i, oldSubject: subject, newSubject });
+          }
+        });
+      });
+    });
+
+    if (!changes.length) {
+      result.innerHTML = `<div style="background:#fef3c7;border:1px solid #f59e0b;padding:12px;border-radius:8px;color:#78350f;">⚠️ 변경 대상 없음 — 입력한 교사명이 시간표에 존재하지 않습니다.</div>`;
+      document.getElementById('btnRenameApply').disabled = true;
+      _renameChanges = null;
+      return;
+    }
+
+    _renameChanges = changes;
+    const sampleHtml = changes.slice(0, 15).map(c => {
+      const [g, cls] = c.docId.split('-');
+      const dayKor = { mon:'월', tue:'화', wed:'수', thu:'목', fri:'금' }[c.day];
+      return `<tr>
+        <td style="padding:4px 8px;border:1px solid #cbd5e1;">${g}-${cls}</td>
+        <td style="padding:4px 8px;border:1px solid #cbd5e1;text-align:center;">${dayKor}</td>
+        <td style="padding:4px 8px;border:1px solid #cbd5e1;text-align:center;">${c.periodIdx+1}교시</td>
+        <td style="padding:4px 8px;border:1px solid #cbd5e1;color:#dc2626;">${escapeHtml(c.oldSubject)}</td>
+        <td style="padding:4px 8px;border:1px solid #cbd5e1;color:#059669;font-weight:700;">${escapeHtml(c.newSubject)}</td>
+      </tr>`;
+    }).join('');
+
+    result.innerHTML = `
+      <div style="background:#ecfdf5;border:1px solid #10b981;padding:12px;border-radius:10px;">
+        <div style="font-weight:800;color:#047857;margin-bottom:10px;font-size:1rem;">✅ 변경 대상: <span style="font-size:1.2rem;">${changes.length}개 셀</span></div>
+        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;background:white;">
+          <thead><tr style="background:#d1fae5;">
+            <th style="padding:5px;border:1px solid #6ee7b7;">학급</th>
+            <th style="padding:5px;border:1px solid #6ee7b7;">요일</th>
+            <th style="padding:5px;border:1px solid #6ee7b7;">교시</th>
+            <th style="padding:5px;border:1px solid #6ee7b7;">변경 전</th>
+            <th style="padding:5px;border:1px solid #6ee7b7;">변경 후</th>
+          </tr></thead>
+          <tbody>${sampleHtml}</tbody>
+        </table>
+        ${changes.length > 15 ? `<div style="margin-top:8px;color:#64748b;font-size:0.82rem;text-align:center;">... 외 ${changes.length - 15}개 셀 (총 ${changes.length}개)</div>` : ''}
+        <p style="margin-top:10px;color:#047857;font-size:0.82rem;">위 내용을 적용하려면 <b>💾 일괄 변경 적용</b> 버튼을 누르세요.</p>
+      </div>`;
+    document.getElementById('btnRenameApply').disabled = false;
+  } catch (e) {
+    result.innerHTML = `<div style="color:#dc2626;padding:10px;background:#fee2e2;border-radius:8px;">❌ 분석 실패: ${e.message}</div>`;
+  }
+});
+
+function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+document.getElementById('btnRenameApply').addEventListener('click', async () => {
+  if (!_renameChanges || !_renameChanges.length) return showToast('먼저 미리보기를 실행하세요');
+  if (!confirm(`${_renameChanges.length}개 셀을 일괄 변경합니다. 계속할까요?\n\n실수해도 원본↔대체를 바꿔 다시 적용하면 되돌릴 수 있어요.`)) return;
+
+  const result = document.getElementById('renameResult');
+  result.innerHTML = '<div style="color:#94a3b8;">⏳ 저장 중...</div>';
+
+  // 문서별로 그룹핑 후 한 번에 update
+  const byDoc = {};
+  _renameChanges.forEach(c => {
+    (byDoc[c.docId] = byDoc[c.docId] || []).push(c);
+  });
+
+  let success = 0, failed = 0;
+  for (const docId of Object.keys(byDoc)) {
+    try {
+      const ref = db.collection('timetable').doc(docId);
+      const snap = await ref.get();
+      const data = snap.exists ? snap.data() : {};
+      const groups = byDoc[docId];
+      groups.forEach(c => {
+        const sched = Array.isArray(data[c.day]) ? [...data[c.day]] : [];
+        const cur = sched[c.periodIdx];
+        if (typeof cur === 'object' && cur !== null) {
+          sched[c.periodIdx] = { ...cur, s: c.newSubject };
+        } else {
+          sched[c.periodIdx] = c.newSubject;
+        }
+        data[c.day] = sched;
+      });
+      data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+      await ref.set(data, { merge: true });
+      success += groups.length;
+    } catch (e) {
+      console.error(`Failed for ${docId}:`, e);
+      failed += byDoc[docId].length;
+    }
+  }
+
+  result.innerHTML = `<div style="background:${failed?'#fef3c7':'#ecfdf5'};border:1px solid ${failed?'#f59e0b':'#10b981'};padding:14px;border-radius:10px;font-weight:700;color:${failed?'#92400e':'#047857'};">
+    ✅ 변경 완료 — 성공 ${success}개${failed ? `, 실패 ${failed}개` : ''} (전자칠판 즉시 반영됨)
+  </div>`;
+  showToast(`✅ ${success}개 셀 일괄 변경 완료`);
+  document.getElementById('btnRenameApply').disabled = true;
+  _renameChanges = null;
+  // 현재 편집 중인 시간표 있으면 새로고침
+  if (typeof loadTimetable === 'function') loadTimetable();
+});
 
 document.getElementById('btnCopyTT').addEventListener('click', async () => {
   const src     = DAY_NAMES[DAY_KEYS.indexOf(currentTTDay)];
