@@ -952,6 +952,17 @@
       0%   { transform: translateX(100%); }
       100% { transform: translateX(-100%); }
     }
+    /* 긴 공지 분할 시 제목 옆 (1/2) 표시 */
+    .ann-led-part {
+      font-size: 0.7em;
+      color: #fcd34d;
+      background: rgba(251, 191, 36, 0.2);
+      padding: 1px 8px;
+      border-radius: 8px;
+      margin-left: 6px;
+      vertical-align: middle;
+      letter-spacing: 0.5px;
+    }
     /* 학교 공지 카드 스택 (활성 공지 전체 한 화면 표시) */
     .ann-style-stack .ann-body-wrap {
       padding: 0; background: transparent;
@@ -2138,6 +2149,8 @@
   // 학교 공지 슬라이드 (LED 통일 후 1개씩만 표시 — buildSchoolSlides 함수는 제거됨)
   let schoolSlides = [];
 
+  const SCHOOL_LINES_PER_SLIDE = 3;  // 슬라이드당 최대 줄 수
+
   function showSchoolSlide(idx) {
     const wrap   = document.getElementById('schoolAnnWrap');
     const panel  = document.getElementById('schoolAnnPanel');
@@ -2155,17 +2168,19 @@
 
     panel.classList.add('ann-style-2');
     const slide = schoolSlides[idx];
-    const a = slide[0];
+    const a = slide.ann;
     const dateStr = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
-    // 줄바꿈 보존: \n → <br> (마키 블록 안에서 다단 표시)
-    const contentHtml = escapeHtml(a.content || '').replace(/\n/g, '<br>');
+    // 이 슬라이드에 해당하는 부분 본문 (3줄 청크)
+    const contentHtml = escapeHtml(slide.chunk).replace(/\n/g, '<br>');
+    // 한 공지가 여러 슬라이드로 나뉜 경우 제목 옆에 (N/M) 표시
+    const partLabel = slide.total > 1 ? ` <span class="ann-led-part">(${slide.part}/${slide.total})</span>` : '';
 
     wrap.innerHTML = `<div class="ann-led">
       <div class="ann-led-header">
         <span class="ann-led-tag">★ SCHOOL BOARD ★</span>
         <span class="ann-led-live">LIVE · ${idx+1}/${schoolSlides.length}</span>
       </div>
-      <div class="ann-led-title">${escapeHtml(a.title)}</div>
+      <div class="ann-led-title">${escapeHtml(a.title)}${partLabel}</div>
       <div class="ann-led-marquee-wrap">
         <div class="ann-led-marquee">${contentHtml} &nbsp;&nbsp;&nbsp; ✦ ${escapeHtml(dateStr)} &nbsp;&nbsp;&nbsp;</div>
       </div>
@@ -2193,7 +2208,19 @@
 
   function startSchoolSlideshow() {
     if (schoolAnnTimer) { clearInterval(schoolAnnTimer); schoolAnnTimer = null; }
-    schoolSlides = schoolAnns.map(a => [a]);
+    // 각 공지를 3줄 청크로 분할 — 긴 공지는 (1/2), (2/2)... 슬라이드로 자동 분리
+    schoolSlides = [];
+    for (const a of schoolAnns) {
+      const lines = (a.content || '').split('\n');
+      const chunks = [];
+      for (let i = 0; i < lines.length; i += SCHOOL_LINES_PER_SLIDE) {
+        chunks.push(lines.slice(i, i + SCHOOL_LINES_PER_SLIDE).join('\n'));
+      }
+      if (!chunks.length) chunks.push('');
+      chunks.forEach((chunk, k) => {
+        schoolSlides.push({ ann: a, chunk, part: k + 1, total: chunks.length });
+      });
+    }
     schoolAnnIdx = 0;
     showSchoolSlide(schoolAnnIdx);
   }
