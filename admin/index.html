@@ -821,6 +821,56 @@
         <div id="neisPreview" style="margin-top:14px;"></div>
       </div>
 
+      <!-- 📅 기간 지정 교사 대체 (자동 적용/종료) -->
+      <div class="card">
+        <div class="card-title">📅 기간 지정 교사 대체 (자동 적용·종료)</div>
+        <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;line-height:1.6;">
+          휴직·출장 등 <b>기간</b>이 정해진 교체에 사용. 베이스 시간표는 그대로 두고,
+          기간 동안만 화면 표시에서 교사명이 자동 교체됩니다.
+          종료일 다음 날부터 자동으로 원래 교사 표시됨 (수동 작업 불필요).
+        </p>
+
+        <div class="form-grid cols2" style="margin-bottom:8px;">
+          <div class="form-row" style="margin:0;">
+            <label>원본 교사</label>
+            <input type="text" id="swapFrom" placeholder="예: 정재윤">
+          </div>
+          <div class="form-row" style="margin:0;">
+            <label>대체 교사</label>
+            <input type="text" id="swapTo" placeholder="예: 김기간제">
+          </div>
+        </div>
+        <div class="form-grid cols3" style="margin-bottom:8px;">
+          <div class="form-row" style="margin:0;">
+            <label>시작일</label>
+            <input type="date" id="swapStart">
+          </div>
+          <div class="form-row" style="margin:0;">
+            <label>종료일</label>
+            <input type="date" id="swapEnd">
+          </div>
+          <div class="form-row" style="margin:0;">
+            <label>적용 학년</label>
+            <select id="swapGrade">
+              <option value="">전체 학년</option>
+              <option value="1">1학년만</option>
+              <option value="2">2학년만</option>
+              <option value="3">3학년만</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row" style="margin-bottom:10px;">
+          <label>메모 (선택)</label>
+          <input type="text" id="swapNote" placeholder="예: 정재윤 휴직 (출산휴가)">
+        </div>
+        <button class="btn btn-primary" id="btnAddSwap">➕ 교사 대체 등록</button>
+
+        <hr style="margin:18px 0;border:none;border-top:1px solid #e2e8f0;">
+
+        <div class="card-title" style="font-size:0.92rem;">📋 등록된 교사 대체 (날짜별 자동 적용)</div>
+        <div id="swapList"><div class="empty-state" style="color:#94a3b8;">등록된 교사 대체 없음</div></div>
+      </div>
+
       <!-- 교사명 일괄 변경 (휴직·기간제 교체 등) -->
       <div class="card">
         <div class="card-title">👨‍🏫 교사명 일괄 변경 (휴직·기간제 대체)</div>
@@ -2892,6 +2942,89 @@ document.getElementById('btnRenamePreview').addEventListener('click', async () =
 });
 
 function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// ============================================================
+// 📅 기간 지정 교사 대체 (자동 적용·종료)
+// ============================================================
+let _teacherSwaps = [];
+
+db.collection('settings').doc('teacherSwaps').onSnapshot(snap => {
+  _teacherSwaps = (snap.exists && Array.isArray(snap.data().swaps)) ? snap.data().swaps : [];
+  renderSwapList();
+});
+
+function newSwapId() { return 'swap_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+
+function getSwapStatus(s) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  if (todayStr < s.startDate) return { label:'🟡 예정', color:'#f59e0b' };
+  if (todayStr > s.endDate)   return { label:'⚫ 종료', color:'#94a3b8' };
+  return { label:'🟢 적용 중', color:'#10b981' };
+}
+
+function renderSwapList() {
+  const el = document.getElementById('swapList');
+  if (!el) return;
+  if (!_teacherSwaps.length) {
+    el.innerHTML = '<div class="empty-state" style="color:#94a3b8;">등록된 교사 대체 없음</div>';
+    return;
+  }
+  el.innerHTML = _teacherSwaps.slice().sort((a,b) => (a.startDate||'').localeCompare(b.startDate||'')).map(s => {
+    const st = getSwapStatus(s);
+    const gradeLabel = s.gradeFilter ? `${s.gradeFilter}학년` : '전체';
+    return `<div class="list-item" style="${st.label.includes('종료') ? 'opacity:0.55;' : ''}">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;color:#0f172a;font-size:0.98rem;">
+          <span style="color:${st.color};">${st.label}</span>
+          <span style="margin:0 6px;color:#94a3b8;">|</span>
+          ${escapeHtml(s.from)} <span style="color:#94a3b8;">→</span>
+          <span style="color:#059669;">${escapeHtml(s.to)}</span>
+        </div>
+        <div style="font-size:0.82rem;color:#64748b;margin-top:3px;">
+          📅 ${s.startDate} ~ ${s.endDate} · ${gradeLabel}
+          ${s.note ? ` · ${escapeHtml(s.note)}` : ''}
+        </div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="window._deleteSwap('${s.id}')">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('btnAddSwap').addEventListener('click', async () => {
+  const from = document.getElementById('swapFrom').value.trim();
+  const to   = document.getElementById('swapTo').value.trim();
+  const startDate = document.getElementById('swapStart').value;
+  const endDate   = document.getElementById('swapEnd').value;
+  const gradeFilter = document.getElementById('swapGrade').value;
+  const note = document.getElementById('swapNote').value.trim();
+  if (!from || !to) return showToast('원본/대체 교사명을 입력하세요');
+  if (!startDate || !endDate) return showToast('시작일·종료일을 입력하세요');
+  if (startDate > endDate) return showToast('시작일이 종료일보다 늦습니다');
+
+  const newSwap = { id: newSwapId(), from, to, startDate, endDate, gradeFilter, note,
+    createdAt: new Date().toISOString() };
+  const newList = [..._teacherSwaps, newSwap];
+  try {
+    await db.collection('settings').doc('teacherSwaps').set({ swaps: newList });
+    // 폼 초기화
+    document.getElementById('swapFrom').value = '';
+    document.getElementById('swapTo').value = '';
+    document.getElementById('swapStart').value = '';
+    document.getElementById('swapEnd').value = '';
+    document.getElementById('swapNote').value = '';
+    showToast(`✅ ${from} → ${to} 대체 등록 (${startDate}~${endDate})`);
+  } catch (e) {
+    showToast('저장 실패: ' + e.message);
+  }
+});
+
+window._deleteSwap = async (id) => {
+  if (!confirm('이 교사 대체를 삭제하시겠습니까?')) return;
+  const newList = _teacherSwaps.filter(s => s.id !== id);
+  await db.collection('settings').doc('teacherSwaps').set({ swaps: newList });
+  showToast('🗑 교사 대체 삭제됨');
+};
 
 document.getElementById('btnRenameApply').addEventListener('click', async () => {
   if (!_renameChanges || !_renameChanges.length) return showToast('먼저 미리보기를 실행하세요');

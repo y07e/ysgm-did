@@ -1995,8 +1995,22 @@
     const trimmed = raw.trim();
     if (!trimmed) return { name: '', teacher: '' };
     const m = trimmed.match(/^(.+?)\(([^()]+)\)\s*$/);
-    if (m) return { name: m[1].trim(), teacher: m[2].trim() };
-    return { name: trimmed, teacher: '' };
+    let parsed = m ? { name: m[1].trim(), teacher: m[2].trim() } : { name: trimmed, teacher: '' };
+    // 기간 지정 교사 대체 적용 (오늘 날짜가 기간 안이면 교사명 교체)
+    if (parsed.teacher && window._teacherSwapsAll && window._teacherSwapsAll.length) {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+      for (const sw of window._teacherSwapsAll) {
+        if (!sw.from || !sw.to || !sw.startDate || !sw.endDate) continue;
+        if (todayStr < sw.startDate || todayStr > sw.endDate) continue;
+        if (sw.gradeFilter && String(sw.gradeFilter) !== String(grade)) continue;
+        if (parsed.teacher === sw.from) {
+          parsed = { name: parsed.name, teacher: sw.to };
+          break;
+        }
+      }
+    }
+    return parsed;
   }
 
   // ============================================================
@@ -2440,6 +2454,17 @@
       if (d.periods) _baseClassTimes = d.periods;
     }
     applyClassTimes();
+  });
+
+  // 기간 지정 교사 대체 (날짜 기반 자동 적용/종료)
+  window._teacherSwapsAll = [];
+  db.collection('settings').doc('teacherSwaps').onSnapshot(snap => {
+    window._teacherSwapsAll = (snap.exists && Array.isArray(snap.data().swaps))
+      ? snap.data().swaps : [];
+    // 적용 즉시 시간표 재렌더
+    if (typeof renderPeriods === 'function' && typeof getWeekdayIdx === 'function') {
+      renderPeriods(getWeekdayIdx());
+    }
   });
 
   // 단축 수업 일 오버라이드 (날짜별)
