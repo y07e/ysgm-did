@@ -951,19 +951,42 @@
       0%   { transform: translateX(100%); }
       100% { transform: translateX(-100%); }
     }
-    /* 학교 공지 LED 내부 우측 하단 슬라이드 도트 (absolute로 고정) */
-    .ann-led-dots {
-      display: flex; gap: 5px;
-      position: absolute;
-      right: 8px; bottom: 6px;
-      z-index: 5;
-      background: rgba(10, 10, 10, 0.7);
-      padding: 3px 6px;
-      border-radius: 8px;
+    /* 학교 공지 카드 스택 (활성 공지 전체 한 화면 표시) */
+    .ann-style-stack .ann-body-wrap {
+      padding: 0; background: transparent;
+      overflow: hidden;
     }
-    .ann-led { position: relative; }
-    /* LED 박스 자체에 padding-bottom 추가 (도트 영역 확보) */
-    .ann-led-marquee-wrap { padding-right: 50px; }
+    .ann-stack-list {
+      display: flex; flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      max-height: 100%;
+      padding-right: 4px;  /* 스크롤바 공간 */
+      scrollbar-width: thin;
+    }
+    .ann-stack-list::-webkit-scrollbar { width: 6px; }
+    .ann-stack-list::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    .ann-stack-card {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
+      border-left: 3px solid #38bdf8;
+      border-radius: 8px;
+      padding: 9px 12px;
+      animation: fadeIn 0.4s ease;
+    }
+    .ann-stack-title {
+      font-size: 1.05rem; font-weight: 800;
+      color: #f1f5f9; line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .ann-stack-body {
+      font-size: 0.92rem; color: #cbd5e1;
+      line-height: 1.55;
+      white-space: pre-line;  /* 줄바꿈 추가 보존 */
+    }
+    .ann-stack-date {
+      font-size: 0.72rem; color: #64748b;
+      margin-top: 4px; text-align: right;
+    }
 
     /* ===== Style 3: 신문 헤드라인 ===== */
     .ann-style-3 .ann-body-wrap {
@@ -1262,9 +1285,12 @@
     }
     body.force-desktop .ann-led-marquee { font-size: 1.05rem !important; line-height: 1.4; }
     body.force-desktop .ann-style-2 .ann-body-wrap { padding: 6px 10px !important; }
-    /* 도트 푸터가 LED 박스에 잘려 안 보이는 문제 방지 */
-    body.force-desktop .ann-footer { min-height: 10px !important; }
-    body.force-desktop .ann-footer .dot { width: 6px; height: 6px; }
+    /* 학교 공지 카드 스택 (키오스크 컴팩트) */
+    body.force-desktop .ann-stack-list { gap: 5px !important; }
+    body.force-desktop .ann-stack-card { padding: 6px 10px !important; border-left-width: 3px; }
+    body.force-desktop .ann-stack-title { font-size: 0.92rem !important; margin-bottom: 3px !important; }
+    body.force-desktop .ann-stack-body { font-size: 0.8rem !important; line-height: 1.4 !important; }
+    body.force-desktop .ann-stack-date { font-size: 0.65rem !important; margin-top: 2px !important; }
 
     /* 학급 게시판 (LED) — 마키 영역 가시성 보장 */
     body.force-desktop .class-led-title { font-size: 0.85rem !important; margin-bottom: 3px !important; }
@@ -2112,65 +2138,46 @@
   let schoolSlides = [];
 
   function showSchoolSlide(idx) {
+    // 호환용 별칭 (기존 호출 보존)
+    renderAllSchoolAnns();
+  }
+
+  // 학교 공지 — 활성 공지 전체를 카드 스택으로 한 번에 표시
+  function renderAllSchoolAnns() {
     const wrap   = document.getElementById('schoolAnnWrap');
     const panel  = document.getElementById('schoolAnnPanel');
     const dateEl = document.getElementById('schoolAnnDate');
     const dotsEl = document.getElementById('schoolAnnDots');
 
-    panel.classList.remove('ann-style-1','ann-style-3','ann-style-4','ann-style-dual');
+    panel.classList.remove('ann-style-1','ann-style-2','ann-style-3','ann-style-4','ann-style-dual');
+    panel.classList.add('ann-style-stack');
 
-    if (!schoolSlides.length) {
+    if (dotsEl) dotsEl.innerHTML = '';
+    if (dateEl) dateEl.textContent = '';
+
+    if (!schoolAnns.length) {
       wrap.innerHTML = '<div class="empty-msg">📋 공지사항이 없습니다</div>';
-      dateEl.textContent = ''; dotsEl.innerHTML = ''; return;
+      return;
     }
 
-    // 학교 공지 — LED 스타일로 통일 (학급 게시판과 동일한 UX)
-    panel.classList.add('ann-style-2');
+    const cards = schoolAnns.map(a => {
+      const date = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
+      const titleSafe = escapeHtml(a.title || '');
+      // 줄바꿈 보존: \n → <br>
+      const contentSafe = escapeHtml(a.content || '').replace(/\n/g, '<br>');
+      return `<div class="ann-stack-card">
+        <div class="ann-stack-title">📢 ${titleSafe}</div>
+        <div class="ann-stack-body">${contentSafe}</div>
+        <div class="ann-stack-date">${escapeHtml(date)}</div>
+      </div>`;
+    }).join('');
 
-    // dual 슬라이드도 1개씩 분리해서 표시 (LED는 한 번에 하나)
-    const slide = schoolSlides[idx];
-    const a = slide[0];  // 첫 번째 공지만
-    const dateStr = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
-    const contentLine = (a.content || '').replace(/\n/g, ' · ');
-
-    // 도트 (LED 박스 내부 우측 하단 — 패널 footer가 잘려도 보장)
-    // 공지가 1개여도 위치 인지를 위해 항상 표시
-    const dotsHtml = schoolSlides.length > 0
-      ? `<div class="ann-led-dots">${schoolSlides.map((_,i) => `<div class="dot${i===idx?' active':''}"></div>`).join('')}</div>`
-      : '';
-
-    wrap.innerHTML = `<div class="ann-led">
-      <div class="ann-led-header">
-        <span class="ann-led-tag">★ SCHOOL BOARD ★</span>
-        <span class="ann-led-live">LIVE</span>
-      </div>
-      <div class="ann-led-title">${escapeHtml(a.title)}</div>
-      <div class="ann-led-marquee-wrap">
-        <div class="ann-led-marquee">${escapeHtml(contentLine)} &nbsp;&nbsp;&nbsp; ✦ ${escapeHtml(dateStr)} &nbsp;&nbsp;&nbsp;</div>
-      </div>
-      ${dotsHtml}
-    </div>`;
-    dateEl.textContent = dateStr;
-    dotsEl.innerHTML = '';  // 기존 푸터 도트 비움 (LED 내부로 이동)
-
-    // 마키 한 바퀴(왼쪽 끝까지) 완료 시 다음 공지로 자동 전환
-    if (schoolSlides.length > 1) {
-      const marqueeEl = wrap.querySelector('.ann-led-marquee');
-      if (marqueeEl) {
-        marqueeEl.addEventListener('animationiteration', () => {
-          schoolAnnIdx = (schoolAnnIdx + 1) % schoolSlides.length;
-          showSchoolSlide(schoolAnnIdx);
-        }, { once: true });
-      }
-    }
+    wrap.innerHTML = `<div class="ann-stack-list">${cards}</div>`;
   }
 
   function startSchoolSlideshow() {
     if (schoolAnnTimer) { clearInterval(schoolAnnTimer); schoolAnnTimer = null; }
-    // 학교 공지도 학급 게시판처럼 항상 1개씩만 표시 (LED 슬라이드 일관성)
-    schoolSlides = schoolAnns.map(a => [a]);
-    schoolAnnIdx = 0;
-    showSchoolSlide(schoolAnnIdx);
+    renderAllSchoolAnns();
   }
 
   // ============================================================
