@@ -694,11 +694,11 @@
         <div class="card-title">새 공지사항 등록</div>
         <div class="form-row">
           <label>제목</label>
-          <input type="text" id="annTitle" placeholder="공지 제목">
+          <input type="text" id="annTitle" placeholder="공지 제목 (15자 이내 권장 · 동시 활성 3~5개)">
         </div>
         <div class="form-row">
           <label>내용</label>
-          <textarea id="annContent" placeholder="공지 내용"></textarea>
+          <textarea id="annContent" placeholder="공지 내용 (한 슬라이드 = 3줄까지 자동 분할 / 줄당 25자 이내 권장)"></textarea>
         </div>
         <div class="form-grid cols2">
           <div class="form-row">
@@ -762,11 +762,11 @@
         </div>
         <div class="form-row">
           <label>제목</label>
-          <input type="text" id="cbTitle" placeholder="학급 공지 제목">
+          <input type="text" id="cbTitle" placeholder="학급 공지 제목 (15자 이내 권장 · 동시 활성 3개 이내)">
         </div>
         <div class="form-row">
           <label>내용</label>
-          <textarea id="cbContent" placeholder="학급 공지 내용"></textarea>
+          <textarea id="cbContent" placeholder="학급 공지 내용 (LED 마키로 흐름 · 줄당 30자 이내 권장 · 만료일 설정 가능)"></textarea>
         </div>
         <div class="form-row">
           <label>만료일 (선택)</label>
@@ -888,7 +888,7 @@
       </div>
       <div class="card">
         <div class="card-title">긴급 공지 전송</div>
-        <div class="form-row"><label>제목</label><input type="text" id="emTitle" placeholder="긴급 공지 제목"></div>
+        <div class="form-row"><label>제목</label><input type="text" id="emTitle" placeholder="긴급 공지 제목 (10자 이내 · 전체 화면 덮음 · 사용 후 반드시 해제)"></div>
         <div class="form-row"><label>내용</label><textarea id="emMsg" placeholder="전달 내용"></textarea></div>
         <div class="form-grid cols2">
           <div class="form-row">
@@ -925,7 +925,7 @@
         <div class="form-grid cols3">
           <div class="form-row">
             <label>제목</label>
-            <input type="text" id="ddTitle" placeholder="예: 1학기 기말고사">
+            <input type="text" id="ddTitle" placeholder="예: 1학기 기말고사 (6자 이내 권장 · 동시 활성 2~3개 — 톱바 잘림 방지)">
           </div>
           <div class="form-row">
             <label>목표 날짜</label>
@@ -958,7 +958,7 @@
         <div class="form-grid cols2">
           <div class="form-row">
             <label>일정 제목</label>
-            <input type="text" id="evTitle" placeholder="예: 체육대회">
+            <input type="text" id="evTitle" placeholder="예: 체육대회 (10자 이내 권장 · 금주 일정만 자동 표시 · 한 주 2~3건 권장)">
           </div>
           <div class="form-row">
             <label>날짜</label>
@@ -971,7 +971,7 @@
           </div>
           <div class="form-row">
             <label>간단 설명 (선택)</label>
-            <input type="text" id="evDesc" placeholder="예: 오전 9시 운동장 집결">
+            <input type="text" id="evDesc" placeholder="예: 오전 9시 운동장 집결 (간단히 — 좌측 패널 공간 제한)">
           </div>
         </div>
         <div class="btn-row">
