@@ -944,8 +944,9 @@
     .ann-led-marquee {
       font-size: 1.85rem; color: #4ade80;
       text-shadow: 0 0 10px rgba(74,222,128,0.6), 0 0 20px rgba(74,222,128,0.2);
-      white-space: nowrap;
+      white-space: pre;            /* 줄바꿈 보존(블록 통째로 스크롤) */
       animation: marquee 22s linear infinite;
+      line-height: 1.3;
     }
     @keyframes marquee {
       0%   { transform: translateX(100%); }
@@ -2156,12 +2157,8 @@
     const slide = schoolSlides[idx];
     const a = slide[0];
     const dateStr = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
-    // 줄바꿈은 마키 한 줄이므로 ' · ' 구분자로 합침
-    const contentLine = (a.content || '').replace(/\n+/g, ' · ');
-
-    const dotsHtml = schoolSlides.length > 0
-      ? `<div class="ann-led-dots">${schoolSlides.map((_,i) => `<div class="dot${i===idx?' active':''}"></div>`).join('')}</div>`
-      : '';
+    // 줄바꿈 보존: \n → <br> (마키 블록 안에서 다단 표시)
+    const contentHtml = escapeHtml(a.content || '').replace(/\n/g, '<br>');
 
     wrap.innerHTML = `<div class="ann-led">
       <div class="ann-led-header">
@@ -2170,12 +2167,28 @@
       </div>
       <div class="ann-led-title">${escapeHtml(a.title)}</div>
       <div class="ann-led-marquee-wrap">
-        <div class="ann-led-marquee">${escapeHtml(contentLine)} &nbsp;&nbsp;&nbsp; ✦ ${escapeHtml(dateStr)} &nbsp;&nbsp;&nbsp;</div>
+        <div class="ann-led-marquee">${contentHtml} &nbsp;&nbsp;&nbsp; ✦ ${escapeHtml(dateStr)} &nbsp;&nbsp;&nbsp;</div>
       </div>
-      ${dotsHtml}
     </div>`;
-    if (dateEl) dateEl.textContent = dateStr;
-    if (dotsEl) dotsEl.innerHTML = '';
+    if (dateEl) dateEl.textContent = '';
+
+    // 도트는 패널 외부 footer에 표시 (학급 게시판과 동일 위치)
+    if (dotsEl) {
+      dotsEl.innerHTML = schoolSlides.length > 1
+        ? schoolSlides.map((_,i) => `<div class="dot${i===idx?' active':''}"></div>`).join('')
+        : '';
+    }
+
+    // 마키 한 바퀴(왼쪽 끝까지) 완료 시 다음 슬라이드로 전환
+    if (schoolSlides.length > 1) {
+      const marqueeEl = wrap.querySelector('.ann-led-marquee');
+      if (marqueeEl) {
+        marqueeEl.addEventListener('animationiteration', () => {
+          schoolAnnIdx = (schoolAnnIdx + 1) % schoolSlides.length;
+          showSchoolSlide(schoolAnnIdx);
+        }, { once: true });
+      }
+    }
   }
 
   function startSchoolSlideshow() {
@@ -2183,13 +2196,6 @@
     schoolSlides = schoolAnns.map(a => [a]);
     schoolAnnIdx = 0;
     showSchoolSlide(schoolAnnIdx);
-    // 슬라이드가 2개 이상이면 9초마다 자동 전환 (setInterval — animationiteration보다 안정적)
-    if (schoolSlides.length > 1) {
-      schoolAnnTimer = setInterval(() => {
-        schoolAnnIdx = (schoolAnnIdx + 1) % schoolSlides.length;
-        showSchoolSlide(schoolAnnIdx);
-      }, 9000);
-    }
   }
 
   // ============================================================
