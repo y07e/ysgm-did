@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학급 게시판 둘러보기 — 양산여중</title>
+<link rel="icon" href="/logo.png">
+<script src="/config.js"></script>
+<style>
+  :root {
+    --primary: #1a3a7a;
+    --primary-light: #2a5fae;
+    --bg: #f7f9fc;
+    --card-bg: #ffffff;
+    --border: #e1e8f0;
+    --text: #1f2937;
+    --text-soft: #5b6b7e;
+    --grade1: #dbeafe;
+    --grade1-border: #3b82f6;
+    --grade2: #d1fae5;
+    --grade2-border: #10b981;
+    --grade3: #fef3c7;
+    --grade3-border: #f59e0b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Pretendard", "Noto Sans KR", sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.6;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  /* 헤더 */
+  header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: 28px 16px 24px;
+    text-align: center;
+  }
+  header h1 { margin: 0 0 6px; font-size: 24px; }
+  header p { margin: 0; opacity: 0.92; font-size: 14px; }
+  header .school-logo {
+    width: 40px; height: 40px;
+    border-radius: 50%; background: white;
+    display: inline-flex; align-items: center; justify-content: center;
+    overflow: hidden; margin-bottom: 8px; padding: 4px;
+  }
+  header .school-logo img { width: 100%; height: 100%; object-fit: contain; }
+
+  /* 환영 안내 */
+  .welcome {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border-left: 5px solid var(--primary);
+  }
+  .welcome h2 { margin: 0 0 10px; font-size: 18px; color: var(--primary); }
+  .welcome p { margin: 4px 0; font-size: 14px; color: var(--text-soft); }
+  .welcome .actions { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    display: inline-block;
+    padding: 9px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.15s;
+    border: none; cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--primary); color: white;
+  }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-secondary {
+    background: white; color: var(--primary);
+    border: 1.5px solid var(--primary);
+  }
+  .btn-secondary:hover { background: #eef2f8; }
+
+  /* 매뉴얼 카드 */
+  .manual-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .manual-card h2 {
+    margin: 0 0 14px; font-size: 16px;
+    color: var(--primary);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .manual-card ol, .manual-card ul {
+    margin: 0; padding-left: 22px; font-size: 14px;
+  }
+  .manual-card li { margin: 6px 0; }
+  .manual-card .tip {
+    background: #fff8e1;
+    border-left: 3px solid #f59e0b;
+    padding: 8px 12px;
+    border-radius: 0 4px 4px 0;
+    margin: 12px 0 0;
+    font-size: 13px;
+  }
+
+  /* 학년 섹션 */
+  .grade-section {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 18px 18px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .grade-section h2 {
+    margin: 0 0 12px; font-size: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .grade-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 13px; font-weight: 700;
+  }
+  .grade-1 { background: var(--grade1); color: #1d4ed8; }
+  .grade-2 { background: var(--grade2); color: #047857; }
+  .grade-3 { background: var(--grade3); color: #b45309; }
+
+  .class-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+  .class-link {
+    display: block;
+    padding: 12px 8px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 14px;
+    background: white;
+    transition: all 0.15s;
+  }
+  .class-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26, 58, 122, 0.15);
+  }
+  .class-link.g1:hover { border-color: var(--grade1-border); }
+  .class-link.g2:hover { border-color: var(--grade2-border); }
+  .class-link.g3:hover { border-color: var(--grade3-border); }
+  .class-link .room-icon { font-size: 20px; display: block; margin-bottom: 2px; }
+
+  footer {
+    text-align: center;
+    margin-top: 32px; padding: 16px;
+    color: var(--text-soft); font-size: 12px;
+  }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 20px; }
+    .class-grid { grid-template-columns: repeat(3, 1fr); }
+    .class-link { font-size: 13px; padding: 10px 4px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="school-logo"><img src="/logo.png" alt="logo" onerror="this.style.display='none'"></div>
+  <h1>학급 게시판 둘러보기</h1>
+  <p id="schoolNameHeader">양산여자중학교 · 담임 선생님 안내</p>
+</header>
+
+<div class="container">
+
+  <!-- 환영 안내 -->
+  <div class="welcome">
+    <h2>👋 안녕하세요, 선생님!</h2>
+    <p>아래에서 우리 학교 모든 학급의 게시판을 미리 둘러보실 수 있습니다.</p>
+    <p>학급을 클릭하면 새 창에서 그 반의 전자칠판 화면이 그대로 열립니다.</p>
+    <div class="actions">
+      <a href="guide.html" class="btn btn-primary">📖 화면 구성 살펴보기</a>
+      <a href="https://ysgm-did.web.app/admin/" class="btn btn-secondary" target="_blank">🔐 담임 로그인 (PIN)</a>
+    </div>
+  </div>
+
+  <!-- 간단 매뉴얼 -->
+  <div class="manual-card">
+    <h2>📋 담임 선생님이 할 수 있는 것</h2>
+    <ol>
+      <li><b>우리 반 공지사항 등록</b> — 칭찬, 안내, 시간표 변동 등 자유롭게</li>
+      <li><b>일일 시간표 변경</b> — 특정 날짜의 수업 일시 변경 (특강·자율학습 등)</li>
+      <li><b>학급 게시판 보기</b> — 학생들에게 보이는 화면을 그대로 확인</li>
+    </ol>
+    <div class="tip">
+      💡 <b>처음 사용하시는 분은</b> 위의 "📖 화면 구성 살펴보기" 버튼을 먼저 클릭해서
+      전자칠판에 어떤 내용이 표시되는지 확인해보세요.
+    </div>
+  </div>
+
+  <!-- 담임 로그인 안내 -->
+  <div class="manual-card">
+    <h2>🔐 담임 관리자 로그인 방법</h2>
+    <ol>
+      <li>위쪽 <b>"🔐 담임 로그인 (PIN)"</b> 버튼 클릭 또는 직접 접속:<br>
+        <code style="background:#f4f4f4;padding:3px 7px;border-radius:3px;font-size:13px;">https://ysgm-did.web.app/admin/</code></li>
+      <li><b>"담임 (PIN)"</b> 탭 선택</li>
+      <li>이름·학년·반 선택 후 <b>4~8자리 PIN 번호</b> 입력</li>
+      <li>로그인되면 우리 반 게시판 등록·수정 가능</li>
+    </ol>
+    <div class="tip">
+      ⚠️ PIN을 모르시는 경우 시스템 담당 교사에게 문의해주세요.
+    </div>
+  </div>
+
+  <!-- 학급 URL 목록 -->
+  <div id="classListArea"></div>
+
+  <footer>
+    양산여중 전자칠판 DID 시스템 · 문의: y07eda@gmail.com
+  </footer>
+
+</div>
+
+<script>
+  // 학교명 적용
+  if (typeof SCHOOL_CONFIG !== 'undefined' && SCHOOL_CONFIG.schoolName) {
+    document.getElementById('schoolNameHeader').textContent =
+      SCHOOL_CONFIG.schoolName + ' · 담임 선생님 안내';
+    document.title = '학급 게시판 둘러보기 — ' + SCHOOL_CONFIG.schoolName;
+  }
+
+  // 학급 URL 목록 동적 생성
+  const gradeIcons = { '1': '🌱', '2': '🌿', '3': '🌳' };
+  const gradeNames = { '1': '1학년', '2': '2학년', '3': '3학년' };
+  const gradeClasses = (typeof SCHOOL_CONFIG !== 'undefined' && SCHOOL_CONFIG.gradeClasses)
+    ? SCHOOL_CONFIG.gradeClasses
+    : { '1': 9, '2': 9, '3': 11 };
+
+  const area = document.getElementById('classListArea');
+  let html = '';
+  for (const grade of ['1', '2', '3']) {
+    const classCount = gradeClasses[grade] || 0;
+    if (!classCount) continue;
+    html += `<div class="grade-section">
+      <h2>
+        <span class="grade-badge grade-${grade}">${gradeIcons[grade]} ${gradeNames[grade]}</span>
+        <span style="color:var(--text-soft);font-weight:500;font-size:13px;">${classCount}개 반</span>
+      </h2>
+      <div class="class-grid">`;
+    for (let c = 1; c <= classCount; c++) {
+      const url = `/display/?grade=${grade}&class=${c}`;
+      html += `<a class="class-link g${grade}" href="${url}" target="_blank" rel="noopener">
+        <span class="room-icon">${gradeIcons[grade]}</span>
+        ${grade}학년 ${c}반
+      </a>`;
+    }
+    html += `</div></div>`;
+  }
+  area.innerHTML = html;
+</script>
+</body>
+</html>
