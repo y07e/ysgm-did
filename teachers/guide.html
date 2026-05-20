@@ -15,7 +15,7 @@
     --border: #e1e8f0;
     --text: #1f2937;
     --text-soft: #5b6b7e;
-    --tooltip-bg: #1f2937;
+    --tooltip-bg: #0f172a;
   }
   * { box-sizing: border-box; }
   body {
@@ -24,7 +24,7 @@
     background: var(--bg); color: var(--text);
     line-height: 1.55;
   }
-  .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px 60px; }
 
   header {
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
@@ -50,181 +50,125 @@
     border-left: 5px solid var(--primary);
     border-radius: 8px;
     padding: 16px 20px;
-    margin-bottom: 22px;
+    margin-bottom: 14px;
     font-size: 14px;
   }
   .intro b { color: var(--primary); }
 
-  /* ========== 학급 화면 모형 ========== */
-  .mockup-wrap {
+  .notice-ratio {
+    background: #fff8e1;
+    border-left: 5px solid #f59e0b;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin-bottom: 22px;
+    font-size: 13px;
+    color: #78350f;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .notice-ratio .icon { font-size: 18px; line-height: 1; padding-top: 2px; }
+  .notice-ratio b { color: #b45309; }
+
+  /* ========== 스크린샷 + 핫스팟 ========== */
+  .screen-container {
     background: var(--card-bg);
     border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 18px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     margin-bottom: 20px;
   }
-  .mockup-title {
+  .screen-title {
     text-align: center;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-soft);
-    margin-bottom: 14px;
+    margin-bottom: 12px;
   }
-  .mockup-title b { color: var(--primary); }
-  .mockup-title .hint {
+  .screen-title .hint {
     display: inline-block;
-    background: #fff8e1;
-    color: #b45309;
+    background: #eef2f8;
+    color: var(--primary);
     padding: 3px 10px; border-radius: 999px;
     font-size: 12px; font-weight: 600;
     margin-left: 6px;
   }
 
-  /* 전자칠판 모형 — 가로 16:9 비율 */
-  .screen {
+  .screen-img-wrap {
+    position: relative;
     width: 100%;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 1900 / 1009;
+    border: 6px solid #0f172a;
+    border-radius: 8px;
+    overflow: hidden;
     background: #0f172a;
-    border: 12px solid #1e293b;
-    border-radius: 14px;
-    padding: 8px;
-    display: grid;
-    grid-template-columns: 1.4fr 1fr;
-    grid-template-rows: auto 1fr auto;
-    gap: 6px;
-    position: relative;
-    overflow: hidden;
   }
-  .zone {
-    background: #1e293b;
-    border-radius: 6px;
-    padding: 6px 9px;
-    color: #e2e8f0;
-    font-size: 12px;
-    position: relative;
-    cursor: pointer;
-    transition: all 0.2s;
-    overflow: hidden;
-    border: 2px solid transparent;
+  .screen-img-wrap img {
+    display: block;
+    width: 100%; height: 100%;
+    object-fit: cover;
   }
-  .zone:hover {
-    background: #334155;
-    border-color: #60a5fa;
-    transform: scale(1.01);
-    z-index: 5;
-  }
-  .zone .zone-title {
-    font-weight: 700;
-    font-size: 11px;
-    color: #93c5fd;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .zone .zone-sample {
-    font-size: 11px;
-    color: #cbd5e1;
-    line-height: 1.4;
-  }
-  .zone .zone-sample .yellow { color: #fde68a; }
-  .zone .zone-sample .red { color: #fca5a5; font-weight: 700; }
 
-  /* 영역 배치 */
-  .zone-topbar {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #1e3a8a !important;
+  .hotspot {
+    position: absolute;
+    border: 2px dashed rgba(147, 197, 253, 0.7);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.18s;
+    background: rgba(147, 197, 253, 0.06);
+    z-index: 2;
   }
-  .zone-topbar .badge {
-    background: white; color: #1e3a8a;
-    padding: 2px 8px; border-radius: 6px;
-    font-size: 11px; font-weight: 700;
+  .hotspot:hover, .hotspot:focus, .hotspot.active {
+    border-color: #fde047;
+    border-style: solid;
+    background: rgba(253, 224, 71, 0.20);
+    z-index: 50;
+    outline: none;
   }
-  .zone-topbar .dday {
-    background: #dc2626; color: white;
-    padding: 2px 8px; border-radius: 4px;
-    font-size: 10px; font-weight: 700;
-  }
-  .zone-topbar .weather {
-    margin-left: auto; font-size: 11px;
-  }
-  .zone-topbar .clock {
-    font-weight: 700; font-size: 13px;
+  .hotspot-num {
+    position: absolute;
+    top: -12px; left: -12px;
+    background: var(--primary);
     color: white;
+    min-width: 24px; height: 24px;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    line-height: 1;
+  }
+  .hotspot:hover .hotspot-num,
+  .hotspot.active .hotspot-num,
+  .hotspot:focus .hotspot-num {
+    background: #b45309;
   }
 
-  .zone-school-notice { grid-column: 1; }
-  .zone-class-board   { grid-column: 2; grid-row: 2 / 4; }
-  .zone-events        { grid-column: 1; }
-
-  .zone-bottom {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 6px;
-    background: transparent !important;
-    padding: 0;
-    border: none !important;
-  }
-  .zone-bottom:hover { transform: none; }
-  .zone-timetable, .zone-lunch {
-    background: #1e293b;
-    border-radius: 6px;
-    padding: 6px 9px;
-    color: #e2e8f0;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 2px solid transparent;
-  }
-  .zone-timetable:hover, .zone-lunch:hover {
-    background: #334155;
-    border-color: #60a5fa;
-    transform: scale(1.01);
-    z-index: 5;
-  }
-  .zone-timetable .zone-title, .zone-lunch .zone-title {
-    font-weight: 700;
-    font-size: 11px;
-    color: #93c5fd;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .zone-timetable .zone-sample, .zone-lunch .zone-sample {
-    font-size: 11px; color: #cbd5e1;
-  }
-
-  /* 툴팁 */
   .tip {
     position: absolute;
     background: var(--tooltip-bg);
     color: white;
     padding: 12px 14px;
     border-radius: 8px;
-    font-size: 12px;
+    font-size: 12.5px;
     line-height: 1.55;
     width: 260px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.45);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.15s;
+    transition: opacity 0.15s, transform 0.15s;
     z-index: 100;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%) translateY(-8px);
   }
-  .tip::after {
-    content: '';
-    position: absolute;
-    top: 100%; left: 50%;
-    transform: translateX(-50%);
-    border: 6px solid transparent;
-    border-top-color: var(--tooltip-bg);
-  }
-  .zone:hover .tip, .zone-timetable:hover .tip, .zone-lunch:hover .tip {
+  .hotspot:hover .tip,
+  .hotspot:focus .tip,
+  .hotspot.active .tip {
     opacity: 1;
+    pointer-events: auto;
   }
+  .tip-pos-below { top: 105%; left: 50%; transform: translateX(-50%); }
+  .tip-pos-above { bottom: 105%; left: 50%; transform: translateX(-50%); }
+  .tip-pos-right { left: 105%; top: 50%; transform: translateY(-50%); }
+  .tip-pos-left  { right: 105%; top: 50%; transform: translateY(-50%); }
+
   .tip-title {
     color: #fde68a;
     font-weight: 700;
@@ -240,32 +184,34 @@
   }
   .tip-meta b { color: #cbd5e1; }
 
-  /* 모바일에서 툴팁 위치 조정 */
-  @media (max-width: 700px) {
-    .tip { width: 200px; font-size: 11px; padding: 10px 12px; }
-    .screen { aspect-ratio: 4 / 3; }
-    .zone { font-size: 10px; padding: 4px 6px; }
-    .zone-topbar .badge, .zone-topbar .dday { font-size: 9px; }
-    .zone-topbar .clock { font-size: 11px; }
+  /* 한눈에 정리 카드 */
+  .legend-section h2 {
+    font-size: 17px;
+    color: var(--primary);
+    margin: 24px 0 12px;
   }
-
-  /* 범례 */
   .legend-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 12px;
-    margin-top: 22px;
   }
   .legend-card {
     background: var(--card-bg);
     border-left: 4px solid var(--primary);
     border-radius: 8px;
-    padding: 14px 16px;
+    padding: 12px 14px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
   .legend-card .title {
     font-weight: 700; font-size: 14px;
     color: var(--primary); margin-bottom: 4px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .legend-card .title .num {
+    background: var(--primary); color: white;
+    width: 20px; height: 20px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px;
   }
   .legend-card .desc {
     font-size: 13px; color: var(--text-soft);
@@ -279,6 +225,10 @@
     font-size: 11px; font-weight: 600;
   }
   .legend-card .who.t { background: #fef3c7; color: #b45309; }
+  .legend-card .who.a { background: #ecfdf5; color: #047857; }
+  .legend-card.highlight { border-left-color: #f59e0b; }
+  .legend-card.highlight .title { color: #b45309; }
+  .legend-card.highlight .title .num { background: #b45309; }
 
   .cta {
     text-align: center;
@@ -294,6 +244,13 @@
     font-size: 14px;
   }
   .cta a:hover { background: var(--primary-light); }
+
+  /* 모바일 — 툴팁 크기 축소 + 핫스팟 번호 작게 */
+  @media (max-width: 700px) {
+    .tip { width: 180px; font-size: 11px; padding: 9px 11px; }
+    .hotspot-num { min-width: 18px; height: 18px; font-size: 9px; top: -8px; left: -8px; }
+    .screen-img-wrap { border-width: 4px; }
+  }
 </style>
 </head>
 <body>
@@ -308,120 +265,162 @@
   <a href="index.html" class="back-link">← 학급 목록으로 돌아가기</a>
 
   <div class="intro">
-    <b>전자칠판 한 화면에 6가지 정보가 함께 표시됩니다.</b>
-    아래 모형에서 궁금한 영역에 마우스를 올려보세요 (모바일은 터치).
-    각 영역이 어디서 등록되는지, 누가 관리하는지 안내됩니다.
+    <b>학급 게시판 한 화면에 10가지 정보가 함께 표시됩니다.</b>
+    아래는 실제 운영 화면이며, 각 영역에 번호가 매겨져 있습니다.
+    번호 영역에 마우스를 올리면 (모바일은 터치) 무엇을 보여주는지 · 누가 등록·관리하는지 안내됩니다.
   </div>
 
-  <!-- 학급 화면 모형 -->
-  <div class="mockup-wrap">
-    <div class="mockup-title">
-      <b>학급 게시판</b> 화면 구성
-      <span class="hint">🖱 영역에 마우스 올려보기</span>
+  <div class="notice-ratio">
+    <span class="icon">📱</span>
+    <div>
+      아래 사진은 <b>PC 브라우저로 캡처한 모습</b>이라 비율이 약간 좁아 보일 수 있습니다.
+      실제 <b>전자칠판(IFP)</b>에서는 16:9 비율의 전체 화면으로 시원하게 표시되니
+      참고해주세요.
+    </div>
+  </div>
+
+  <!-- 스크린샷 + 핫스팟 -->
+  <div class="screen-container">
+    <div class="screen-title">
+      <b>실제 학급 게시판 운영 화면</b> (1학년 9반 예시)
+      <span class="hint">🖱 번호 위에 마우스 올리기</span>
     </div>
 
-    <div class="screen">
+    <div class="screen-img-wrap" id="imgWrap">
+      <img src="screen-sample.png" alt="학급 게시판 실제 화면 예시">
 
-      <!-- 1. 상단 톱바 -->
-      <div class="zone zone-topbar">
-        <span class="badge">1학년 1반</span>
-        <span class="dday">D-7 체육대회</span>
-        <span class="weather">☀️ 23°</span>
-        <span class="clock">10:25</span>
-        <div class="tip">
-          <div class="tip-title">① 상단 톱바</div>
-          학급 정보 · 다가오는 일정(D-Day) · 현재 날씨 · 현재 시각이 한 줄에 표시됩니다.
-          항상 켜져 있어 한눈에 확인 가능.
+      <!-- ① 학교 로고 + 학교명 -->
+      <div class="hotspot" tabindex="0" style="left:1.4%; top:1.4%; width:17%; height:11%;">
+        <span class="hotspot-num">1</span>
+        <div class="tip tip-pos-below">
+          <div class="tip-title">① 학교 로고 + 학교명</div>
+          학교의 정체성을 보여줍니다. 항상 표시.
           <div class="tip-meta">
-            <b>관리:</b> 학교 관리자 (D-Day) · 자동 (날씨·시각)
+            <b>관리:</b> 관리자 → ⚙️ 설정 → 🏫 학교 설정
           </div>
         </div>
       </div>
 
-      <!-- 2. 학교 공지사항 (LED) -->
-      <div class="zone zone-school-notice">
-        <div class="zone-title">📢 학교 공지</div>
-        <div class="zone-sample">
-          <span class="yellow">[교무부]</span> 5월 22일 단축수업 안내<br>
-          <span style="color:#94a3b8;">●●● ○○</span>
-        </div>
-        <div class="tip">
-          <div class="tip-title">② 학교 공지사항 (LED 슬라이드)</div>
-          학교 전체 공지가 노란 LED 글자처럼 슬라이드로 회전 표시됩니다.
-          긴 공지는 자동으로 여러 화면으로 나뉩니다.
+      <!-- ② 알림판 + 학급 배지 (중앙) -->
+      <div class="hotspot" tabindex="0" style="left:40%; top:1.4%; width:21%; height:9%;">
+        <span class="hotspot-num">2</span>
+        <div class="tip tip-pos-below">
+          <div class="tip-title">② 알림판 + 학급 배지</div>
+          "스마트 학교 알림판"이라는 시스템명과 현재 어느 학급의 화면인지(예: 1학년 9반) 표시합니다.
           <div class="tip-meta">
-            <b>등록:</b> 학교 관리자만 (📢 공지사항 등록 메뉴)
+            <b>관리:</b> 자동 (URL의 학년·반 정보 기반)
           </div>
         </div>
       </div>
 
-      <!-- 3. 학급 게시판 (담임 등록) -->
-      <div class="zone zone-class-board">
-        <div class="zone-title" style="color:#fde68a;">📋 우리 반 게시판</div>
-        <div class="zone-sample">
-          <span class="yellow">[알림]</span> 내일 체육복 꼭<br>
-          [칭찬] 청소왕 김○○<br>
-          <span style="color:#94a3b8;">●● ○</span>
-        </div>
-        <div class="tip">
-          <div class="tip-title">③ 우리 반 게시판 ⭐</div>
-          담임 선생님이 직접 등록하는 우리 반만의 공지·칭찬·안내가 표시됩니다.
-          여러 글은 슬라이드로 회전.
+      <!-- ③ 날짜 + 시계 -->
+      <div class="hotspot" tabindex="0" style="left:84%; top:0.5%; width:15.5%; height:13%;">
+        <span class="hotspot-num">3</span>
+        <div class="tip tip-pos-below">
+          <div class="tip-title">③ 날짜 + 현재 시각</div>
+          오늘 날짜·요일과 현재 시각이 실시간으로 표시됩니다. 매초 갱신.
           <div class="tip-meta">
-            <b>등록:</b> 담임 선생님 (담임 PIN 로그인 후)
+            <b>관리:</b> 자동 (시스템 시계)
           </div>
         </div>
       </div>
 
-      <!-- 4. 학사일정 (금주) -->
-      <div class="zone zone-events">
-        <div class="zone-title">📆 금주 학사일정</div>
-        <div class="zone-sample">
-          5/22(목) 단축수업<br>
-          5/24(토) 체육대회 예선
-        </div>
-        <div class="tip">
-          <div class="tip-title">④ 금주 학사일정</div>
-          이번 주(월~일) 학교 행사·일정이 자동으로 표시됩니다.
-          한 주 2건 권장.
+      <!-- ④ D-day 영역 -->
+      <div class="hotspot" tabindex="0" style="left:0.7%; top:12.5%; width:48%; height:7%;">
+        <span class="hotspot-num">4</span>
+        <div class="tip tip-pos-below">
+          <div class="tip-title">④ D-Day 안내</div>
+          다가오는 학교 행사·시험까지 남은 일수를 카운트다운으로 표시합니다.
+          (예: 체육대회 D-20, 1학기 2차고사 D-41)
           <div class="tip-meta">
-            <b>등록:</b> 학교 관리자 (📆 학사일정 메뉴)
+            <b>등록:</b> 학교 관리자 (📅 일정 관리 → 🎯 D-Day)<br>
+            <b>권장:</b> 동시 활성 2개 (가로 공간 제한)
           </div>
         </div>
       </div>
 
-      <!-- 5+6. 하단: 시간표 + 급식 -->
-      <div class="zone-bottom">
-        <div class="zone-timetable">
-          <div class="zone-title">⏰ 오늘의 시간표</div>
-          <div class="zone-sample">
-            3교시 국어 (변경) · 김○○<br>
-            4교시 수학 · 박○○
-          </div>
-          <div class="tip" style="left:25%;">
-            <div class="tip-title">⑤ 오늘의 시간표</div>
-            오늘 우리 반 수업이 표시됩니다. 일일 변경된 수업은
-            <span style="color:#fca5a5;">빨간 "변경" 배지</span>로 표시.
-            <div class="tip-meta">
-              <b>기초 등록:</b> 관리자 (NEIS 엑셀 일괄 업로드)<br>
-              <b>일일 변경:</b> 담임도 가능
-            </div>
+      <!-- ⑤ 날씨 영역 -->
+      <div class="hotspot" tabindex="0" style="left:67.5%; top:12.5%; width:32%; height:6.5%;">
+        <span class="hotspot-num">5</span>
+        <div class="tip tip-pos-below">
+          <div class="tip-title">⑤ 양산 날씨 정보</div>
+          현재 기온·체감·습도·미세먼지·초미세먼지 정보가 실시간으로 표시됩니다.
+          <div class="tip-meta">
+            <b>제공:</b> 자동 (Open-Meteo + 에어코리아 API)
           </div>
         </div>
-        <div class="zone-lunch">
-          <div class="zone-title">🍱 급식 / 점심</div>
-          <div class="zone-sample">
-            우리 반: 12:22~12:42<br>
-            메뉴: 비빔밥, 미역국...
+      </div>
+
+      <!-- ⑥ 오늘 시간표 (왼쪽 메인) -->
+      <div class="hotspot" tabindex="0" style="left:0.7%; top:20.5%; width:18.5%; height:60%;">
+        <span class="hotspot-num">6</span>
+        <div class="tip tip-pos-right">
+          <div class="tip-title">⑥ 오늘 시간표</div>
+          오늘 우리 반 수업이 교시별로 표시됩니다. 담당 교사 · 시간 포함.
+          일일 변경된 수업은 <span style="color:#fca5a5;">빨간 "변경" 배지</span>로 강조.
+          중간에 <span style="color:#34d399;">우리반 급식 시간</span>이 자동 삽입됩니다.
+          상단 주황 배지는 단축 수업 알림.
+          <div class="tip-meta">
+            <b>기초 시간표:</b> 학교 관리자 (NEIS 엑셀 일괄 업로드)<br>
+            <b>일일 변경:</b> 담임 선생님도 가능
           </div>
-          <div class="tip" style="left:75%;">
-            <div class="tip-title">⑥ 급식 / 점심 시간</div>
-            오늘 급식 메뉴(나이스 자동)와 우리 반 급식 시각이 표시됩니다.
-            학급별 시간이 매주 자동 순환.
-            <div class="tip-meta">
-              <b>메뉴:</b> 나이스(NEIS) 자동 연동<br>
-              <b>학급별 시간:</b> 관리자 (🍱 급식 시간 메뉴)
-            </div>
+        </div>
+      </div>
+
+      <!-- ⑦ 금주 학사일정 (왼쪽 하단) -->
+      <div class="hotspot" tabindex="0" style="left:0.7%; top:82%; width:18.5%; height:17%;">
+        <span class="hotspot-num">7</span>
+        <div class="tip tip-pos-above">
+          <div class="tip-title">⑦ 금주 학사일정</div>
+          이번 주(월~일) 학교 전체 행사·일정을 자동으로 표시합니다.
+          (예: 5/20(수) 교직원 심폐소생술 교육)
+          <div class="tip-meta">
+            <b>등록:</b> 학교 관리자 (📆 학사일정 메뉴)<br>
+            <b>권장:</b> 한 주 2건 (좌측 패널 공간 제한)
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑧ 학교 공지사항 (우측 상단 - LED) -->
+      <div class="hotspot" tabindex="0" style="left:20%; top:20.5%; width:79.3%; height:34%;">
+        <span class="hotspot-num">8</span>
+        <div class="tip tip-pos-below">
+          <div class="tip-title">⑧ 학교 공지사항 (LED 슬라이드)</div>
+          학교 전체 공지가 LED 전광판 스타일로 표시됩니다.
+          노란색은 제목 · 녹색은 세부 내용. 활성 공지 여러 개를 자동 회전하며,
+          긴 공지는 3줄씩 슬라이드 분할(1/2 표시)됩니다.
+          <div class="tip-meta">
+            <b>등록:</b> 학교 관리자만 (📢 공지사항 등록 → 학교 공지)<br>
+            <b>권장:</b> 동시 활성 3~5개
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑨ 학급 게시판 (우측 중간) -->
+      <div class="hotspot" tabindex="0" style="left:20%; top:55.5%; width:79.3%; height:18.5%;">
+        <span class="hotspot-num">9</span>
+        <div class="tip tip-pos-above">
+          <div class="tip-title">⑨ 우리 반 게시판 ⭐</div>
+          담임 선생님이 직접 등록한 우리 반만의 공지·칭찬·안내가 표시됩니다.
+          여러 글이 있으면 슬라이드로 회전.
+          <div class="tip-meta">
+            <b>등록:</b> 담임 선생님 (담임 PIN 로그인 후)<br>
+            <b>특징:</b> 우리 반만 보임, 다른 반엔 표시 안 됨
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑩ 오늘의 급식 (우측 하단) -->
+      <div class="hotspot" tabindex="0" style="left:20%; top:75%; width:79.3%; height:24%;">
+        <span class="hotspot-num">10</span>
+        <div class="tip tip-pos-above">
+          <div class="tip-title">⑩ 오늘의 급식</div>
+          오늘 급식 메뉴와 총 칼로리가 표시됩니다.
+          메뉴는 NEIS(교육부 나이스)에서 자동 연동되며,
+          우리 반 급식 시간(예: 12:22~)은 시간표 중간에도 표시됩니다.
+          <div class="tip-meta">
+            <b>메뉴:</b> 자동 (NEIS 급식 API)<br>
+            <b>학급별 급식 시간:</b> 학교 관리자 (🍱 급식 시간 메뉴)
           </div>
         </div>
       </div>
@@ -430,54 +429,80 @@
   </div>
 
   <!-- 한눈에 요약 -->
-  <h2 style="font-size:17px;color:var(--primary);margin:24px 0 10px;">👉 한눈에 정리</h2>
-  <div class="legend-cards">
+  <div class="legend-section">
+    <h2>👉 한눈에 정리 (누가 등록·관리?)</h2>
+    <div class="legend-cards">
 
-    <div class="legend-card">
-      <div class="title">① 상단 톱바</div>
-      <div class="desc">학급 · D-Day · 날씨 · 현재 시각</div>
-      <span class="who">관리자 + 자동</span>
+      <div class="legend-card">
+        <div class="title"><span class="num">1</span> 학교 로고·학교명</div>
+        <div class="desc">학교 정체성 표시</div>
+        <span class="who">학교 관리자 (1회 설정)</span>
+      </div>
+
+      <div class="legend-card">
+        <div class="title"><span class="num">2</span> 알림판 + 학급 배지</div>
+        <div class="desc">시스템명 · 현재 학급</div>
+        <span class="who a">자동 (URL 기반)</span>
+      </div>
+
+      <div class="legend-card">
+        <div class="title"><span class="num">3</span> 날짜 + 시계</div>
+        <div class="desc">실시간 날짜·시각</div>
+        <span class="who a">자동</span>
+      </div>
+
+      <div class="legend-card">
+        <div class="title"><span class="num">4</span> D-Day</div>
+        <div class="desc">행사·시험 카운트다운</div>
+        <span class="who">학교 관리자</span>
+      </div>
+
+      <div class="legend-card">
+        <div class="title"><span class="num">5</span> 날씨 정보</div>
+        <div class="desc">기온·습도·미세먼지</div>
+        <span class="who a">자동 (API)</span>
+      </div>
+
+      <div class="legend-card">
+        <div class="title"><span class="num">6</span> 오늘 시간표</div>
+        <div class="desc">교시별 수업 + 우리반 급식 시간</div>
+        <span class="who">관리자 + 담임</span>
+      </div>
+
+      <div class="legend-card">
+        <div class="title"><span class="num">7</span> 금주 학사일정</div>
+        <div class="desc">이번 주 학교 행사</div>
+        <span class="who">학교 관리자</span>
+      </div>
+
+      <div class="legend-card">
+        <div class="title"><span class="num">8</span> 학교 공지사항</div>
+        <div class="desc">전체 공지 (LED 슬라이드)</div>
+        <span class="who">학교 관리자</span>
+      </div>
+
+      <div class="legend-card highlight">
+        <div class="title"><span class="num">9</span> 우리 반 게시판 ⭐</div>
+        <div class="desc">담임이 등록하는 우리 반 공지</div>
+        <span class="who t">담임 선생님</span>
+      </div>
+
+      <div class="legend-card">
+        <div class="title"><span class="num">10</span> 오늘의 급식</div>
+        <div class="desc">메뉴 + 칼로리</div>
+        <span class="who a">자동 (NEIS) + 관리자</span>
+      </div>
+
     </div>
-
-    <div class="legend-card">
-      <div class="title">② 학교 공지</div>
-      <div class="desc">학교 전체에 알리는 공지 (LED 슬라이드)</div>
-      <span class="who">학교 관리자</span>
-    </div>
-
-    <div class="legend-card" style="border-left-color:#f59e0b;">
-      <div class="title" style="color:#b45309;">③ 우리 반 게시판 ⭐</div>
-      <div class="desc">담임이 직접 등록하는 우리 반 공지</div>
-      <span class="who t">담임 선생님</span>
-    </div>
-
-    <div class="legend-card">
-      <div class="title">④ 금주 학사일정</div>
-      <div class="desc">이번 주(월~일) 학교 행사</div>
-      <span class="who">학교 관리자</span>
-    </div>
-
-    <div class="legend-card">
-      <div class="title">⑤ 오늘 시간표</div>
-      <div class="desc">기초 시간표 + 일일 변경 사항</div>
-      <span class="who">관리자 + 담임</span>
-    </div>
-
-    <div class="legend-card">
-      <div class="title">⑥ 급식 / 점심</div>
-      <div class="desc">메뉴(NEIS 자동) + 우리 반 급식 시각</div>
-      <span class="who">자동 + 관리자</span>
-    </div>
-
   </div>
 
   <!-- 긴급 공지 별도 안내 -->
   <h2 style="font-size:17px;color:#dc2626;margin:24px 0 10px;">🚨 긴급 공지 (특별한 경우)</h2>
   <div class="legend-card" style="border-left-color:#dc2626;">
-    <div class="title" style="color:#dc2626;">전체 화면 덮기</div>
-    <div class="desc">화재·재난·일과 변경 등 긴급 상황 시 학교 관리자가 발송하면
+    <div class="title" style="color:#dc2626;">전체 화면 덮기 알림</div>
+    <div class="desc">화재·재난·일과 변경 등 긴급 상황 시, 학교 관리자가 발송하면
     위의 모든 화면을 덮고 <b>전체 화면에 큰 글씨로 표시</b>됩니다.
-    관리자가 해제하면 원래 화면으로 복귀.</div>
+    관리자가 해제할 때까지 유지되며, 해제하면 원래 화면으로 복귀합니다.</div>
     <span class="who">학교 관리자 전용</span>
   </div>
 
@@ -488,10 +513,23 @@
 </div>
 
 <script>
-  // 학교명 적용 (있으면)
   if (typeof SCHOOL_CONFIG !== 'undefined' && SCHOOL_CONFIG.schoolName) {
     document.title = '학급 화면 구성 안내 — ' + SCHOOL_CONFIG.schoolName;
   }
+
+  // 모바일 — 탭하면 해당 핫스팟 활성/비활성 토글
+  document.querySelectorAll('.hotspot').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const wasActive = el.classList.contains('active');
+      document.querySelectorAll('.hotspot.active').forEach(x => x.classList.remove('active'));
+      if (!wasActive) el.classList.add('active');
+    });
+  });
+  // 빈 곳 클릭하면 모두 해제
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.hotspot.active').forEach(x => x.classList.remove('active'));
+  });
 </script>
 </body>
 </html>
