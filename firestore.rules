@@ -104,20 +104,35 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 관리자 초대 (pendingAdmins)
+    // 관리자가 새 관리자를 등록할 때 사용. 새 관리자가 첫 로그인 시
+    // 이 컬렉션에 자신의 이메일이 있으면 teachers/{uid} 문서를 자가 생성할 수 있음.
+    match /pendingAdmins/{email} {
+      allow read: if isLoggedIn() && (isAdmin() || request.auth.token.email == email);
+      allow create, delete: if isAdmin();
+      allow update: if false;
+    }
+
     // 교사 컬렉션
     // 읽기: 익명 포함 로그인 사용자 (담임 PIN 로그인용 — name/grade/class 매칭)
     //       ⚠️ 알려진 한계: pinHash가 익명 사용자에게도 노출됨
     //       (Cloud Function PIN 검증으로 마이그레이션 권장)
     // 쓰기:
-    //   - create: 본인 uid 문서만 (역할 변조 방지)
+    //   - create:
+    //       (a) 관리자는 임의 docId/역할로 등록 가능 (.add() 랜덤 ID 포함)
+    //       (b) 본인 uid 문서로 self-create 가능
+    //           · role=teacher 또는 미지정 → 항상 허용
+    //           · role=admin → pendingAdmins/{email} 초대가 있을 때만 허용
     //   - update/delete: 관리자 또는 본인
     match /teachers/{docId} {
       allow read: if isLoggedIn();
-      allow create: if isLoggedIn()
-        && request.auth.uid == docId
-        && (!('role' in request.resource.data)
-            || request.resource.data.role == 'teacher'
-            || (request.resource.data.role == 'admin' && isAdmin()));
+      allow create: if isAdmin()
+        || (isLoggedIn() && request.auth.uid == docId
+            && (!('role' in request.resource.data)
+                || request.resource.data.role == 'teacher'
+                || (request.resource.data.role == 'admin'
+                    && !isAnonymous()
+                    && exists(/databases/$(database)/documents/pendingAdmins/$(request.auth.token.email)))));
       allow update: if isAdmin()
         || (request.auth.uid == docId
             && !isAnonymous()
