@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>학급 게시판 둘러보기 — 양산여중</title>
+<title>양산여중 전자칠판 DID 안내</title>
 <link rel="icon" href="/logo.png">
 <script src="/config.js"></script>
 <style>
@@ -172,8 +172,8 @@
 
 <header>
   <div class="school-logo"><img src="/logo.png" alt="logo" onerror="this.style.display='none'"></div>
-  <h1>학급 게시판 둘러보기</h1>
-  <p id="schoolNameHeader">양산여자중학교 · 담임 선생님 안내</p>
+  <h1>양산여중 전자칠판 DID 안내</h1>
+  <p id="schoolNameHeader">양산여자중학교 · 선생님 안내 자료</p>
 </header>
 
 <div class="container">
@@ -210,11 +210,12 @@
       <li>위쪽 <b>"🔐 담임 로그인 (PIN)"</b> 버튼 클릭 또는 직접 접속:<br>
         <code style="background:#f4f4f4;padding:3px 7px;border-radius:3px;font-size:13px;">https://ysgm-did.web.app/admin/</code></li>
       <li><b>"담임 (PIN)"</b> 탭 선택</li>
-      <li>이름·학년·반 선택 후 <b>4~8자리 PIN 번호</b> 입력</li>
+      <li>이름·학년·반 선택 후 <b>4~8자리 PIN 번호</b> 입력 (기본 PIN: <b style="color:#b45309;">2026</b>)</li>
       <li>로그인되면 우리 반 게시판 등록·수정 가능</li>
     </ol>
     <div class="tip">
-      ⚠️ PIN을 모르시는 경우 시스템 담당 교사에게 문의해주세요.
+      🔑 <b>기본 PIN은 2026</b>입니다. 첫 로그인 후 본인만의 PIN으로 변경하시는 것을 권장합니다.<br>
+      ⚠️ PIN을 변경하셨는데 잊으셨다면 시스템 담당 교사에게 PIN 재설정을 요청해주세요.
     </div>
   </div>
 
@@ -228,11 +229,10 @@
 </div>
 
 <script>
-  // 학교명 적용
+  // 학교명 적용 (config에 다른 학교명이 들어있으면 그것에 맞춰 갱신)
   if (typeof SCHOOL_CONFIG !== 'undefined' && SCHOOL_CONFIG.schoolName) {
     document.getElementById('schoolNameHeader').textContent =
-      SCHOOL_CONFIG.schoolName + ' · 담임 선생님 안내';
-    document.title = '학급 게시판 둘러보기 — ' + SCHOOL_CONFIG.schoolName;
+      SCHOOL_CONFIG.schoolName + ' · 선생님 안내 자료';
   }
 
   // 학급 URL 목록 동적 생성
