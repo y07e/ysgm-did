@@ -2160,8 +2160,9 @@
     return all.filter(a => {
       if (!a.isActive) return false;
       if (a.expiresAt?.toDate && a.expiresAt.toDate() < now) return false;
-      const tg = a.targetGrades  || ['all'];
-      const tc = a.targetClasses || ['all'];
+      // 빈 배열([])도 '전체'로 취급 (관리자 등록 시 체크박스 미체크 방어)
+      const tg = (Array.isArray(a.targetGrades)  && a.targetGrades.length)  ? a.targetGrades  : ['all'];
+      const tc = (Array.isArray(a.targetClasses) && a.targetClasses.length) ? a.targetClasses : ['all'];
       return (tg.includes('all') || tg.includes(grade)) &&
              (tc.includes('all') || tc.includes(cls));
     });

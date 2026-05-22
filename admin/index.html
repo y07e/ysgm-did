@@ -2376,10 +2376,13 @@ document.getElementById('btnAddAnn').addEventListener('click', async () => {
   if (!title||!content) return showToast('제목과 내용을 입력하세요');
   const expiry = document.getElementById('annExpiry').value;
 
+  // 체크박스 하나도 안 체크된 경우 자동으로 '전체'(all) 처리 → 누락 방지
+  const ag = getChecked('ag');
+  const ac = getChecked('ac');
   const data = {
     title, content,
-    targetGrades:  getChecked('ag'),
-    targetClasses: getChecked('ac'),
+    targetGrades:  ag.length ? ag : ['all'],
+    targetClasses: ac.length ? ac : ['all'],
     expiresAt: expiry ? firebase.firestore.Timestamp.fromDate(new Date(expiry)) : null,
   };
 
@@ -2921,8 +2924,11 @@ document.getElementById('btnSendEm').addEventListener('click', async () => {
   const msg   = document.getElementById('emMsg').value.trim();
   if (!title||!msg) return showToast('제목과 내용을 입력하세요');
   if (!confirm('긴급 공지를 즉시 전송하시겠습니까?\n해당 교실 전자칠판에 즉시 표시됩니다.')) return;
-  const targetGrades  = getChecked('emg');
-  const targetClasses = getChecked('ec');
+  // 미체크 시 '전체'(all) 자동 적용 → 누락 방지
+  const _emg = getChecked('emg');
+  const _ec  = getChecked('ec');
+  const targetGrades  = _emg.length ? _emg : ['all'];
+  const targetClasses = _ec.length  ? _ec  : ['all'];
   const ts = firebase.firestore.FieldValue.serverTimestamp();
 
   // 현재 활성 긴급공지 갱신
