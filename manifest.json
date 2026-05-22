@@ -1,13 +1,17 @@
 {
   "name": "양산여자중학교 전자칠판",
-  "short_name": "양산여중 전자칠판",
+  "short_name": "양산여중 알림판",
   "description": "양산여자중학교 학급 전자칠판 종합 알림판",
-  "start_url": "/start/",
+  "id": "/start/",
+  "start_url": "/start/?source=pwa",
   "scope": "/",
   "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
   "orientation": "landscape",
   "background_color": "#0f172a",
   "theme_color": "#1e293b",
+  "lang": "ko",
+  "categories": ["education"],
   "icons": [
     {
       "src": "/icons/icon-192.png",
