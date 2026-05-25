@@ -74,7 +74,7 @@
      · "New" 선택 → 자동으로 새 서명 키 생성
      · "Key alias": android (기본값 유지)
      · "Key Password / Store Password": 임의의 비밀번호 입력
-       예: yspil2026 (잊지 말 것! 추후 업데이트 시 필요)
+       예: ysgm2026 (잊지 말 것! 추후 업데이트 시 필요)
 
   5) "Download" 버튼 → ZIP 파일 다운로드
 
