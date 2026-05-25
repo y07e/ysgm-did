@@ -7,10 +7,15 @@
       ".gitignore",
       "README.md",
       "node_modules",
+      "_apk_build/**",
+      "apk-downloads/**",
+      "매뉴얼/**",
       "**/*.xlsx",
       "**/*.pdf",
       "**/*.pptx",
-      "**/*.docx"
+      "**/*.docx",
+      "**/*.apk",
+      "**/*.keystore"
     ],
     "rewrites": [],
     "headers": [
