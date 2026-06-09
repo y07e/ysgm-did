@@ -2117,22 +2117,24 @@ function renderDDList() {
     const td = d.targetDate?.toDate ? d.targetDate.toDate() : new Date();
     const dateStr = td.toLocaleDateString('ko-KR');
     const isEditing = (d.id === editingDDId);
-    const isOff = d.isActive === false;
+    const isOn = d.isActive !== false;
     const today = new Date(); today.setHours(0,0,0,0);
     const tdMid = new Date(td); tdMid.setHours(0,0,0,0);
     const isPast = tdMid < today;
-    const rowStyle = isEditing ? 'background:#fef3c7;border-color:#fbbf24;'
-                   : (isOff || isPast) ? 'opacity:0.55;' : '';
-    const stateBadge = isOff ? '<span class="badge" style="background:#e2e8f0;color:#64748b;">해제됨</span>'
-                     : isPast ? '<span class="badge" style="background:#fee2e2;color:#b91c1c;">지남 · 화면에 숨김</span>' : '';
-    return `<div class="list-item" style="${rowStyle}">
+    const status = isOn
+      ? '<span class="badge badge-on">활성</span>'
+      : '<span class="badge badge-off">비활성</span>';
+    const pastBadge = (isOn && isPast) ? ' <span class="badge" style="background:#fee2e2;color:#b91c1c;">지남 · 화면에 숨김</span>' : '';
+    const editTag = isEditing ? ' <span class="badge badge-blue">수정 중</span>' : '';
+    const editStyle = isEditing ? ' style="background:#fef3c7;border-color:#fbbf24;"' : '';
+    return `<div class="list-item${isOn?'':' inactive'}"${editStyle}>
       <div class="list-item-body">
-        <div class="list-item-title">${escapeHtml(d.icon||'📅')} ${escapeHtml(d.title)} <span style="color:#3b82f6;font-weight:800;margin-left:8px;font-size:1rem;">${escapeHtml(calcDday(td))}</span> ${stateBadge} ${isEditing ? '<span class="badge badge-blue">수정 중</span>' : ''}</div>
+        <div class="list-item-title">${escapeHtml(d.icon||'📅')} ${escapeHtml(d.title)} <span style="color:#3b82f6;font-weight:800;margin-left:8px;font-size:1rem;">${escapeHtml(calcDday(td))}</span> ${status}${pastBadge}${editTag}</div>
         <div class="list-item-meta">${escapeHtml(dateStr)}</div>
       </div>
       <div class="list-item-actions">
-        <button class="btn ${isOff ? 'btn-primary' : 'btn-secondary'} btn-sm" onclick="toggleDD('${escapeHtml(d.id)}', ${isOff})">${isOff ? '✅ 활성화' : '⏸ 해제'}</button>
         <button class="btn btn-warning btn-sm" onclick="editDD('${escapeHtml(d.id)}')">✏ 수정</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleDD('${escapeHtml(d.id)}',${isOn})">${isOn?'비활성화':'활성화'}</button>
         <button class="btn btn-danger btn-sm" onclick="deleteDD('${escapeHtml(d.id)}')">삭제</button>
       </div>
     </div>`;
@@ -2196,10 +2198,10 @@ document.getElementById('btnAddDD').addEventListener('click', async () => {
   }
 });
 
-window.toggleDD = async (id, currentlyOff) => {
+window.toggleDD = async (id, isActive) => {
   try {
-    await db.collection('dDays').doc(id).update({ isActive: !!currentlyOff });
-    showToast(currentlyOff ? '✅ D-Day 활성화됨' : '⏸ D-Day 해제됨 (화면에서 숨김)');
+    await db.collection('dDays').doc(id).update({ isActive: !isActive });
+    showToast(isActive ? '비활성화됨' : '활성화됨');
   } catch (e) {
     showToast('오류: ' + e.message);
   }
