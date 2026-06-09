@@ -2780,7 +2780,7 @@
         const diff = Math.round((target - today) / 86400000);
         return { ...d, diff, target };
       })
-      .filter(d => d.diff >= -3) // 지난 D-Day는 3일 이내만 표시
+      .filter(d => d.diff >= 0) // 지난 D-Day는 다음날부터 자동 숨김
       .map(d => {
         let txt, cls = '';
         if (d.diff === 0) { txt = 'D-DAY'; cls = 'dday-today'; }
