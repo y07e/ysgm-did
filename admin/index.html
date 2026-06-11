@@ -428,6 +428,41 @@
     .daily-overrides-changes { font-size: 0.78rem; color: #64748b; margin-top: 3px; }
     .daily-overrides-reason { font-size: 0.78rem; color: #94a3b8; margin-top: 2px; font-style: italic; }
 
+    /* 날짜별 그룹 (아코디언) */
+    .ov-date-group { margin-bottom: 8px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+    .ov-date-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; cursor: pointer; user-select: none;
+      background: #eff6ff; font-size: 0.9rem;
+    }
+    .ov-date-header:hover { background: #dbeafe; }
+    .ov-date-header .ov-caret { font-size: 0.7rem; color: #3b82f6; transition: transform 0.15s; }
+    .ov-date-group.open .ov-caret { transform: rotate(90deg); }
+    .ov-date-header .ov-date-title { font-weight: 800; color: #1e40af; }
+    .ov-date-header .ov-date-count {
+      background: #1e40af; color: white; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 700; padding: 1px 8px;
+    }
+    .ov-date-header .ov-date-reason {
+      font-size: 0.78rem; color: #64748b; font-style: italic;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;
+    }
+    .ov-date-body { display: none; padding: 8px 10px; background: white; }
+    .ov-date-group.open .ov-date-body { display: block; }
+    .ov-date-body .daily-overrides-item { margin-bottom: 6px; }
+    .ov-date-body .daily-overrides-item:last-child { margin-bottom: 0; }
+    .ov-past-toggle {
+      width: 100%; text-align: center; padding: 9px;
+      background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;
+      color: #64748b; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      margin-top: 6px;
+    }
+    .ov-past-toggle:hover { background: #f1f5f9; }
+    .ov-past-label {
+      font-size: 0.75rem; color: #94a3b8; font-weight: 700;
+      margin: 12px 0 6px; letter-spacing: 0.5px;
+    }
+
     /* ===== 순환 순서 (드래그) ===== */
     .class-order-wrap {
       background: #eff6ff; border: 1px dashed #3b82f6;
@@ -3975,6 +4010,39 @@ document.getElementById('btnClearDaily').addEventListener('click', async () => {
 });
 
 // 등록된 일일 변경 목록 렌더
+let _ovExpandedDates = null;   // 사용자가 펼친 날짜 기억 (null = 첫 렌더)
+let _ovShowPast = false;       // 지난 변경 표시 여부
+
+function _ovDateGroupHtml(date, dStr, data, isOpen) {
+  const classEntries = Object.entries(data.classes || {}).sort((a,b) => {
+    const [ga, ca] = a[0].split('-').map(Number);
+    const [gb, cb] = b[0].split('-').map(Number);
+    return ga !== gb ? ga - gb : ca - cb;
+  });
+  const items = classEntries.map(([classKey, overrides]) => {
+    const changes = Object.entries(overrides).map(([p, v]) => `${p}교시→${v}`).join(', ');
+    return `<div class="daily-overrides-item">
+      <div class="daily-overrides-item-info">
+        <span class="daily-overrides-class" style="margin-left:0;font-weight:700;">${classKey.replace('-','학년 ')}반</span>
+        <div class="daily-overrides-changes">${changes}</div>
+      </div>
+      <div>
+        <button class="btn btn-secondary btn-sm" onclick="editDailyOverride('${date}','${classKey}')">✏ 편집</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteDailyOverride('${date}','${classKey}')">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="ov-date-group${isOpen ? ' open' : ''}" data-ovdate="${date}">
+    <div class="ov-date-header" onclick="toggleOvDate('${date}')">
+      <span class="ov-caret">▶</span>
+      <span class="ov-date-title">📅 ${dStr}</span>
+      <span class="ov-date-count">${classEntries.length}개 반</span>
+      ${data.reason ? `<span class="ov-date-reason">${escapeHtml(data.reason)}</span>` : '<span style="flex:1;"></span>'}
+    </div>
+    <div class="ov-date-body">${items}</div>
+  </div>`;
+}
+
 function renderDailyOverridesList() {
   const el = document.getElementById('dailyOverridesList');
   const dates = Object.keys(dailyOverridesAll).sort();
@@ -3983,30 +4051,60 @@ function renderDailyOverridesList() {
     return;
   }
   const dayKor = ['일','월','화','수','목','금','토'];
-  let html = '';
-  for (const date of dates) {
-    const data = dailyOverridesAll[date];
+  const todayStr = dateToInputFormat(new Date());
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = dateToInputFormat(tomorrow);
+
+  const upcoming = dates.filter(d => d >= todayStr);
+  const past = dates.filter(d => d < todayStr).reverse(); // 최근 지난 날짜부터
+
+  // 첫 렌더: 오늘·내일만 펼침
+  if (_ovExpandedDates === null) {
+    _ovExpandedDates = new Set(upcoming.filter(d => d === todayStr || d === tomorrowStr));
+    if (!_ovExpandedDates.size && upcoming.length) _ovExpandedDates.add(upcoming[0]); // 둘 다 없으면 가장 가까운 날짜
+  }
+
+  const fmt = date => {
     const [y, m, d] = date.split('-').map(Number);
     const dt = new Date(y, m-1, d);
-    const dStr = `${date} (${dayKor[dt.getDay()]})`;
-    for (const [classKey, overrides] of Object.entries(data.classes || {})) {
-      const changes = Object.entries(overrides).map(([p, v]) => `${p}교시→${v}`).join(', ');
-      html += `<div class="daily-overrides-item">
-        <div class="daily-overrides-item-info">
-          <span class="daily-overrides-date">${dStr}</span>
-          <span class="daily-overrides-class">${classKey.replace('-','학년 ')}반</span>
-          <div class="daily-overrides-changes">${changes}</div>
-          ${data.reason ? `<div class="daily-overrides-reason">사유: ${data.reason}</div>` : ''}
-        </div>
-        <div>
-          <button class="btn btn-secondary btn-sm" onclick="editDailyOverride('${date}','${classKey}')">✏ 편집</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteDailyOverride('${date}','${classKey}')">삭제</button>
-        </div>
-      </div>`;
+    let s = `${date} (${dayKor[dt.getDay()]})`;
+    if (date === todayStr) s += ' · 오늘';
+    else if (date === tomorrowStr) s += ' · 내일';
+    return s;
+  };
+
+  let html = upcoming.map(date =>
+    _ovDateGroupHtml(date, fmt(date), dailyOverridesAll[date], _ovExpandedDates.has(date))
+  ).join('');
+
+  if (!upcoming.length) html += '<div class="empty-state" style="padding:14px;">예정된 시간표 변경 없음</div>';
+
+  if (past.length) {
+    const pastCount = past.reduce((n, d) => n + Object.keys(dailyOverridesAll[d].classes || {}).length, 0);
+    if (_ovShowPast) {
+      html += `<div class="ov-past-label">─── 지난 변경 ───</div>`;
+      html += past.map(date =>
+        _ovDateGroupHtml(date, fmt(date), dailyOverridesAll[date], _ovExpandedDates.has(date))
+      ).join('');
+      html += `<div class="ov-past-toggle" onclick="toggleOvPast()">▲ 지난 변경 접기</div>`;
+    } else {
+      html += `<div class="ov-past-toggle" onclick="toggleOvPast()">▼ 지난 변경 ${past.length}일 (${pastCount}건) 보기</div>`;
     }
   }
+
   el.innerHTML = html;
 }
+
+window.toggleOvDate = date => {
+  if (_ovExpandedDates.has(date)) _ovExpandedDates.delete(date);
+  else _ovExpandedDates.add(date);
+  renderDailyOverridesList();
+};
+
+window.toggleOvPast = () => {
+  _ovShowPast = !_ovShowPast;
+  renderDailyOverridesList();
+};
 
 window.editDailyOverride = (date, classKey) => {
   const [g, c] = classKey.split('-');
