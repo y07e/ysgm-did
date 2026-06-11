@@ -973,9 +973,14 @@
       </div>
 
       <div class="card">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <span>📅 일일 시간표 변경 목록</span>
-          <button class="btn btn-success btn-sm" id="btnPrintDailyOverrides">🖨️ 변경 목록 인쇄</button>
+          <span style="display:flex;gap:6px;align-items:center;">
+            <select id="printRangeSelect" style="margin-bottom:0;width:auto;font-size:0.82rem;padding:6px 10px;">
+              <option value="all">전체 기간</option>
+            </select>
+            <button class="btn btn-success btn-sm" id="btnPrintDailyOverrides">🖨️ 인쇄</button>
+          </span>
         </div>
         <div id="dailyOverridesList">
           <div class="empty-state">시간표 변경 목록이 없습니다</div>
@@ -4137,12 +4142,50 @@ db.collection('timetableOverrides').onSnapshot(snap => {
   dailyOverridesAll = {};
   snap.docs.forEach(d => dailyOverridesAll[d.id] = d.data());
   renderDailyOverridesList();
+  updatePrintRangeOptions();
 });
 
-// 시간표 변경 목록 인쇄
+// 인쇄 기간 선택 옵션 갱신 (데이터에 있는 월만 동적 생성)
+function updatePrintRangeOptions() {
+  const sel = document.getElementById('printRangeSelect');
+  if (!sel) return;
+  const prev = sel.value;
+  const months = [...new Set(Object.keys(dailyOverridesAll).map(d => d.slice(0, 7)))].sort().reverse();
+  let html = '<option value="all">전체 기간</option>'
+           + '<option value="thisweek">이번 주</option>'
+           + '<option value="nextweek">다음 주</option>';
+  html += months.map(m => {
+    const [y, mo] = m.split('-');
+    return `<option value="month:${m}">${y}년 ${Number(mo)}월</option>`;
+  }).join('');
+  sel.innerHTML = html;
+  if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+// 시간표 변경 목록 인쇄 (기간 선택)
 document.getElementById('btnPrintDailyOverrides').addEventListener('click', () => {
-  const dates = Object.keys(dailyOverridesAll).sort();
-  if (!dates.length) { showToast('인쇄할 변경 목록이 없습니다'); return; }
+  const range = document.getElementById('printRangeSelect')?.value || 'all';
+  let dates = Object.keys(dailyOverridesAll).sort();
+  let rangeLabel = '전체 기간';
+
+  if (range === 'thisweek' || range === 'nextweek') {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const day = today.getDay();
+    const offsetToMon = (day === 0) ? -6 : (1 - day);
+    const monday = new Date(today); monday.setDate(today.getDate() + offsetToMon);
+    if (range === 'nextweek') monday.setDate(monday.getDate() + 7);
+    const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+    const mStr = dateToInputFormat(monday), sStr = dateToInputFormat(sunday);
+    dates = dates.filter(d => d >= mStr && d <= sStr);
+    rangeLabel = `${range === 'thisweek' ? '이번 주' : '다음 주'} (${mStr} ~ ${sStr})`;
+  } else if (range.startsWith('month:')) {
+    const m = range.slice(6);
+    dates = dates.filter(d => d.startsWith(m));
+    const [y, mo] = m.split('-');
+    rangeLabel = `${y}년 ${Number(mo)}월`;
+  }
+
+  if (!dates.length) { showToast(`선택한 기간(${rangeLabel})에 변경 목록이 없습니다`); return; }
 
   const dayKor = ['일','월','화','수','목','금','토'];
   const logoSrc = SCHOOL_CONFIG.schoolLogo
@@ -4233,7 +4276,7 @@ document.getElementById('btnPrintDailyOverrides').addEventListener('click', () =
       ${logoSrc}
       <h1>${SCHOOL_CONFIG.schoolName} 시간표 변경 목록</h1>
     </div>
-    <div class="header-sub">총 ${dates.length}일 · 출력일: ${todayStr}</div>
+    <div class="header-sub">${rangeLabel} · 총 ${dates.length}일 · 출력일: ${todayStr}</div>
   </div>
 
   ${bodyHtml}
