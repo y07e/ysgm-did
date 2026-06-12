@@ -361,6 +361,14 @@
     }
     .schedule-card.upcoming { border-color: #fbbf24; }
     .schedule-card.expired { border-color: #cbd5e1; opacity: 0.65; }
+    /* 접힌 운영 기간 — 헤더만 보이고 상세(급식실/순환) 숨김 */
+    .schedule-card.collapsed > *:not(.schedule-header-bar) { display: none; }
+    .schedule-card.collapsed .schedule-header-bar { padding-bottom: 0; margin-bottom: 0; border-bottom: none; }
+    .sch-caret {
+      background: none; border: none; cursor: pointer;
+      font-size: 0.75rem; color: #64748b; padding: 0 4px;
+      flex-shrink: 0;
+    }
     .schedule-header-bar {
       display: flex; gap: 10px; align-items: center;
       padding-bottom: 12px; margin-bottom: 14px;
@@ -834,9 +842,13 @@
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
           <div>
             <div style="font-weight:800;color:#047857;font-size:1rem;">🔍 우리반 학급 화면 미리보기</div>
-            <div style="font-size:0.82rem;color:#475569;margin-top:2px;">공지 등록 후 어떻게 보이는지 새 창에서 즉시 확인</div>
+            <div style="font-size:0.82rem;color:#475569;margin-top:2px;">공지 등록 후 어떻게 보이는지 새 창에서 즉시 확인 · 날짜를 지정하면 그날 시간표로 미리보기</div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <label style="font-size:0.82rem;color:#475569;font-weight:600;">📅 날짜
+              <input type="date" id="previewDate" style="margin-left:4px;padding:5px 8px;font-size:0.85rem;">
+            </label>
+            <button class="btn btn-secondary btn-sm" id="btnPreviewDateClear" title="오늘로 초기화">↺</button>
             <button class="btn btn-success btn-sm" id="btnPreviewMyClass">📺 새 창으로 열기</button>
             <button class="btn btn-secondary btn-sm" id="btnPreviewMobile">📱 모바일 사이즈로 열기</button>
           </div>
@@ -2582,16 +2594,23 @@ function getPreviewGradeClass() {
   }
   return { grade: cbCurrentGrade || '1', cls: cbCurrentClass || '1' };
 }
+function previewDateParam() {
+  const d = document.getElementById('previewDate')?.value;
+  return d ? `&date=${d}` : '';
+}
 document.getElementById('btnPreviewMyClass').addEventListener('click', () => {
   const { grade, cls } = getPreviewGradeClass();
-  const url = `${location.origin}/display/?grade=${grade}&class=${cls}&desktop=1`;
+  const url = `${location.origin}/display/?grade=${grade}&class=${cls}&desktop=1${previewDateParam()}`;
   window.open(url, '_blank', 'width=1280,height=720');
 });
 document.getElementById('btnPreviewMobile').addEventListener('click', () => {
   const { grade, cls } = getPreviewGradeClass();
-  const url = `${location.origin}/display/?grade=${grade}&class=${cls}`;
+  const url = `${location.origin}/display/?grade=${grade}&class=${cls}${previewDateParam()}`;
   // 휴대폰 사이즈 (375x812 = iPhone 표준)
   window.open(url, '_blank', 'width=400,height=812');
+});
+document.getElementById('btnPreviewDateClear').addEventListener('click', () => {
+  document.getElementById('previewDate').value = '';
 });
 
 document.getElementById('btnCbLoad').addEventListener('click', () => {
@@ -3330,8 +3349,10 @@ function renderSchedules() {
     const rotationLink = sch.rotationAnchorDate
       ? `<div style="background:#ecfdf5;border:1px solid #10b981;border-radius:8px;padding:5px 11px;margin:6px 0;font-size:0.78rem;color:#047857;font-weight:600;">🔗 순환 이어받기: <b>${sch.rotationAnchorDate}</b>부터 계산 (이전 운영기간의 순환을 끊김 없이 이어감)</div>`
       : '';
-    return `<div class="schedule-card ${status}">
+    const collapsed = (status === 'expired');  // 종료된 운영 기간은 기본 접힘
+    return `<div class="schedule-card ${status}${collapsed ? ' collapsed' : ''}" data-schcard="${si}">
       <div class="schedule-header-bar">
+        <button type="button" class="sch-caret" onclick="toggleScheduleCollapse(${si})" title="펼치기/접기">${collapsed ? '▶' : '▼'}</button>
         <input type="text" class="schedule-name-input" data-sch="${si}" value="${sch.name||''}" placeholder="운영 기간 이름 (예: 5월 운영)">
         <input type="date" class="schedule-date-input schedule-start-date" data-sch="${si}" value="${sch.startDate||''}">
         <span style="color:#94a3b8;">~</span>
@@ -3354,6 +3375,15 @@ function renderSchedules() {
 
   attachScheduleListeners();
 }
+
+// 운영 기간 펼치기/접기 (DOM만 토글 — 재렌더 없이 부드럽게)
+window.toggleScheduleCollapse = (si) => {
+  const card = document.querySelector(`.schedule-card[data-schcard="${si}"]`);
+  if (!card) return;
+  card.classList.toggle('collapsed');
+  const caret = card.querySelector('.sch-caret');
+  if (caret) caret.textContent = card.classList.contains('collapsed') ? '▶' : '▼';
+};
 
 function getFloorOrder(f) {
   if (Array.isArray(f.classOrder) && f.classOrder.length) {
