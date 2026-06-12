@@ -4411,8 +4411,10 @@ function _gbParseLines(lines) {
     const dm = l.match(/(\d{4})\s*-\s*(\d{2})\s*-\s*(\d{2})/);
     if (dm) { date = `${dm[1]}-${dm[2]}-${dm[3]}`; break; }
   }
-  // m[4]=원래과목(변경수업 칸), m[5]=변경내용(새 수업 칸)
-  const lineRe = /(\d+)\s*학년\s*(\d+)\s*반\s+(\d+)\s*교시\s+(.+?)\s*\(\s*[^)]+\)\s+(.+?)\s*=>/;
+  // 컴시간 결보강 컬럼: [변경수업]=그 교시에 새로 들어오는 수업(결과), [변경내용]=원래 수업 + 행선지 설명
+  // 형식: "N학년 M반 P교시  새과목(새교사)  원래과목 원래교사(번호) => 비고"
+  //   m[4]=새과목, m[5]=새교사(변경수업 칸), m[6]=변경내용(원래 수업 + 행선지)
+  const lineRe = /(\d+)\s*학년\s*(\d+)\s*반\s+(\d+)\s*교시\s+(.+?)\s*\(\s*([^)]+?)\s*\)\s+(.+?)\s*=>/;
   const nospace = s => (s || '').replace(/\s+/g, '');
   const items = [];
   for (const l of lines) {
@@ -4420,19 +4422,14 @@ function _gbParseLines(lines) {
     const m = l.match(lineRe);
     if (!m) continue;
     const grade = m[1], cls = m[2], period = m[3];
-    const oldSubj = nospace(m[4]);          // 원래 과목 (표시용)
-    let newPart = m[5].trim();
-    // "국어1 이대현(3)" → 과목/교사  또는  "국어2(이항준)" → 과목/교사
-    let subj = '', teacher = '';
-    let nm = newPart.match(/^(.+?)\s+([^\s()]+)\s*\(\s*\d+\s*\)$/); // 과목 + 교사(식별번호)
-    if (nm) { subj = nm[1]; teacher = nm[2]; }
-    else {
-      nm = newPart.match(/^(.+?)\(\s*([^)]+?)\s*\)$/); // 과목(교사)
-      if (nm) { subj = nm[1]; teacher = nm[2].replace(/\d+\s*$/, ''); }
-      else { subj = newPart; teacher = ''; }
-    }
-    subj = nospace(subj); teacher = nospace(teacher);
+    // 새 수업 (변경수업 칸) = 그 교시에 실제로 표시될 수업
+    const subj = nospace(m[4]);
+    const teacher = nospace(m[5]).replace(/\d+$/, '');
     const value = teacher ? `${subj}(${teacher})` : subj;
+    // 원래 수업 (변경내용 칸의 첫 과목) — 미리보기 표시용
+    let orig = m[6].replace(/\(\s*\d+\s*\)\s*$/, '').trim();
+    const om = orig.match(/^(.+?)\s*\(\s*[^)]+\)\s*$/);
+    const oldSubj = om ? nospace(om[1]) : nospace(orig.replace(/\s+[가-힣]{2,4}$/, ''));
     items.push({ grade, cls, period, value, oldSubj, raw: l });
   }
   return { date, items };
