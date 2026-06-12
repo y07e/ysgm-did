@@ -2223,6 +2223,7 @@ function initFirestoreListeners() {
   db.collection('dDays').orderBy('targetDate').onSnapshot(snap => {
     allDDays = snap.docs.map(d => ({id:d.id,...d.data()}));
     renderDDList();
+    if (allEvents && allEvents.length) renderEvList();  // D-Day 토글 상태 즉시 반영
   });
 
   // 학사일정
@@ -2393,13 +2394,22 @@ function renderEvList() {
     const dayNames = ['일','월','화','수','목','금','토'];
     const dateStr = `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()} (${dayNames[d.getDay()]})`;
     const isEditing = (e.id === editingEvId);
+    const evDate = e.date?.toDate ? e.date.toDate() : null;
+    // 이 일정이 이미 D-Day에 등록돼 있는지 (같은 제목 + 같은 날짜)
+    const linkedDday = evDate ? (allDDays || []).find(d => {
+      const dt = d.targetDate?.toDate ? d.targetDate.toDate() : null;
+      return d.title === e.title && dt && dt.toDateString() === evDate.toDateString();
+    }) : null;
+    const ddayBtn = linkedDday
+      ? `<button class="btn btn-secondary btn-sm" onclick="removeEvFromDday('${escapeHtml(linkedDday.id)}')" title="D-Day에서 제거">🎯 D-Day 해제</button>`
+      : `<button class="btn btn-secondary btn-sm" onclick="addEvToDday('${escapeHtml(e.id)}')" title="이 일정을 D-Day에 자동 등록">🎯 D-Day 설정</button>`;
     return `<div class="list-item" ${isEditing ? 'style="background:#fef3c7;border-color:#fbbf24;"' : ''}>
       <div class="list-item-body">
-        <div class="list-item-title">${escapeHtml(e.icon||'📅')} ${escapeHtml(e.title)} ${isEditing ? '<span class="badge badge-blue">수정 중</span>' : ''}</div>
+        <div class="list-item-title">${escapeHtml(e.icon||'📅')} ${escapeHtml(e.title)} ${linkedDday ? '<span class="badge" style="background:#ede9fe;color:#6d28d9;">D-Day</span>' : ''} ${isEditing ? '<span class="badge badge-blue">수정 중</span>' : ''}</div>
         <div class="list-item-meta">${escapeHtml(dateStr)}${e.description?' · '+escapeHtml(e.description):''}</div>
       </div>
       <div class="list-item-actions">
-        <button class="btn btn-secondary btn-sm" onclick="addEvToDday('${escapeHtml(e.id)}')" title="이 일정을 D-Day에 자동 등록">🎯 D-Day 설정</button>
+        ${ddayBtn}
         <button class="btn btn-warning btn-sm" onclick="editEv('${escapeHtml(e.id)}')">✏ 수정</button>
         <button class="btn btn-danger btn-sm" onclick="deleteEv('${escapeHtml(e.id)}')">삭제</button>
       </div>
@@ -2413,7 +2423,6 @@ window.addEvToDday = async (id) => {
   if (!e) return;
   const targetDate = e.date?.toDate ? e.date.toDate() : null;
   if (!targetDate) { showToast('일정 날짜 정보가 없습니다'); return; }
-  // 중복 체크 (같은 제목 + 같은 날짜)
   const dup = (allDDays || []).find(d => {
     const dt = d.targetDate?.toDate ? d.targetDate.toDate() : null;
     return d.title === e.title && dt && dt.toDateString() === targetDate.toDateString();
@@ -2431,6 +2440,17 @@ window.addEvToDday = async (id) => {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     showToast(`🎯 "${e.title}" D-Day 등록 완료`);
+  } catch (err) {
+    showToast('오류: ' + err.message);
+  }
+};
+
+// 학사일정에서 만든 D-Day 해제 (삭제)
+window.removeEvFromDday = async (ddayId) => {
+  if (!confirm('이 일정의 D-Day 설정을 해제할까요?')) return;
+  try {
+    await db.collection('dDays').doc(ddayId).delete();
+    showToast('🎯 D-Day 해제됨');
   } catch (err) {
     showToast('오류: ' + err.message);
   }
