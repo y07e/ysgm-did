@@ -4136,7 +4136,7 @@ function renderDailyOverridesList() {
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = dateToInputFormat(tomorrow);
 
-  const upcoming = dates.filter(d => d >= todayStr);
+  const upcoming = dates.filter(d => d >= todayStr).reverse(); // 최신(먼 날짜) 먼저
   const past = dates.filter(d => d < todayStr).reverse(); // 최근 지난 날짜부터
 
   // 첫 렌더: 오늘·내일만 펼침
