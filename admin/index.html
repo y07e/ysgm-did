@@ -4411,25 +4411,29 @@ function _gbParseLines(lines) {
     const dm = l.match(/(\d{4})\s*-\s*(\d{2})\s*-\s*(\d{2})/);
     if (dm) { date = `${dm[1]}-${dm[2]}-${dm[3]}`; break; }
   }
-  const lineRe = /(\d+)\s*학년\s*(\d+)\s*반\s+(\d+)\s*교시\s+.+?\([^)]+\)\s+(.+?)\s*=>/;
+  // m[4]=원래과목(변경수업 칸), m[5]=변경내용(새 수업 칸)
+  const lineRe = /(\d+)\s*학년\s*(\d+)\s*반\s+(\d+)\s*교시\s+(.+?)\s*\(\s*[^)]+\)\s+(.+?)\s*=>/;
+  const nospace = s => (s || '').replace(/\s+/g, '');
   const items = [];
   for (const l of lines) {
     if (!l.includes('교시')) continue;
     const m = l.match(lineRe);
     if (!m) continue;
     const grade = m[1], cls = m[2], period = m[3];
-    let newPart = m[4].trim();
+    const oldSubj = nospace(m[4]);          // 원래 과목 (표시용)
+    let newPart = m[5].trim();
     // "국어1 이대현(3)" → 과목/교사  또는  "국어2(이항준)" → 과목/교사
     let subj = '', teacher = '';
     let nm = newPart.match(/^(.+?)\s+([^\s()]+)\s*\(\s*\d+\s*\)$/); // 과목 + 교사(식별번호)
-    if (nm) { subj = nm[1].trim(); teacher = nm[2].trim(); }
+    if (nm) { subj = nm[1]; teacher = nm[2]; }
     else {
       nm = newPart.match(/^(.+?)\(\s*([^)]+?)\s*\)$/); // 과목(교사)
-      if (nm) { subj = nm[1].trim(); teacher = nm[2].trim().replace(/\d+$/, '').trim(); }
+      if (nm) { subj = nm[1]; teacher = nm[2].replace(/\d+\s*$/, ''); }
       else { subj = newPart; teacher = ''; }
     }
+    subj = nospace(subj); teacher = nospace(teacher);
     const value = teacher ? `${subj}(${teacher})` : subj;
-    items.push({ grade, cls, period, value, raw: l });
+    items.push({ grade, cls, period, value, oldSubj, raw: l });
   }
   return { date, items };
 }
@@ -4482,7 +4486,7 @@ function _gbRenderModal() {
       <input type="checkbox" data-idx="${i}" checked>
       <span class="gb-class">${it.grade}-${it.cls}</span>
       <span class="gb-period">${it.period}교시</span>
-      <span class="gb-subj">→ <strong>${escapeHtml(it.value)}</strong>${it.isDup ? `<span class="gb-dupnote">(기존: ${escapeHtml(it.curValue)})</span>` : ''}</span>
+      <span class="gb-subj">${it.oldSubj ? `<span style="color:#94a3b8;text-decoration:line-through;">${escapeHtml(it.oldSubj)}</span> → ` : '→ '}<strong>${escapeHtml(it.value)}</strong>${it.isDup ? `<span class="gb-dupnote">(기존: ${escapeHtml(it.curValue)})</span>` : ''}</span>
     </label>`).join('');
   document.getElementById('gbModalBody').innerHTML = html;
   _gbUpdateCount();
