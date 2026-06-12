@@ -519,8 +519,8 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.55; }
     }
-    /* 특별보강 배지 — '변경' 배지 바로 옆, 색만 보라로 구분 (간격 좁힘) */
-    .changed-tag.special-tag { background: #8b5cf6; margin-left: 3px; }
+    /* 특별보강 배지 — 보라색, 4글자라 letter-spacing 제거해 폭 절약 */
+    .changed-tag.special-tag { background: #8b5cf6; letter-spacing: 0; }
 
     .period-num   { font-size: 0.85rem; color: #64748b; width: 22px; font-weight: 700; text-align: center; }
     .period-item.current .period-num { color: #6ee7b7; }
@@ -2098,10 +2098,10 @@
 
       // 과목명(교사명) 파싱하여 2줄로 렌더링
       const parsed = parseSubject(subject);
-      // 변경 배지 + 특별보강이면 '보강' 배지 추가 (간격 좁혀 레이아웃 유지)
+      // 특별보강이면 '특별보강' 배지, 일반 변경이면 '변경' 배지 (배지 1개 → 레이아웃 안전)
       const changedTag = (changed && subject !== '-')
         ? (parsed.special
-            ? ' <span class="changed-tag">변경</span><span class="changed-tag special-tag">보강</span>'
+            ? ' <span class="changed-tag special-tag">특별보강</span>'
             : ' <span class="changed-tag">변경</span>')
         : '';
       // 2글자 한글 과목(국어·수학 등)은 letter-spacing으로 여유있게
