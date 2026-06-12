@@ -2491,8 +2491,9 @@
 
   // 미리보기 모드에서 오늘 단축수업 데이터 진단 박스 표시 (회전 상세 포함)
   function showShortDayDebug() {
-    const isMock = !!new URLSearchParams(location.search).get('date');
-    if (!isMock) return;
+    // 진단 박스는 ?debug=1 일 때만 표시 (평소 미리보기 화면은 깔끔하게)
+    const wantDebug = !!new URLSearchParams(location.search).get('debug');
+    if (!wantDebug) return;
     const today = new Date(); today.setHours(0,0,0,0);
     const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
     const ov = _classTimeOverridesAll[todayStr];

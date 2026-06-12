@@ -349,6 +349,34 @@
     .em-dot.off { background: #22c55e; }
     @keyframes blink { 50% { opacity: 0.3; } }
 
+    /* ===== 미리보기 날짜 선택 칩 ===== */
+    .preview-date-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: white; border: 1.5px solid #10b981;
+      border-radius: 10px; padding: 5px 10px;
+      box-shadow: 0 1px 3px rgba(16,185,129,0.15);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .preview-date-chip:focus-within {
+      border-color: #047857; box-shadow: 0 0 0 3px rgba(16,185,129,0.18);
+    }
+    .preview-date-chip input[type="date"] {
+      border: none; background: transparent; outline: none;
+      font-size: 0.88rem; color: #047857; font-weight: 700;
+      font-family: inherit; cursor: pointer; margin: 0; padding: 0;
+    }
+    .preview-date-chip input[type="date"]::-webkit-calendar-picker-indicator {
+      cursor: pointer; opacity: 0.7;
+    }
+    .preview-date-chip #btnPreviewDateClear {
+      border: none; background: #ecfdf5; color: #047857;
+      width: 22px; height: 22px; border-radius: 50%;
+      cursor: pointer; font-size: 0.9rem; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0; transition: background 0.15s;
+    }
+    .preview-date-chip #btnPreviewDateClear:hover { background: #d1fae5; }
+
     /* ===== 운영 기간 카드 ===== */
     .schedule-card {
       border: 2px solid #cbd5e1; border-radius: 12px;
@@ -845,10 +873,11 @@
             <div style="font-size:0.82rem;color:#475569;margin-top:2px;">공지 등록 후 어떻게 보이는지 새 창에서 즉시 확인 · 날짜를 지정하면 그날 시간표로 미리보기</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <label style="font-size:0.82rem;color:#475569;font-weight:600;">📅 날짜
-              <input type="date" id="previewDate" style="margin-left:4px;padding:5px 8px;font-size:0.85rem;">
+            <label class="preview-date-chip">
+              <span style="font-size:0.95rem;">📅</span>
+              <input type="date" id="previewDate">
+              <button type="button" id="btnPreviewDateClear" title="오늘로 초기화">↺</button>
             </label>
-            <button class="btn btn-secondary btn-sm" id="btnPreviewDateClear" title="오늘로 초기화">↺</button>
             <button class="btn btn-success btn-sm" id="btnPreviewMyClass">📺 새 창으로 열기</button>
             <button class="btn btn-secondary btn-sm" id="btnPreviewMobile">📱 모바일 사이즈로 열기</button>
           </div>
