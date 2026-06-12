@@ -2399,12 +2399,42 @@ function renderEvList() {
         <div class="list-item-meta">${escapeHtml(dateStr)}${e.description?' · '+escapeHtml(e.description):''}</div>
       </div>
       <div class="list-item-actions">
+        <button class="btn btn-secondary btn-sm" onclick="addEvToDday('${escapeHtml(e.id)}')" title="이 일정을 D-Day에 자동 등록">🎯 D-Day 설정</button>
         <button class="btn btn-warning btn-sm" onclick="editEv('${escapeHtml(e.id)}')">✏ 수정</button>
         <button class="btn btn-danger btn-sm" onclick="deleteEv('${escapeHtml(e.id)}')">삭제</button>
       </div>
     </div>`;
   }).join('');
 }
+
+// 학사일정 → D-Day 자동 등록
+window.addEvToDday = async (id) => {
+  const e = allEvents.find(x => x.id === id);
+  if (!e) return;
+  const targetDate = e.date?.toDate ? e.date.toDate() : null;
+  if (!targetDate) { showToast('일정 날짜 정보가 없습니다'); return; }
+  // 중복 체크 (같은 제목 + 같은 날짜)
+  const dup = (allDDays || []).find(d => {
+    const dt = d.targetDate?.toDate ? d.targetDate.toDate() : null;
+    return d.title === e.title && dt && dt.toDateString() === targetDate.toDateString();
+  });
+  if (dup) { showToast('이미 D-Day에 등록된 일정입니다'); return; }
+  const dayNames = ['일','월','화','수','목','금','토'];
+  const ds = `${targetDate.getFullYear()}.${targetDate.getMonth()+1}.${targetDate.getDate()} (${dayNames[targetDate.getDay()]})`;
+  if (!confirm(`"${e.title}"을(를) D-Day에 추가할까요?\n날짜: ${ds}\n\n※ D-Day 제목이 길면 톱바에서 잘릴 수 있어요. 필요하면 D-Day 탭에서 짧게 수정하세요.`)) return;
+  try {
+    await db.collection('dDays').add({
+      title: e.title,
+      icon: e.icon || '🎯',
+      targetDate: firebase.firestore.Timestamp.fromDate(targetDate),
+      isActive: true,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast(`🎯 "${e.title}" D-Day 등록 완료`);
+  } catch (err) {
+    showToast('오류: ' + err.message);
+  }
+};
 
 window.editEv = id => {
   const e = allEvents.find(x => x.id === id);
