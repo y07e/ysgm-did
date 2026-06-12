@@ -519,6 +519,8 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.55; }
     }
+    /* 특별보강 배지 — '변경'과 같은 크기·위치, 색만 보라로 구분 */
+    .changed-tag.special-tag { background: #8b5cf6; }
 
     .period-num   { font-size: 0.85rem; color: #64748b; width: 22px; font-weight: 700; text-align: center; }
     .period-item.current .period-num { color: #6ee7b7; }
@@ -1991,11 +1993,15 @@
 
   // 과목명(교사명) 파싱
   function parseSubject(raw) {
-    if (!raw || typeof raw !== 'string') return { name: '', teacher: '' };
-    const trimmed = raw.trim();
-    if (!trimmed) return { name: '', teacher: '' };
+    if (!raw || typeof raw !== 'string') return { name: '', teacher: '', special: false };
+    let trimmed = raw.trim();
+    if (!trimmed) return { name: '', teacher: '', special: false };
+    // 특별보강 마커 분리 ("수학(김지원) [보강]" → special)
+    let special = false;
+    if (/\s*\[보강\]\s*$/.test(trimmed)) { special = true; trimmed = trimmed.replace(/\s*\[보강\]\s*$/, '').trim(); }
     const m = trimmed.match(/^(.+?)\(([^()]+)\)\s*$/);
     let parsed = m ? { name: m[1].trim(), teacher: m[2].trim() } : { name: trimmed, teacher: '' };
+    parsed.special = special;
     // 기간 지정 교사 대체 적용 (오늘 날짜가 기간 안이면 교사명 교체)
     if (parsed.teacher && window._teacherSwapsAll && window._teacherSwapsAll.length) {
       const today = new Date();
@@ -2005,7 +2011,7 @@
         if (todayStr < sw.startDate || todayStr > sw.endDate) continue;
         if (sw.gradeFilter && String(sw.gradeFilter) !== String(grade)) continue;
         if (parsed.teacher === sw.from) {
-          parsed = { name: parsed.name, teacher: sw.to };
+          parsed = { name: parsed.name, teacher: sw.to, special };
           break;
         }
       }
@@ -2063,8 +2069,6 @@
         subject = raw || '-';
         changed = false;
       }
-      const changedTag = (changed && subject !== '-') ? ' <span class="changed-tag">변경</span>' : '';
-
       let cls2 = 'period-item'; let dot = '';
       if (changed) cls2 += ' changed';
 
@@ -2094,6 +2098,10 @@
 
       // 과목명(교사명) 파싱하여 2줄로 렌더링
       const parsed = parseSubject(subject);
+      // 특별보강이면 '보강', 일반 변경이면 '변경' 배지 (같은 자리·같은 크기 → 레이아웃 유지)
+      const changedTag = (changed && subject !== '-')
+        ? (parsed.special ? ' <span class="changed-tag special-tag">보강</span>' : ' <span class="changed-tag">변경</span>')
+        : '';
       // 2글자 한글 과목(국어·수학 등)은 letter-spacing으로 여유있게
       const isTwoChar = /^[가-힣]{2}$/.test(parsed.name);
       const nameCls = 'subject-name' + (isTwoChar ? ' two-char' : '');

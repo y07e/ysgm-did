@@ -4414,7 +4414,8 @@ function _gbParseLines(lines) {
   // 컴시간 결보강 컬럼: [변경수업]=그 교시에 새로 들어오는 수업(결과), [변경내용]=원래 수업 + 행선지 설명
   // 형식: "N학년 M반 P교시  새과목(새교사)  원래과목 원래교사(번호) => 비고"
   //   m[4]=새과목, m[5]=새교사(변경수업 칸), m[6]=변경내용(원래 수업 + 행선지)
-  const lineRe = /(\d+)\s*학년\s*(\d+)\s*반\s+(\d+)\s*교시\s+(.+?)\s*\(\s*([^)]+?)\s*\)\s+(.+?)\s*=>/;
+  //   m[7]=비고(=> 뒤) — "특별보강" 여부 판단용
+  const lineRe = /(\d+)\s*학년\s*(\d+)\s*반\s+(\d+)\s*교시\s+(.+?)\s*\(\s*([^)]+?)\s*\)\s+(.+?)\s*=>\s*(.*)/;
   const nospace = s => (s || '').replace(/\s+/g, '');
   const items = [];
   for (const l of lines) {
@@ -4422,15 +4423,18 @@ function _gbParseLines(lines) {
     const m = l.match(lineRe);
     if (!m) continue;
     const grade = m[1], cls = m[2], period = m[3];
+    const note = nospace(m[7]);
+    const isSpecial = note.includes('특별보강');
     // 새 수업 (변경수업 칸) = 그 교시에 실제로 표시될 수업
     const subj = nospace(m[4]);
     const teacher = nospace(m[5]).replace(/\d+$/, '');
-    const value = teacher ? `${subj}(${teacher})` : subj;
+    let value = teacher ? `${subj}(${teacher})` : subj;
+    if (isSpecial) value += ' [보강]';   // 화면에서 '보강' 배지로 표시
     // 원래 수업 (변경내용 칸의 첫 과목) — 미리보기 표시용
     let orig = m[6].replace(/\(\s*\d+\s*\)\s*$/, '').trim();
     const om = orig.match(/^(.+?)\s*\(\s*[^)]+\)\s*$/);
     const oldSubj = om ? nospace(om[1]) : nospace(orig.replace(/\s+[가-힣]{2,4}$/, ''));
-    items.push({ grade, cls, period, value, oldSubj, raw: l });
+    items.push({ grade, cls, period, value, oldSubj, special: isSpecial, raw: l });
   }
   return { date, items };
 }
