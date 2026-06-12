@@ -8,6 +8,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <!-- 결보강 PDF 파싱용 (지연 로드: 실제 업로드 시점에만 활성) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Noto Sans KR', sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; }
@@ -462,6 +464,51 @@
       font-size: 0.75rem; color: #94a3b8; font-weight: 700;
       margin: 12px 0 6px; letter-spacing: 0.5px;
     }
+
+    /* 결보강 PDF 미리보기 모달 */
+    .gb-modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(15,23,42,0.55); backdrop-filter: blur(2px);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .gb-modal-overlay.show { display: flex; }
+    .gb-modal {
+      background: white; border-radius: 14px;
+      width: 100%; max-width: 720px; max-height: 88vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;
+    }
+    .gb-modal-head {
+      padding: 16px 20px; border-bottom: 1px solid #e2e8f0;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .gb-modal-head h3 { font-size: 1.1rem; font-weight: 800; color: #1e40af; }
+    .gb-modal-head .gb-date { font-size: 0.85rem; color: #64748b; margin-top: 2px; font-weight: 500; }
+    .gb-close { background: none; border: none; font-size: 1.4rem; color: #94a3b8; cursor: pointer; line-height: 1; }
+    .gb-modal-body { padding: 14px 20px; overflow-y: auto; flex: 1; }
+    .gb-summary {
+      background: #eff6ff; border-left: 4px solid #1e40af; border-radius: 6px;
+      padding: 10px 14px; margin-bottom: 12px; font-size: 0.88rem; color: #1e293b;
+    }
+    .gb-warn { background: #fff7ed; border-left-color: #ea580c; color: #9a3412; }
+    .gb-item {
+      display: grid; grid-template-columns: 26px 90px 60px 1fr; gap: 8px;
+      align-items: center; padding: 8px 10px; border-radius: 8px;
+      border: 1px solid #e2e8f0; margin-bottom: 6px; font-size: 0.9rem;
+    }
+    .gb-item.dup { background: #fef9c3; border-color: #fde047; }
+    .gb-item input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
+    .gb-item .gb-class { font-weight: 700; color: #1e40af; }
+    .gb-item .gb-period { color: #64748b; font-size: 0.82rem; }
+    .gb-item .gb-subj { color: #1e293b; }
+    .gb-item .gb-subj strong { color: #991b1b; }
+    .gb-item .gb-dupnote { font-size: 0.72rem; color: #a16207; margin-left: 6px; }
+    .gb-modal-foot {
+      padding: 14px 20px; border-top: 1px solid #e2e8f0;
+      display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .gb-foot-left { font-size: 0.82rem; color: #64748b; }
+    .gb-foot-left a { color: #1e40af; cursor: pointer; text-decoration: underline; margin-right: 8px; }
 
     /* ===== 순환 순서 (드래그) ===== */
     .class-order-wrap {
@@ -931,11 +978,16 @@
     <!-- ===== 시간표 변경 (일일) ===== -->
     <div class="tab-panel" id="tab-timetable-daily">
       <div class="card">
-        <div class="card-title">📋 일일 시간표 변경</div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span>📋 일일 시간표 변경</span>
+          <button type="button" class="btn btn-primary btn-sm" id="btnUploadGyebogang">📄 결보강 PDF 업로드</button>
+        </div>
         <p style="font-size:0.85rem;color:#475569;margin-bottom:14px;line-height:1.6;">
           <strong>기초 시간표는 그대로 두고</strong>, 선택한 날짜만 변경합니다.<br>
-          다음 같은 요일에는 자동으로 원래 시간표로 돌아갑니다.
+          다음 같은 요일에는 자동으로 원래 시간표로 돌아갑니다.<br>
+          <span style="color:#1e40af;">💡 컴시간 <strong>결보강 PDF</strong>를 업로드하면 전체 반 변경분을 한 번에 입력할 수 있습니다.</span>
         </p>
+        <input type="file" id="gyebogangFile" accept="application/pdf,.pdf" style="display:none;">
 
         <div class="tt-header">
           <div><label>학년</label><select id="dailyGrade"></select></div>
@@ -984,6 +1036,30 @@
         </div>
         <div id="dailyOverridesList">
           <div class="empty-state">시간표 변경 목록이 없습니다</div>
+        </div>
+      </div>
+
+      <!-- 결보강 PDF 미리보기 모달 -->
+      <div class="gb-modal-overlay" id="gbModal">
+        <div class="gb-modal">
+          <div class="gb-modal-head">
+            <div>
+              <h3>📄 결보강 변경 내역 확인</h3>
+              <div class="gb-date" id="gbModalDate"></div>
+            </div>
+            <button type="button" class="gb-close" id="gbModalClose">✕</button>
+          </div>
+          <div class="gb-modal-body" id="gbModalBody"></div>
+          <div class="gb-modal-foot">
+            <div class="gb-foot-left">
+              <a id="gbSelectAll">전체 선택</a><a id="gbSelectNone">전체 해제</a>
+              <span id="gbCount"></span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="gbCancel">취소</button>
+              <button type="button" class="btn btn-primary btn-sm" id="gbApply">✅ 선택 항목 적용</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -4293,6 +4369,174 @@ document.getElementById('btnPrintDailyOverrides').addEventListener('click', () =
   if (!w) { showToast('팝업 차단을 해제해주세요'); return; }
   w.document.write(html);
   w.document.close();
+});
+
+// ============================================================
+// 📄 결보강 PDF 업로드 → 일일 시간표 변경 자동 입력
+// ============================================================
+let _gbParsed = null;  // 파싱 결과 보관 { date, items: [{grade,cls,period,value,isDup}] }
+
+// PDF 텍스트를 y좌표 기준으로 줄 단위 재구성
+async function _gbExtractLines(arrayBuffer) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF 라이브러리 로드 실패 (인터넷 연결 확인)');
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const allLines = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    // y좌표(소수점 반올림)로 그룹화 → 같은 줄
+    const rows = {};
+    for (const it of tc.items) {
+      if (!it.str) continue;
+      const y = Math.round(it.transform[5]);
+      (rows[y] = rows[y] || []).push({ x: it.transform[4], s: it.str });
+    }
+    // y 내림차순(위→아래), 각 줄은 x오름차순
+    Object.keys(rows).map(Number).sort((a, b) => b - a).forEach(y => {
+      const line = rows[y].sort((a, b) => a.x - b.x).map(o => o.s).join(' ')
+        .replace(/\s+/g, ' ').trim();
+      if (line) allLines.push(line);
+    });
+  }
+  return allLines;
+}
+
+// 줄 배열 → 변경 항목 파싱
+function _gbParseLines(lines) {
+  // 날짜: "2026-06-12( 금) 변경시간표"
+  let date = '';
+  for (const l of lines) {
+    const dm = l.match(/(\d{4})\s*-\s*(\d{2})\s*-\s*(\d{2})/);
+    if (dm) { date = `${dm[1]}-${dm[2]}-${dm[3]}`; break; }
+  }
+  const lineRe = /(\d+)\s*학년\s*(\d+)\s*반\s+(\d+)\s*교시\s+.+?\([^)]+\)\s+(.+?)\s*=>/;
+  const items = [];
+  for (const l of lines) {
+    if (!l.includes('교시')) continue;
+    const m = l.match(lineRe);
+    if (!m) continue;
+    const grade = m[1], cls = m[2], period = m[3];
+    let newPart = m[4].trim();
+    // "국어1 이대현(3)" → 과목/교사  또는  "국어2(이항준)" → 과목/교사
+    let subj = '', teacher = '';
+    let nm = newPart.match(/^(.+?)\s+([^\s()]+)\s*\(\s*\d+\s*\)$/); // 과목 + 교사(식별번호)
+    if (nm) { subj = nm[1].trim(); teacher = nm[2].trim(); }
+    else {
+      nm = newPart.match(/^(.+?)\(\s*([^)]+?)\s*\)$/); // 과목(교사)
+      if (nm) { subj = nm[1].trim(); teacher = nm[2].trim().replace(/\d+$/, '').trim(); }
+      else { subj = newPart; teacher = ''; }
+    }
+    const value = teacher ? `${subj}(${teacher})` : subj;
+    items.push({ grade, cls, period, value, raw: l });
+  }
+  return { date, items };
+}
+
+document.getElementById('btnUploadGyebogang').addEventListener('click', () => {
+  document.getElementById('gyebogangFile').value = '';
+  document.getElementById('gyebogangFile').click();
+});
+
+document.getElementById('gyebogangFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  showToast('📄 PDF 분석 중...');
+  try {
+    const buf = await file.arrayBuffer();
+    const lines = await _gbExtractLines(buf);
+    const { date, items } = _gbParseLines(lines);
+    if (!date) { showToast('❌ PDF에서 날짜를 찾지 못했습니다'); return; }
+    if (!items.length) { showToast('❌ 변경 항목을 찾지 못했습니다 (형식 확인 필요)'); return; }
+    // 기존 override와 중복 표시
+    const existing = (dailyOverridesAll[date]?.classes) || {};
+    items.forEach(it => {
+      const cur = existing[`${it.grade}-${it.cls}`]?.[it.period];
+      it.isDup = (cur !== undefined && cur !== '');
+      it.curValue = cur || '';
+    });
+    _gbParsed = { date, items };
+    _gbRenderModal();
+  } catch (err) {
+    console.error(err);
+    showToast('❌ PDF 분석 실패: ' + err.message);
+  }
+});
+
+function _gbRenderModal() {
+  const { date, items } = _gbParsed;
+  const [y, m, d] = date.split('-').map(Number);
+  const dow = ['일','월','화','수','목','금','토'][new Date(y, m-1, d).getDay()];
+  document.getElementById('gbModalDate').textContent = `${date} (${dow}요일) · 총 ${items.length}건`;
+  const dupCount = items.filter(it => it.isDup).length;
+
+  let html = '';
+  if (dupCount) {
+    html += `<div class="gb-summary gb-warn">⚠️ ${dupCount}건은 이미 입력된 변경과 겹칩니다 (노란 항목). 적용 시 덮어씁니다.</div>`;
+  } else {
+    html += `<div class="gb-summary">아래 ${items.length}건을 확인하고 적용할 항목을 선택하세요. 기초 시간표는 그대로 유지됩니다.</div>`;
+  }
+  html += items.map((it, i) => `
+    <label class="gb-item${it.isDup ? ' dup' : ''}">
+      <input type="checkbox" data-idx="${i}" checked>
+      <span class="gb-class">${it.grade}-${it.cls}</span>
+      <span class="gb-period">${it.period}교시</span>
+      <span class="gb-subj">→ <strong>${escapeHtml(it.value)}</strong>${it.isDup ? `<span class="gb-dupnote">(기존: ${escapeHtml(it.curValue)})</span>` : ''}</span>
+    </label>`).join('');
+  document.getElementById('gbModalBody').innerHTML = html;
+  _gbUpdateCount();
+  document.getElementById('gbModal').classList.add('show');
+}
+
+function _gbUpdateCount() {
+  const checked = document.querySelectorAll('#gbModalBody input[type=checkbox]:checked').length;
+  document.getElementById('gbCount').textContent = `선택: ${checked}건`;
+}
+
+document.getElementById('gbModalBody').addEventListener('change', _gbUpdateCount);
+document.getElementById('gbSelectAll').addEventListener('click', () => {
+  document.querySelectorAll('#gbModalBody input[type=checkbox]').forEach(c => c.checked = true); _gbUpdateCount();
+});
+document.getElementById('gbSelectNone').addEventListener('click', () => {
+  document.querySelectorAll('#gbModalBody input[type=checkbox]').forEach(c => c.checked = false); _gbUpdateCount();
+});
+document.getElementById('gbModalClose').addEventListener('click', () => document.getElementById('gbModal').classList.remove('show'));
+document.getElementById('gbCancel').addEventListener('click', () => document.getElementById('gbModal').classList.remove('show'));
+document.getElementById('gbModal').addEventListener('click', e => {
+  if (e.target.id === 'gbModal') document.getElementById('gbModal').classList.remove('show');
+});
+
+document.getElementById('gbApply').addEventListener('click', async () => {
+  if (!_gbParsed) return;
+  const { date, items } = _gbParsed;
+  const chosen = [...document.querySelectorAll('#gbModalBody input[type=checkbox]:checked')]
+    .map(c => items[parseInt(c.dataset.idx, 10)]);
+  if (!chosen.length) { showToast('선택된 항목이 없습니다'); return; }
+
+  const btn = document.getElementById('gbApply');
+  btn.disabled = true; btn.textContent = '적용 중...';
+  try {
+    const docRef = db.collection('timetableOverrides').doc(date);
+    const snap = await docRef.get();
+    const data = snap.exists ? snap.data() : { date, classes: {} };
+    data.classes = data.classes || {};
+    for (const it of chosen) {
+      const key = `${it.grade}-${it.cls}`;
+      data.classes[key] = data.classes[key] || {};
+      data.classes[key][it.period] = it.value;
+    }
+    if (!data.date) data.date = date;
+    await docRef.set(data);
+    showToast(`✅ ${chosen.length}건 적용 완료 (${date})`);
+    document.getElementById('gbModal').classList.remove('show');
+    _gbParsed = null;
+  } catch (err) {
+    console.error(err);
+    showToast('❌ 적용 실패: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ 선택 항목 적용';
+  }
 });
 
 // 폼 변경 시 자동 로드
