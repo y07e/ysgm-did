@@ -6,6 +6,8 @@
 <title>양산여중 전자칠판 DID 안내</title>
 <link rel="icon" href="/logo.png">
 <script src="/config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
   :root {
     --primary: #1a3a7a;
@@ -240,34 +242,48 @@
       SCHOOL_CONFIG.schoolName + ' · 선생님 안내 자료';
   }
 
-  // 학급 URL 목록 동적 생성
+  // 학급 URL 목록 동적 생성 — settings/general의 학급 수를 우선 사용 (config.js는 fallback)
   const gradeIcons = { '1': '🌱', '2': '🌿', '3': '🌳' };
   const gradeNames = { '1': '1학년', '2': '2학년', '3': '3학년' };
-  const gradeClasses = (typeof SCHOOL_CONFIG !== 'undefined' && SCHOOL_CONFIG.gradeClasses)
-    ? SCHOOL_CONFIG.gradeClasses
-    : { '1': 9, '2': 9, '3': 11 };
 
-  const area = document.getElementById('classListArea');
-  let html = '';
-  for (const grade of ['1', '2', '3']) {
-    const classCount = gradeClasses[grade] || 0;
-    if (!classCount) continue;
-    html += `<div class="grade-section">
-      <h2>
-        <span class="grade-badge grade-${grade}">${gradeIcons[grade]} ${gradeNames[grade]}</span>
-        <span style="color:var(--text-soft);font-weight:500;font-size:13px;">${classCount}개 반</span>
-      </h2>
-      <div class="class-grid">`;
-    for (let c = 1; c <= classCount; c++) {
-      const url = `/display/?grade=${grade}&class=${c}`;
-      html += `<a class="class-link g${grade}" href="${url}" target="_blank" rel="noopener">
-        <span class="room-icon">${gradeIcons[grade]}</span>
-        ${grade}학년 ${c}반
-      </a>`;
+  function renderClassList(gradeClasses) {
+    const area = document.getElementById('classListArea');
+    let html = '';
+    for (const grade of ['1', '2', '3']) {
+      const classCount = gradeClasses[grade] || 0;
+      if (!classCount) continue;
+      html += `<div class="grade-section">
+        <h2>
+          <span class="grade-badge grade-${grade}">${gradeIcons[grade]} ${gradeNames[grade]}</span>
+          <span style="color:var(--text-soft);font-weight:500;font-size:13px;">${classCount}개 반</span>
+        </h2>
+        <div class="class-grid">`;
+      for (let c = 1; c <= classCount; c++) {
+        const url = `/display/?grade=${grade}&class=${c}`;
+        html += `<a class="class-link g${grade}" href="${url}" target="_blank" rel="noopener">
+          <span class="room-icon">${gradeIcons[grade]}</span>
+          ${grade}학년 ${c}반
+        </a>`;
+      }
+      html += `</div></div>`;
     }
-    html += `</div></div>`;
+    area.innerHTML = html;
   }
-  area.innerHTML = html;
+
+  // 1차: config.js 기본값으로 즉시 표시 (빠른 렌더)
+  const configGC = (typeof SCHOOL_CONFIG !== 'undefined' && SCHOOL_CONFIG.gradeClasses)
+    ? SCHOOL_CONFIG.gradeClasses : { '1': 9, '2': 9, '3': 11 };
+  renderClassList(configGC);
+
+  // 2차: settings/general 읽어 학급 수가 다르면 다시 그림 (config.js 수정 불필요)
+  try {
+    if (typeof firebase !== 'undefined' && SCHOOL_CONFIG.firebase) {
+      if (!firebase.apps.length) firebase.initializeApp(SCHOOL_CONFIG.firebase);
+      firebase.firestore().collection('settings').doc('general').get().then(snap => {
+        if (snap.exists && snap.data().gradeClasses) renderClassList(snap.data().gradeClasses);
+      }).catch(()=>{});
+    }
+  } catch (e) { /* 안내 페이지이므로 실패해도 무시 */ }
 </script>
 </body>
 </html>

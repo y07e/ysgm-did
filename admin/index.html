@@ -1674,7 +1674,7 @@ if (SCHOOL_CONFIG.schoolLogo) {
   document.getElementById('topbarLogo').textContent = SCHOOL_CONFIG.schoolName.charAt(0);
 }
 
-const GC = SCHOOL_CONFIG.gradeClasses;
+let GC = SCHOOL_CONFIG.gradeClasses;   // 학급 수 — settings/general 로드 시 갱신됨
 const DAY_KEYS  = ['mon','tue','wed','thu','fri'];
 const DAY_NAMES = ['월요일','화요일','수요일','목요일','금요일'];
 
@@ -2138,6 +2138,25 @@ function buildClassSelect(gradeId, classId, grade) {
 }
 
 
+// 학급 수(GC) 변경 시 학년/반 select·체크박스를 다시 채움 (리스너는 유지)
+function rebuildClassUI() {
+  ['ttGrade','cbGrade','ltGrade','tGrade','dailyGrade'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = Object.keys(GC).map(g=>`<option value="${g}">${g}학년</option>`).join('');
+    if (cur && GC[cur]) el.value = cur;
+  });
+  [['ttGrade','ttClass'],['cbGrade','cbClass'],['ltGrade','ltClass'],['tGrade','tClass'],['dailyGrade','dailyClass']]
+    .forEach(([g,c]) => {
+      const gEl = document.getElementById(g);
+      if (gEl && document.getElementById(c)) buildClassSelect(g, c, gEl.value || '1');
+    });
+  if (document.getElementById('annClassGroup')) { buildAllClassCheckbox('annClassGroup','ac'); setupAllToggle('ag'); setupAllToggle('ac'); }
+  if (document.getElementById('emClassGroup'))  { buildAllClassCheckbox('emClassGroup','ec'); setupAllToggle('emg'); setupAllToggle('ec'); }
+  if (typeof buildUrlTable === 'function') buildUrlTable();
+}
+
 function buildAllClassCheckbox(groupId, name) {
   const el = document.getElementById(groupId);
   if (!el) return;
@@ -2234,6 +2253,12 @@ function initFirestoreListeners() {
     document.getElementById('setGrade1').value = gc['1'] || 9;
     document.getElementById('setGrade2').value = gc['2'] || 9;
     document.getElementById('setGrade3').value = gc['3'] || 11;
+    // 학급 수가 설정값과 다르면 → GC 갱신 + 학급 UI 전체 재생성 (config.js 수정 불필요)
+    if (d.gradeClasses && JSON.stringify(d.gradeClasses) !== JSON.stringify(GC)) {
+      GC = d.gradeClasses;
+      SCHOOL_CONFIG.gradeClasses = d.gradeClasses;
+      rebuildClassUI();
+    }
     updateLogoPreview();
   });
 
