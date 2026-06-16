@@ -1560,15 +1560,16 @@
       </div>
 
       <div class="card" style="background:linear-gradient(135deg,#eff6ff 0%,#ecfdf5 100%);border:1px solid #3b82f6;">
-        <div class="card-title">📋 담임 일괄 등록 (엑셀)</div>
+        <div class="card-title">📋 담임 일괄 등록 (엑셀 / 부서표 PDF)</div>
         <p style="font-size:0.85rem;color:#475569;margin-bottom:12px;line-height:1.6;">
-          행정 담당자가 양식에 명단만 입력해 올리면 전체 담임이 한 번에 등록됩니다.<br>
-          <span style="color:#1e40af;">① 양식 다운로드 → ② 학년·반·이름 입력 → ③ 업로드 → ④ 미리보기 확인 → ⑤ 등록</span><br>
-          <span style="font-size:0.8rem;color:#64748b;">※ PIN을 비우면 기본값 <b>2026</b>으로 등록됩니다. (담임이 첫 로그인 후 변경 권장)</span>
+          명단을 한 번에 등록합니다. <b>두 가지 방법</b> 모두 가능:<br>
+          <span style="color:#1e40af;">• 엑셀 양식: 양식 다운로드 → 학년·반·이름 입력 → 업로드</span><br>
+          <span style="color:#7c3aed;">• 부서표 PDF: 학교 담임·부서 배정표 PDF를 그대로 업로드 (학급 담임 표 자동 인식)</span><br>
+          <span style="font-size:0.8rem;color:#64748b;">→ 업로드 후 <b>미리보기로 확인</b>한 뒤 등록 · PIN을 비우면 기본값 <b>2026</b> (담임이 첫 로그인 후 변경 권장)</span>
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <button class="btn btn-secondary btn-sm" id="btnDownloadTeacherTemplate">📥 엑셀 양식 다운로드</button>
-          <input type="file" id="teacherBulkFile" accept=".xlsx,.xls" style="flex:1;min-width:200px;">
+          <input type="file" id="teacherBulkFile" accept=".xlsx,.xls,.pdf,application/pdf" style="flex:1;min-width:200px;">
         </div>
         <div id="teacherBulkPreview" style="margin-top:12px;"></div>
       </div>
@@ -2217,7 +2218,7 @@ function initFirestoreListeners() {
     db.collection('teachers').orderBy('addedAt').onSnapshot(snap => {
       _teacherCacheAdmin = snap.docs.map(d=>({id:d.id,...d.data()}));
       renderTeacherList(_teacherCacheAdmin);
-      if (_teacherBulkData.length) parseTeacherBulk(_lastBulkRows); // 미리보기 중복상태 갱신
+      if (_teacherBulkData.length && _lastBulkRaw.length) buildBulkItems(_lastBulkRaw); // 미리보기 중복상태 갱신
     });
   }
 
@@ -5371,7 +5372,7 @@ async function hashPin(pin) {
 // ============================================================
 let _teacherCacheAdmin = [];   // 현재 등록된 교사 캐시 (중복 판별용)
 let _teacherBulkData = [];      // 업로드 미리보기 데이터
-let _lastBulkRows = [];         // 마지막 파싱한 원본 행 (캐시 갱신 시 재파싱용)
+let _lastBulkRaw = [];          // 마지막 파싱한 원본 {grade,cls,name,pin} 목록 (캐시 갱신 시 재검증용)
 
 // 양식 다운로드 — 전체 학급이 미리 채워진 빈 명단
 document.getElementById('btnDownloadTeacherTemplate')?.addEventListener('click', () => {
@@ -5388,34 +5389,94 @@ document.getElementById('btnDownloadTeacherTemplate')?.addEventListener('click',
   XLSX.writeFile(wb, `담임명단_양식_${SCHOOL_CONFIG.schoolName||''}.xlsx`);
 });
 
-// 파일 업로드 → 파싱
+// 파일 업로드 → 확장자 분기 (엑셀 / PDF 부서표 둘 다 지원)
 document.getElementById('teacherBulkFile')?.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  if (typeof XLSX === 'undefined') return showToast('XLSX 로드 실패 — 새로고침 후 다시 시도');
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
   try {
     const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type:'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
-    _lastBulkRows = rows;
-    parseTeacherBulk(rows);
+    if (ext === 'pdf') {
+      await parseTeacherPdf(buf);
+    } else {
+      if (typeof XLSX === 'undefined') return showToast('XLSX 로드 실패 — 새로고침 후 다시 시도');
+      const wb = XLSX.read(buf, { type:'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+      const raw = [];
+      for (let i = 1; i < rows.length; i++) {  // 1행=헤더
+        const r = rows[i] || [];
+        const grade = String(r[0] ?? '').trim();
+        const cls   = String(r[1] ?? '').trim();
+        const name  = String(r[2] ?? '').trim();
+        const pin   = String(r[3] ?? '').trim();
+        if (!grade && !cls && !name) continue;
+        raw.push({ grade, cls, name, pin });
+      }
+      if (!raw.length) return showToast('엑셀에서 명단을 찾지 못했습니다');
+      buildBulkItems(raw);
+    }
   } catch (err) {
     showToast('파일 분석 실패: ' + err.message);
   }
 });
 
-function parseTeacherBulk(rows) {
+// PDF 부서표(학급 담임 표) 좌표 기반 파싱
+async function parseTeacherPdf(arrayBuffer) {
+  if (typeof pdfjsLib === 'undefined') return showToast('PDF 라이브러리 로드 실패 — 새로고침 후 다시 시도');
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const isName = s => /^[가-힣]{2,4}$/.test(s);
+  const cellIn = (line, lo, hi) => line.filter(o => o.x >= lo && o.x < hi).map(o => o.s).join('');
+  const raw = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    const rows = {};
+    for (const it of tc.items) {
+      if (!it.str.trim()) continue;
+      const y = Math.round(it.transform[5]);
+      (rows[y] = rows[y] || []).push({ x: Math.round(it.transform[4]), s: it.str.trim() });
+    }
+    const ys = Object.keys(rows).map(Number).sort((a,b) => b-a);
+    let inTable = false;
+    for (const y of ys) {
+      const line = rows[y].sort((a,b) => a.x - b.x);
+      const full = line.map(o => o.s).join('');
+      // "1학년 담임 과목" 헤더부터 표 시작
+      if (full.includes('1학년') && full.includes('담임') && full.includes('과목')) { inTable = true; continue; }
+      if (!inTable) continue;
+      if (full.replace(/\s/g,'').includes('비담임')) break;  // 비담임 영역 진입 시 종료
+      const left = line.filter(o => o.x < 460);  // 오른쪽 부서편성 표 제외
+      if (!left.length) continue;
+      const sharedNo = cellIn(left, 0, 78).replace(/[^0-9X]/g,'');   // 1·2학년 공유 반번호
+      const g1 = cellIn(left, 82, 138);   // 1학년 담임
+      const g2 = cellIn(left, 185, 242);  // 2학년 담임
+      const g3no = cellIn(left, 300, 332).replace(/[^0-9]/g,'');     // 3학년 반번호
+      const g3 = cellIn(left, 335, 430);  // 3학년 담임
+      if (/^\d+$/.test(sharedNo)) {
+        if (isName(g1)) raw.push({ grade:'1', cls:sharedNo, name:g1, pin:'' });
+        if (isName(g2)) raw.push({ grade:'2', cls:sharedNo, name:g2, pin:'' });
+      }
+      if (/^\d+$/.test(g3no) && isName(g3)) raw.push({ grade:'3', cls:g3no, name:g3, pin:'' });
+    }
+  }
+  if (!raw.length) {
+    showToast('PDF에서 담임 표를 찾지 못했습니다. 엑셀 양식을 이용해주세요.');
+    return;
+  }
+  buildBulkItems(raw);
+}
+
+// 원본 {grade,cls,name,pin} 목록 → 검증·중복체크 → 미리보기 데이터
+function buildBulkItems(raw) {
+  _lastBulkRaw = raw;
   const gc = SCHOOL_CONFIG.gradeClasses || {};
-  const items = [];
-  for (let i = 1; i < rows.length; i++) {  // 1행=헤더 건너뜀
-    const r = rows[i] || [];
-    const grade = String(r[0] ?? '').trim();
-    const cls   = String(r[1] ?? '').trim();
-    const name  = String(r[2] ?? '').trim();
-    let pin     = String(r[3] ?? '').trim();
-    if (!grade && !cls && !name) continue;  // 완전 빈 행 스킵
-    if (!name) continue;                     // 이름 없으면 미등록 학급으로 보고 스킵
+  _teacherBulkData = raw.map(r => {
+    const grade = String(r.grade ?? '').trim();
+    const cls   = String(r.cls ?? '').trim();
+    const name  = String(r.name ?? '').trim();
+    let pin     = String(r.pin ?? '').trim();
     let error = '';
     if (!gc[grade]) error = '학년 범위를 벗어남';
     else if (!cls || +cls < 1 || +cls > gc[grade]) error = '반 범위를 벗어남';
@@ -5423,9 +5484,8 @@ function parseTeacherBulk(rows) {
     if (!pin) pin = '2026';
     const existing = _teacherCacheAdmin.find(t =>
       t.role==='teacher' && String(t.grade)===grade && String(t.class)===cls);
-    items.push({ grade, cls, name, pin, error, existingId: existing ? existing.id : null });
-  }
-  _teacherBulkData = items;
+    return { grade, cls, name, pin, error, existingId: existing ? existing.id : null };
+  }).filter(d => d.name);
   renderTeacherBulkPreview();
 }
 
@@ -5478,7 +5538,7 @@ window.applyTeacherBulk = async () => {
       });
       cnt++;
     }
-    _teacherBulkData = []; _lastBulkRows = [];
+    _teacherBulkData = []; _lastBulkRaw = [];
     const fileEl = document.getElementById('teacherBulkFile');
     if (fileEl) fileEl.value = '';
     renderTeacherBulkPreview();
