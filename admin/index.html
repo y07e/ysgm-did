@@ -1565,7 +1565,7 @@
           명단을 한 번에 등록합니다. <b>두 가지 방법</b> 모두 가능:<br>
           <span style="color:#1e40af;">• 엑셀 양식: 양식 다운로드 → 학년·반·이름 입력 → 업로드</span><br>
           <span style="color:#7c3aed;">• 부서표 PDF: 학교 담임·부서 배정표 PDF를 그대로 업로드 (학급 담임 표 자동 인식)</span><br>
-          <span style="font-size:0.8rem;color:#64748b;">→ 업로드 후 <b>미리보기로 확인</b>한 뒤 등록 · PIN을 비우면 기본값 <b>2026</b> (담임이 첫 로그인 후 변경 권장)</span>
+          <span style="font-size:0.8rem;color:#64748b;">→ 업로드 후 <b>미리보기로 확인</b>한 뒤 등록 · PIN을 비우면 기본값 <b id="bulkDefaultPin">2026</b> (담임이 첫 로그인 후 변경 권장)</span>
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <button class="btn btn-secondary btn-sm" id="btnDownloadTeacherTemplate">📥 엑셀 양식 다운로드</button>
@@ -5358,6 +5358,16 @@ window.deleteCtoByDate = async (date) => {
 // 교사 관리
 // ============================================================
 // PIN 해시 (SHA-256 + salt)
+// 기본 PIN — 해당 연도 (예: 2027년 등록 시 '2027'). 매년 자동.
+function defaultPin() {
+  return String(new Date().getFullYear());
+}
+// UI 안내 문구의 기본 PIN 표시도 올해 연도로 갱신
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('bulkDefaultPin');
+  if (el) el.textContent = defaultPin();
+});
+
 async function hashPin(pin) {
   const encoder = new TextEncoder();
   const data = encoder.encode(pin + ':ysgm-pin-salt-v1');
@@ -5378,7 +5388,7 @@ let _lastBulkRaw = [];          // 마지막 파싱한 원본 {grade,cls,name,pi
 document.getElementById('btnDownloadTeacherTemplate')?.addEventListener('click', () => {
   if (typeof XLSX === 'undefined') return showToast('XLSX 로드 실패 — 새로고침 후 다시 시도');
   const gc = SCHOOL_CONFIG.gradeClasses || {};
-  const rows = [['학년','반','이름','PIN(선택·비우면 2026)']];
+  const rows = [['학년','반','이름',`PIN(선택·비우면 ${defaultPin()})`]];
   Object.keys(gc).sort().forEach(g => {
     for (let c=1; c<=gc[g]; c++) rows.push([Number(g), c, '', '']);
   });
@@ -5481,7 +5491,7 @@ function buildBulkItems(raw) {
     if (!gc[grade]) error = '학년 범위를 벗어남';
     else if (!cls || +cls < 1 || +cls > gc[grade]) error = '반 범위를 벗어남';
     if (!error && pin && !/^\d{4,8}$/.test(pin)) error = 'PIN은 4~8자리 숫자';
-    if (!pin) pin = '2026';
+    if (!pin) pin = defaultPin();
     const existing = _teacherCacheAdmin.find(t =>
       t.role==='teacher' && String(t.grade)===grade && String(t.class)===cls);
     return { grade, cls, name, pin, error, existingId: existing ? existing.id : null };
@@ -5846,7 +5856,8 @@ const BACKUP_COLLECTIONS = [
   'timetable', 'timetableOverrides',
   'classTimeOverrides',
   'settings', 'teachers',
-  'dDays', 'schoolEvents'
+  'dDays', 'schoolEvents',
+  'pendingAdmins'
 ];
 
 // Firestore Timestamp → JSON 직렬화
