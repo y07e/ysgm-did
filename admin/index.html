@@ -5860,6 +5860,16 @@ const BACKUP_COLLECTIONS = [
   'pendingAdmins'
 ];
 
+// 백업/복원 결과 표시용 한글 라벨
+const COLLECTION_LABELS = {
+  announcements: '학교공지', classAnnouncements: '학급게시판',
+  emergency: '긴급공지', emergencyHistory: '긴급공지이력',
+  timetable: '기초시간표', timetableOverrides: '일일/결보강',
+  classTimeOverrides: '단축수업', settings: '설정(급식·교사대체 등)',
+  teachers: '교사', dDays: 'D-Day', schoolEvents: '학사일정',
+  pendingAdmins: '관리자초대'
+};
+
 // Firestore Timestamp → JSON 직렬화
 function serializeData(obj) {
   if (obj === null || obj === undefined) return obj;
@@ -5898,10 +5908,12 @@ document.getElementById('btnBackup').addEventListener('click', async () => {
       }
     };
     let totalDocs = 0;
+    const counts = [];
     for (const col of BACKUP_COLLECTIONS) {
       const snap = await db.collection(col).get();
       backup[col] = snap.docs.map(d => ({ id: d.id, ...serializeData(d.data()) }));
       totalDocs += snap.docs.length;
+      if (snap.docs.length) counts.push(`${COLLECTION_LABELS[col] || col} ${snap.docs.length}`);
     }
 
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -5915,7 +5927,7 @@ document.getElementById('btnBackup').addEventListener('click', async () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    status.textContent = `✅ 백업 완료 — 총 ${totalDocs}개 문서`;
+    status.innerHTML = `✅ 백업 완료 — 총 <b>${totalDocs}개</b> 문서<br><span style="font-size:0.78rem;color:#475569;line-height:1.7;">${counts.join(' · ') || '데이터 없음'}</span>`;
     showToast('✅ 백업 파일 다운로드 완료');
   } catch (e) {
     status.textContent = '❌ 오류: ' + e.message;
@@ -5935,17 +5947,20 @@ document.getElementById('btnRestore').addEventListener('click', async () => {
     const backup = JSON.parse(text);
 
     let total = 0;
+    const counts = [];
     for (const col of BACKUP_COLLECTIONS) {
-      if (!backup[col]) continue;
+      if (!backup[col] || !backup[col].length) continue;
+      let n = 0;
       for (const doc of backup[col]) {
         const { id, ...data } = doc;
         const clean = deserializeData(data);
         if (id) await db.collection(col).doc(id).set(clean);
         else    await db.collection(col).add(clean);
-        total++;
+        total++; n++;
       }
+      counts.push(`${COLLECTION_LABELS[col] || col} ${n}`);
     }
-    status.textContent = `✅ 복원 완료 — ${total}개 문서 복원됨`;
+    status.innerHTML = `✅ 복원 완료 — 총 <b>${total}개</b> 문서<br><span style="font-size:0.78rem;color:#475569;line-height:1.7;">${counts.join(' · ') || '복원할 데이터 없음'}</span>`;
     showToast(`✅ 복원 완료 (${total}개)`);
   } catch (e) {
     status.textContent = '❌ 오류: ' + e.message;
