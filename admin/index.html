@@ -1558,6 +1558,21 @@
         </div>
         <button class="btn btn-primary" id="btnAddTeacher">교사 등록</button>
       </div>
+
+      <div class="card" style="background:linear-gradient(135deg,#eff6ff 0%,#ecfdf5 100%);border:1px solid #3b82f6;">
+        <div class="card-title">📋 담임 일괄 등록 (엑셀)</div>
+        <p style="font-size:0.85rem;color:#475569;margin-bottom:12px;line-height:1.6;">
+          행정 담당자가 양식에 명단만 입력해 올리면 전체 담임이 한 번에 등록됩니다.<br>
+          <span style="color:#1e40af;">① 양식 다운로드 → ② 학년·반·이름 입력 → ③ 업로드 → ④ 미리보기 확인 → ⑤ 등록</span><br>
+          <span style="font-size:0.8rem;color:#64748b;">※ PIN을 비우면 기본값 <b>2026</b>으로 등록됩니다. (담임이 첫 로그인 후 변경 권장)</span>
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-secondary btn-sm" id="btnDownloadTeacherTemplate">📥 엑셀 양식 다운로드</button>
+          <input type="file" id="teacherBulkFile" accept=".xlsx,.xls" style="flex:1;min-width:200px;">
+        </div>
+        <div id="teacherBulkPreview" style="margin-top:12px;"></div>
+      </div>
+
       <div class="card">
         <div class="card-title">등록된 교사</div>
         <div id="teacherList"><div class="empty-state">등록된 교사 없음</div></div>
@@ -2200,7 +2215,9 @@ function initFirestoreListeners() {
   // 교사 목록
   if (currentRole === 'admin') {
     db.collection('teachers').orderBy('addedAt').onSnapshot(snap => {
-      renderTeacherList(snap.docs.map(d=>({id:d.id,...d.data()})));
+      _teacherCacheAdmin = snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderTeacherList(_teacherCacheAdmin);
+      if (_teacherBulkData.length) parseTeacherBulk(_lastBulkRows); // 미리보기 중복상태 갱신
     });
   }
 
@@ -5348,6 +5365,129 @@ async function hashPin(pin) {
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
 }
+
+// ============================================================
+// 담임 일괄 등록 (엑셀)
+// ============================================================
+let _teacherCacheAdmin = [];   // 현재 등록된 교사 캐시 (중복 판별용)
+let _teacherBulkData = [];      // 업로드 미리보기 데이터
+let _lastBulkRows = [];         // 마지막 파싱한 원본 행 (캐시 갱신 시 재파싱용)
+
+// 양식 다운로드 — 전체 학급이 미리 채워진 빈 명단
+document.getElementById('btnDownloadTeacherTemplate')?.addEventListener('click', () => {
+  if (typeof XLSX === 'undefined') return showToast('XLSX 로드 실패 — 새로고침 후 다시 시도');
+  const gc = SCHOOL_CONFIG.gradeClasses || {};
+  const rows = [['학년','반','이름','PIN(선택·비우면 2026)']];
+  Object.keys(gc).sort().forEach(g => {
+    for (let c=1; c<=gc[g]; c++) rows.push([Number(g), c, '', '']);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:8},{wch:8},{wch:16},{wch:24}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '담임명단');
+  XLSX.writeFile(wb, `담임명단_양식_${SCHOOL_CONFIG.schoolName||''}.xlsx`);
+});
+
+// 파일 업로드 → 파싱
+document.getElementById('teacherBulkFile')?.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (typeof XLSX === 'undefined') return showToast('XLSX 로드 실패 — 새로고침 후 다시 시도');
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type:'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:'' });
+    _lastBulkRows = rows;
+    parseTeacherBulk(rows);
+  } catch (err) {
+    showToast('파일 분석 실패: ' + err.message);
+  }
+});
+
+function parseTeacherBulk(rows) {
+  const gc = SCHOOL_CONFIG.gradeClasses || {};
+  const items = [];
+  for (let i = 1; i < rows.length; i++) {  // 1행=헤더 건너뜀
+    const r = rows[i] || [];
+    const grade = String(r[0] ?? '').trim();
+    const cls   = String(r[1] ?? '').trim();
+    const name  = String(r[2] ?? '').trim();
+    let pin     = String(r[3] ?? '').trim();
+    if (!grade && !cls && !name) continue;  // 완전 빈 행 스킵
+    if (!name) continue;                     // 이름 없으면 미등록 학급으로 보고 스킵
+    let error = '';
+    if (!gc[grade]) error = '학년 범위를 벗어남';
+    else if (!cls || +cls < 1 || +cls > gc[grade]) error = '반 범위를 벗어남';
+    if (!error && pin && !/^\d{4,8}$/.test(pin)) error = 'PIN은 4~8자리 숫자';
+    if (!pin) pin = '2026';
+    const existing = _teacherCacheAdmin.find(t =>
+      t.role==='teacher' && String(t.grade)===grade && String(t.class)===cls);
+    items.push({ grade, cls, name, pin, error, existingId: existing ? existing.id : null });
+  }
+  _teacherBulkData = items;
+  renderTeacherBulkPreview();
+}
+
+function renderTeacherBulkPreview() {
+  const el = document.getElementById('teacherBulkPreview');
+  if (!el) return;
+  if (!_teacherBulkData.length) { el.innerHTML = ''; return; }
+  const valid = _teacherBulkData.filter(d => !d.error);
+  const errs  = _teacherBulkData.filter(d => d.error);
+  const replaceCnt = valid.filter(d => d.existingId).length;
+
+  let html = `<div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:10px 14px;">
+    <div style="font-weight:700;color:#1e40af;margin-bottom:8px;">
+      총 ${_teacherBulkData.length}명 · <span style="color:#059669;">정상 ${valid.length}</span>${errs.length?` · <span style="color:#dc2626;">오류 ${errs.length}</span>`:''}${replaceCnt?` · <span style="color:#d97706;">기존 교체 ${replaceCnt}</span>`:''}
+    </div>
+    <div style="max-height:260px;overflow-y:auto;font-size:0.85rem;line-height:1.7;">`;
+  html += valid.map(d =>
+    `<div>✅ <b>${d.grade}-${d.cls}</b> ${escapeHtml(d.name)} <span style="color:#94a3b8;">(PIN: ${d.pin})</span>${d.existingId?' <span style="color:#d97706;font-size:0.78rem;">[기존 교체]</span>':''}</div>`
+  ).join('');
+  html += errs.map(d =>
+    `<div style="color:#dc2626;">❌ ${d.grade||'?'}-${d.cls||'?'} ${escapeHtml(d.name)} — ${d.error}</div>`
+  ).join('');
+  html += `</div>`;
+  html += `<label style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:0.85rem;color:#475569;cursor:pointer;">
+    <input type="checkbox" id="bulkReplaceAll"> 기존 담임 <b>전체 삭제</b> 후 등록 (신학년도 권장 · 관리자 계정은 유지)
+  </label>`;
+  html += `<button class="btn btn-success" style="margin-top:10px;" onclick="applyTeacherBulk()"${valid.length?'':' disabled'}>✅ ${valid.length}명 일괄 등록</button>`;
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+window.applyTeacherBulk = async () => {
+  const valid = _teacherBulkData.filter(d => !d.error);
+  if (!valid.length) return showToast('등록할 명단이 없습니다');
+  const replaceAll = document.getElementById('bulkReplaceAll')?.checked;
+  if (!confirm(`담임 ${valid.length}명을 등록합니다.${replaceAll?'\n\n⚠️ 기존 담임 전체를 먼저 삭제합니다 (관리자 계정은 유지).':''}\n\n진행할까요?`)) return;
+  try {
+    if (replaceAll) {
+      const olds = _teacherCacheAdmin.filter(t => t.role==='teacher');
+      for (const t of olds) await db.collection('teachers').doc(t.id).delete();
+    }
+    let cnt = 0;
+    for (const d of valid) {
+      if (!replaceAll && d.existingId) await db.collection('teachers').doc(d.existingId).delete();
+      await db.collection('teachers').add({
+        name: d.name, email: '', role: 'teacher',
+        grade: d.grade, class: d.cls,
+        pinHash: await hashPin(d.pin),
+        addedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      cnt++;
+    }
+    _teacherBulkData = []; _lastBulkRows = [];
+    const fileEl = document.getElementById('teacherBulkFile');
+    if (fileEl) fileEl.value = '';
+    renderTeacherBulkPreview();
+    showToast(`✅ 담임 ${cnt}명 일괄 등록 완료`);
+  } catch (e) {
+    console.error('일괄 등록 실패:', e);
+    showToast(`❌ 등록 실패: ${e.code || ''} ${e.message || e}`);
+  }
+};
 
 function renderTeacherList(teachers) {
   const el = document.getElementById('teacherList');
