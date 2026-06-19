@@ -2050,7 +2050,7 @@
     else if (_ddow === 6) _disp.setDate(_disp.getDate() + 2);  // 토 → 월
     const todayStr = `${_disp.getFullYear()}-${String(_disp.getMonth()+1).padStart(2,'0')}-${String(_disp.getDate()).padStart(2,'0')}`;
     const todayOverrides = (isToday && typeof dailyOverridesAll === 'object' && dailyOverridesAll)
-      ? (dailyOverridesAll[todayStr]?.classes?.[`${grade}-${cls}`] || {})
+      ? ((dailyOverridesAll[todayStr] && dailyOverridesAll[todayStr].classes && dailyOverridesAll[todayStr].classes[`${grade}-${cls}`]) || {})
       : {};
 
     let html = '';
@@ -2169,7 +2169,7 @@
     const now = new Date();
     return all.filter(a => {
       if (!a.isActive) return false;
-      if (a.expiresAt?.toDate && a.expiresAt.toDate() < now) return false;
+      if (a.expiresAt && a.expiresAt.toDate && a.expiresAt.toDate() < now) return false;
       // 빈 배열([])도 '전체'로 취급 (관리자 등록 시 체크박스 미체크 방어)
       const tg = (Array.isArray(a.targetGrades)  && a.targetGrades.length)  ? a.targetGrades  : ['all'];
       const tc = (Array.isArray(a.targetClasses) && a.targetClasses.length) ? a.targetClasses : ['all'];
@@ -2202,7 +2202,7 @@
     panel.classList.add('ann-style-2');
     const slide = schoolSlides[idx];
     const a = slide.ann;
-    const dateStr = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
+    const dateStr = (a.createdAt && a.createdAt.toDate) ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
     // 이 슬라이드에 해당하는 부분 본문 (3줄 청크)
     const contentHtml = escapeHtml(slide.chunk).replace(/\n/g, '<br>');
     // 한 공지가 여러 슬라이드로 나뉜 경우 제목 옆에 (N/M) 표시
@@ -2294,7 +2294,7 @@
 
     // LED는 1개씩만 표시 (buildClassSlides에서 이미 1개씩 분리됨)
     const a = classSlides[idx][0];
-    const date = a.createdAt?.toDate ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
+    const date = (a.createdAt && a.createdAt.toDate) ? a.createdAt.toDate().toLocaleDateString('ko-KR') : '';
     const contentLine = (a.content || '').replace(/\n/g, ' · ');
 
     list.innerHTML = `
@@ -2331,7 +2331,7 @@
       `&SD_SCHUL_CODE=${SCHOOL_CONFIG.neis.schoolCode}&MLSV_YMD=${ymd}`;
     const res = await fetch(url);
     const data = await res.json();
-    return data?.mealServiceDietInfo?.[1]?.row?.[0];
+    return data && data.mealServiceDietInfo && data.mealServiceDietInfo[1] && data.mealServiceDietInfo[1].row && data.mealServiceDietInfo[1].row[0];
   }
 
   // (renderMealMenu/renderMealEmpty 제거됨 — fetchLunch가 직접 lunch-today 렌더)
@@ -2775,7 +2775,7 @@
         .map(d=>({id:d.id,...d.data()}))
         .filter(a => a.targetGrade === grade && a.targetClass === cls)
         .filter(a => a.isActive)
-        .filter(a => !a.expiresAt?.toDate || a.expiresAt.toDate() > now);
+        .filter(a => !(a.expiresAt && a.expiresAt.toDate) || a.expiresAt.toDate() > now);
       renderClassBoard(anns);
     });
 
@@ -2786,7 +2786,7 @@
       .map(d => ({id:d.id, ...d.data()}))
       .filter(d => d.isActive !== false)
       .map(d => {
-        const target = d.targetDate?.toDate ? d.targetDate.toDate() : new Date();
+        const target = (d.targetDate && d.targetDate.toDate) ? d.targetDate.toDate() : new Date();
         target.setHours(0,0,0,0);
         const diff = Math.round((target - today) / 86400000);
         return { ...d, diff, target };
@@ -2839,7 +2839,7 @@
     const events = snap.docs
       .map(d => ({id:d.id, ...d.data()}))
       .filter(e => e.isActive !== false)
-      .map(e => ({...e, dateObj: e.date?.toDate ? e.date.toDate() : new Date()}))
+      .map(e => ({...e, dateObj: (e.date && e.date.toDate) ? e.date.toDate() : new Date()}))
       .filter(e => e.dateObj >= monday && e.dateObj <= sunday)
       .sort((a,b) => a.dateObj - b.dateObj);
 
