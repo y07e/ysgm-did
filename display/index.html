@@ -3008,6 +3008,12 @@
   // 시계 시작
   updateClock();
   setInterval(updateClock, 1000);
+
+  // 절전·백그라운드에서 깨어날 때 시계·요일 즉시 동기화
+  // (브라우저가 절전 중 setInterval을 멈춰 요일이 옛 값으로 잠깐 남는 현상 방지)
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) updateClock(); });
+  window.addEventListener('focus', updateClock);
+  window.addEventListener('pageshow', updateClock);
 </script>
 </body>
 </html>
