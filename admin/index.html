@@ -3469,7 +3469,10 @@ function renderSchedules() {
     const status = getScheduleStatus(sch);
     const statusLabel = { active:'🟢 현재 활성', upcoming:'🟡 예정', expired:'⚫ 종료', incomplete:'⚪ 날짜 미설정' }[status];
     const rotationLink = sch.rotationAnchorDate
-      ? `<div style="background:#ecfdf5;border:1px solid #10b981;border-radius:8px;padding:5px 11px;margin:6px 0;font-size:0.78rem;color:#047857;font-weight:600;">🔗 순환 이어받기: <b>${sch.rotationAnchorDate}</b>부터 계산 (이전 운영기간의 순환을 끊김 없이 이어감)</div>`
+      ? `<div style="background:#ecfdf5;border:1px solid #10b981;border-radius:8px;padding:7px 11px;margin:6px 0;font-size:0.78rem;color:#047857;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>🔗 순환 이어받기: <b>${sch.rotationAnchorDate}</b>부터 계산 (이전 운영기간의 순환을 끊김 없이 이어감)</span>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="resetRotationAnchor(${si})" title="방학 등으로 순환을 끊고, 이 운영기간 시작일을 1주차로 재설정">🔄 이 달부터 새로 시작</button>
+        </div>`
       : '';
     const collapsed = (status === 'expired');  // 종료된 운영 기간은 기본 접힘
     return `<div class="schedule-card ${status}${collapsed ? ' collapsed' : ''}" data-schcard="${si}">
@@ -3773,6 +3776,21 @@ window.duplicateSchedule = (si) => {
   schedulesData.splice(si + 1, 0, copy);
   renderSchedules();
   showToast(`✅ "${copy.name}" 추가됨 — 순환은 ${copy.rotationAnchorDate}부터 이어집니다. 💾 저장 버튼을 눌러주세요.`);
+};
+
+// 순환 기준일을 이 운영기간 시작일로 재설정 (방학 등으로 순환 끊고 새 학기 시작)
+window.resetRotationAnchor = (si) => {
+  const sch = schedulesData[si];
+  if (!sch.startDate) { showToast('먼저 운영 시작일을 설정하세요'); return; }
+  if (!confirm(
+    `순환 기준일을 이 운영기간 시작일(${sch.startDate})로 재설정합니다.\n\n` +
+    `→ 방학 등 이전 순환을 끊고, ${sch.startDate}가 포함된 주가 "1주차"가 됩니다.\n` +
+    `→ 각 급식실의 '시작 학급(1주차)'이 그 주부터 그대로 적용됩니다.\n\n` +
+    `진행할까요?`
+  )) return;
+  sch.rotationAnchorDate = sch.startDate;
+  renderSchedules();
+  showToast(`✅ 순환 기준이 ${sch.startDate}로 재설정됨 — 💾 저장 버튼을 눌러주세요`);
 };
 
 window.addFloorToSchedule = (si) => {
