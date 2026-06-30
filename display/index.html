@@ -2712,10 +2712,21 @@
           const times = _calcFloorTimes(floor, opts);
           const me = times.find(t => t.classKey === myKey);
           if (me) {
-            // 단축수업일에는 점심 끝 시간을 학교 전체 점심 종료(고정)로 통일
-            const endTime = (shortDay && shortDay.lunch && shortDay.lunch.end)
-              ? shortDay.lunch.end
-              : me.end;
+            // 급식 종료시간 결정
+            //  - 단축수업일: 학교 전체 점심 종료(고정)로 통일
+            //  - 평상시: '시작+식사시간'이되, 학교 점심 종료(=점심 다음 교시 시작)를 넘지 않게 제한
+            //    (식사시간이 길게 설정돼 늦게 시작하는 반의 종료가 점심시간을 넘어 안내되던 문제 방지)
+            let endTime = me.end;
+            if (shortDay && shortDay.lunch && shortDay.lunch.end) {
+              endTime = shortDay.lunch.end;
+            } else {
+              const lunchAfterP = (window._shortLunchOverride && window._shortLunchOverride.afterPeriod != null)
+                ? window._shortLunchOverride.afterPeriod : 4;
+              const nextPeriod = classTimes.find(p => p.period > lunchAfterP);
+              const schoolLunchEnd = (nextPeriod && nextPeriod.start)
+                || (SCHOOL_CONFIG.defaultLunch && SCHOOL_CONFIG.defaultLunch.end);
+              if (schoolLunchEnd && toMin(me.end) > toMin(schoolLunchEnd)) endTime = schoolLunchEnd;
+            }
             myLunch = { start: me.start, end: endTime };
             return;
           }
