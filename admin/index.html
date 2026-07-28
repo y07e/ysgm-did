@@ -2988,7 +2988,9 @@ function parseNeisExcel(workbook) {
     if (DAY_KOR.includes(cell)) {
       currentDay = DAY_KEYS[DAY_KOR.indexOf(cell)];
       dayColumns[currentDay] = [];
-    } else if (currentDay && periodNumRow[c]) {
+      // 요일 헤더와 같은 열에 교시가 있는 형식도 지원 (예: '월' 병합셀 아래 1교시)
+    }
+    if (currentDay && periodNumRow[c]) {
       const periodNum = parseInt(periodNumRow[c], 10);
       if (periodNum && periodNum >= 1 && periodNum <= 9) {
         dayColumns[currentDay].push({ col: c, period: periodNum });
