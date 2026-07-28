@@ -2969,11 +2969,20 @@ function parseNeisExcel(workbook) {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(sheet, { header:1, defval:'' });
 
-  const dayHeaderRowIdx = 4;   // 5번째 행 (0-indexed 4)
-  const periodNumRowIdx = 5;   // 6번째 행
-  const dataStartRowIdx = 6;   // 7번째 행부터 학급 데이터
-
   if (rows.length < 8) return { error: '엑셀 형식이 맞지 않습니다 (행 부족)' };
+
+  // 요일 헤더 행 자동 탐색 — 시트 범위가 A열/B열 어디서 시작하든 대응
+  // ('월'이 있고 다음 행에 숫자 교시가 있는 행)
+  let dayHeaderRowIdx = -1;
+  for (let r = 0; r < Math.min(12, rows.length - 1); r++) {
+    const cells = (rows[r] || []).map(v => String(v || '').trim());
+    if (cells.includes('월') && (rows[r+1] || []).some(v => {
+      const n = parseInt(v, 10); return n >= 1 && n <= 9;
+    })) { dayHeaderRowIdx = r; break; }
+  }
+  if (dayHeaderRowIdx === -1) return { error: "요일 헤더('월'~'금') 행을 찾지 못했습니다" };
+  const periodNumRowIdx = dayHeaderRowIdx + 1;
+  const dataStartRowIdx = dayHeaderRowIdx + 2;
 
   const dayHeaderRow = rows[dayHeaderRowIdx];
   const periodNumRow = rows[periodNumRowIdx];
@@ -3004,9 +3013,11 @@ function parseNeisExcel(workbook) {
   for (let r = dataStartRowIdx; r < rows.length; r++) {
     const row = rows[r];
     if (!row || !row.length) continue;
-    // col C (idx 2) 에서 "N(G학년) M반)" 형태 추출
-    const labelCell = String(row[2] || '').trim();
-    const m = labelCell.match(/\(\s*(\d+)\s*학년\s*\)\s*\s*(\d+)\s*반/);
+    // 앞쪽 열(0~5)에서 "N(G학년) M반)" 라벨 탐색 — 시트 시작 열 시프트 대응
+    let m = null;
+    for (let lc = 0; lc <= 5 && !m; lc++) {
+      m = String(row[lc] || '').trim().match(/\(\s*(\d+)\s*학년\s*\)\s*\s*(\d+)\s*반/);
+    }
     if (!m) continue;
     const grade = parseInt(m[1], 10);
     const classNum = parseInt(m[2], 10);
