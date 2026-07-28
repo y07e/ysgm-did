@@ -2946,6 +2946,19 @@ document.getElementById('btnSaveTT').addEventListener('click', async () => {
 // ============================================================
 let _neisParsed = null;  // { grade, classes: {classNum: {mon:[], tue:[], ...}} }
 
+// NEIS 과목 셀 정규화 — 임시강사 이중 괄호 정리
+// "영어(최효정(영어_임시))" → "영어(최효정)" / "음악(윤청미)" → 그대로
+function normalizeNeisSubject(v) {
+  const i = v.indexOf('(');
+  if (i === -1) return v.trim();
+  const subject = v.slice(0, i).trim();
+  let teacher = v.slice(i + 1).replace(/\)+\s*$/, '');  // 끝의 닫는 괄호 제거
+  const j = teacher.indexOf('(');
+  if (j !== -1) teacher = teacher.slice(0, j);          // 중첩 괄호 메모(_임시 등) 제거
+  teacher = teacher.trim();
+  return teacher ? `${subject}(${teacher})` : subject;
+}
+
 function parseNeisExcel(workbook) {
   // NEIS 시간표 구조:
   // Row 5(idx 4): 요일 헤더 (월/화/수/목/금) — 각 요일이 여러 컬럼 차지
@@ -3006,7 +3019,7 @@ function parseNeisExcel(workbook) {
       const slots = Array(maxP).fill('');
       for (const { col, period } of cols) {
         const v = String(row[col] || '').trim();
-        if (v) slots[period - 1] = v;
+        if (v) slots[period - 1] = normalizeNeisSubject(v);
       }
       classes[classNum][dayKey] = slots;
     }
