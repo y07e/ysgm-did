@@ -1966,6 +1966,26 @@
   };
   const getWeekdayIdx = () => { const d = new Date().getDay(); return d>=1&&d<=5 ? d-1 : 0; };
 
+  // 오늘 날짜의 '요일 통째 변경'(dayOverride) 확인 — 있으면 그 요일 idx, 없으면 null
+  // (예: 수요일인데 전교가 금요일 시간표로 운영되는 날)
+  function getTodaySwapIdx() {
+    if (typeof dailyOverridesAll !== 'object' || !dailyOverridesAll) return null;
+    const t = new Date(); t.setHours(0,0,0,0);
+    const dw = t.getDay();
+    if (dw === 0) t.setDate(t.getDate() + 1);
+    else if (dw === 6) t.setDate(t.getDate() + 2);
+    const ds = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+    const doc = dailyOverridesAll[ds];
+    const dk = doc && doc.dayOverride;
+    const i = dk ? ['mon','tue','wed','thu','fri'].indexOf(dk) : -1;
+    return i >= 0 ? i : null;
+  }
+  // 화면에 표시할 요일 idx (요일 변경 반영)
+  function getDisplayDayIdx() {
+    const s = getTodaySwapIdx();
+    return s !== null ? s : getWeekdayIdx();
+  }
+
   function getPeriodState(now) {
     const cur = now.getHours()*60 + now.getMinutes();
 
@@ -2041,7 +2061,7 @@
     const now = new Date();
     const cur = now.getHours()*60 + now.getMinutes();
     const state = getPeriodState(now);
-    const isToday = (dayIdx === getWeekdayIdx());
+    const isToday = (dayIdx === getDisplayDayIdx());
 
     // 표시 중인 날짜 계산 — 평일은 오늘, 주말은 다음 월요일(시간표가 월요일로 보이므로)
     const _disp = new Date(); _disp.setHours(0,0,0,0);
@@ -2123,7 +2143,7 @@
   // 교시·급식 상태 업데이트
   // ============================================================
   function updatePeriodState(now) {
-    const dayIdx = getWeekdayIdx();
+    const dayIdx = getDisplayDayIdx();
     renderPeriods(dayIdx);
 
     const state = getPeriodState(now);
@@ -2439,23 +2459,31 @@
     const ov = _classTimeOverridesAll[todayStr];
 
     const titleEl = document.querySelector('.timetable-panel .panel-title');
+    // 요일 통째 변경 배지 (예: 금요일 시간표 운영)
+    const swapIdx = (typeof getTodaySwapIdx === 'function') ? getTodaySwapIdx() : null;
+    const swapBadge = (swapIdx !== null && swapIdx !== getWeekdayIdx())
+      ? ` <span class="short-day-badge" style="background:#7c3aed;">📆 ${['월','화','수','목','금'][swapIdx]}요일 시간표 운영</span>`
+      : '';
     if (ov && Array.isArray(ov.periods) && ov.periods.length) {
       classTimes = ov.periods;
       window._shortLunchOverride = ov.lunch || null;
       if (titleEl) {
         const noteText = ov.note ? ` · ${ov.note}` : '';
-        titleEl.innerHTML = `오늘 시간표 <span class="short-day-badge">⚡ 단축 수업${noteText}</span>`;
+        titleEl.innerHTML = `오늘 시간표 <span class="short-day-badge">⚡ 단축 수업${noteText}</span>${swapBadge}`;
       }
     } else {
       classTimes = _baseClassTimes;
       window._shortLunchOverride = null;
-      if (titleEl) titleEl.textContent = '오늘 시간표';
+      if (titleEl) {
+        if (swapBadge) titleEl.innerHTML = `오늘 시간표${swapBadge}`;
+        else titleEl.textContent = '오늘 시간표';
+      }
     }
     // 점심 시간 재계산 (단축수업 점심 우선순위 적용)
     if (typeof applyMyLunch === 'function') applyMyLunch();
     // 시간표 다시 렌더
     if (typeof renderPeriods === 'function' && typeof getWeekdayIdx === 'function') {
-      renderPeriods(getWeekdayIdx());
+      renderPeriods(getDisplayDayIdx());
     }
   }
 
@@ -2474,7 +2502,7 @@
       ? snap.data().swaps : [];
     // 적용 즉시 시간표 재렌더
     if (typeof renderPeriods === 'function' && typeof getWeekdayIdx === 'function') {
-      renderPeriods(getWeekdayIdx());
+      renderPeriods(getDisplayDayIdx());
     }
   });
 
@@ -2596,7 +2624,7 @@
     schedulesDoc = (snap.exists && Array.isArray(snap.data().schedules)) ? snap.data().schedules : [];
     applyMyLunch();
     if (typeof renderPeriods === 'function' && typeof getWeekdayIdx === 'function') {
-      renderPeriods(getWeekdayIdx());
+      renderPeriods(getDisplayDayIdx());
     }
     showShortDayDebug();
   });
@@ -2607,7 +2635,7 @@
     overridesDoc = (snap.exists && snap.data().overrides) ? snap.data().overrides : {};
     applyMyLunch();
     if (typeof renderPeriods === 'function' && typeof getWeekdayIdx === 'function') {
-      renderPeriods(getWeekdayIdx());
+      renderPeriods(getDisplayDayIdx());
     }
     showShortDayDebug();
   });
@@ -2754,7 +2782,7 @@
   // 시간표
   db.collection('timetable').doc(`${grade}-${cls}`).onSnapshot(snap => {
     timetable = snap.exists ? (snap.data() || {}) : {};
-    const idx = getWeekdayIdx();
+    const idx = getDisplayDayIdx();
     renderDayTabs(idx);
     renderPeriods(idx);
   });
@@ -2764,7 +2792,10 @@
   db.collection('timetableOverrides').onSnapshot(snap => {
     dailyOverridesAll = {};
     snap.docs.forEach(d => dailyOverridesAll[d.id] = d.data());
-    renderPeriods(getWeekdayIdx());
+    // 요일 통째 변경이 있으면 요일탭·배지·점심까지 갱신
+    renderDayTabs(getDisplayDayIdx());
+    if (typeof applyClassTimes === 'function') applyClassTimes();
+    else renderPeriods(getDisplayDayIdx());
   });
 
   // 학교 공지 (인덱스 불필요 — 클라이언트 필터링)
@@ -3008,7 +3039,7 @@
   // ============================================================
   // 초기 실행 (모든 함수·상수 정의가 완료된 후 호출)
   // ============================================================
-  const initDay = getWeekdayIdx();
+  const initDay = getDisplayDayIdx();
   renderDayTabs(initDay);
   fetchLunch();
   setInterval(fetchLunch, 60*60*1000);

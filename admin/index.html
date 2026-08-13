@@ -1065,6 +1065,31 @@
         </div>
       </div>
 
+      <!-- 📆 전체 학년 요일 변경 (예: 수요일에 금요일 시간표로 운영) -->
+      <div class="card" id="daySwapCard">
+        <div class="card-title">📆 전체 학년 요일 변경</div>
+        <p style="font-size:0.85rem;color:#475569;margin-bottom:14px;line-height:1.6;">
+          특정 날짜에 <strong>전교(29개 반)가 다른 요일 시간표로 수업</strong>하는 경우 사용합니다.
+          (예: 수요일인데 금요일 수업 진행)<br>
+          기초 시간표는 건드리지 않으며, 그날 하루만 적용됩니다. 학급별 결보강 변경은 그 위에 그대로 적용됩니다.
+        </p>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <div><label style="display:block;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:4px;">날짜</label>
+            <input type="date" id="daySwapDate" style="margin-bottom:0;"></div>
+          <div><label style="display:block;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:4px;">적용할 요일 시간표</label>
+            <select id="daySwapDay" style="margin-bottom:0;width:auto;">
+              <option value="mon">월요일 시간표</option>
+              <option value="tue">화요일 시간표</option>
+              <option value="wed">수요일 시간표</option>
+              <option value="thu">목요일 시간표</option>
+              <option value="fri">금요일 시간표</option>
+            </select></div>
+          <button class="btn btn-primary" id="btnSaveDaySwap">💾 적용</button>
+          <button class="btn btn-danger" id="btnClearDaySwap">해제</button>
+        </div>
+        <div id="daySwapStatus" style="margin-top:10px;font-size:0.85rem;"></div>
+      </div>
+
       <div class="card">
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <span>📅 일일 시간표 변경 목록</span>
@@ -2121,6 +2146,9 @@ function buildSelectors() {
     const notice = document.getElementById('teacherNotice');
     notice.style.display = 'block';
     notice.textContent = `${myTeacherData.grade}학년 ${myTeacherData.class}반 담임으로 로그인됨. 내 학급 게시판만 관리할 수 있습니다.`;
+    // 전체 학년 요일 변경은 관리자 전용
+    const dsc = document.getElementById('daySwapCard');
+    if (dsc) dsc.style.display = 'none';
   }
 }
 
@@ -4136,10 +4164,19 @@ async function loadDailyOverrideEditor() {
     return;
   }
 
-  badge.textContent = `${DAY_KOR[dow]}요일`;
-  badge.style.color = '#1e40af';
+  // 요일 통째 변경이 설정된 날짜면 그 요일의 기초 시간표를 기준으로 편집
+  const _swapDoc = dailyOverridesAll[date];
+  const _swapKey = _swapDoc && _swapDoc.dayOverride;
+  if (_swapKey) {
+    const swapKor = ({mon:'월',tue:'화',wed:'수',thu:'목',fri:'금'})[_swapKey];
+    badge.textContent = `${DAY_KOR[dow]}요일 → 📆 ${swapKor}요일 시간표 운영`;
+    badge.style.color = '#7c3aed';
+  } else {
+    badge.textContent = `${DAY_KOR[dow]}요일`;
+    badge.style.color = '#1e40af';
+  }
 
-  const dayKey = ['mon','tue','wed','thu','fri'][dow-1];
+  const dayKey = _swapKey || ['mon','tue','wed','thu','fri'][dow-1];
 
   try {
     const baseSnap = await db.collection('timetable').doc(`${grade}-${cls}`).get();
@@ -4309,10 +4346,14 @@ function _ovDateGroupHtml(date, dStr, data, isOpen) {
       </div>
     </div>`;
   }).join('');
+  const swapBadge = data.dayOverride
+    ? `<span style="background:#7c3aed;color:white;border-radius:999px;font-size:0.72rem;font-weight:700;padding:1px 8px;">📆 ${({mon:'월',tue:'화',wed:'수',thu:'목',fri:'금'})[data.dayOverride]}요일 시간표</span>`
+    : '';
   return `<div class="ov-date-group${isOpen ? ' open' : ''}" data-ovdate="${date}">
     <div class="ov-date-header" onclick="toggleOvDate('${date}')">
       <span class="ov-caret">▶</span>
       <span class="ov-date-title">📅 ${dStr}</span>
+      ${swapBadge}
       <span class="ov-date-count">${classEntries.length}개 반</span>
       ${data.reason ? `<span class="ov-date-reason">${escapeHtml(data.reason)}</span>` : '<span style="flex:1;"></span>'}
     </div>
@@ -4409,12 +4450,70 @@ window.deleteDailyOverride = async (date, classKey) => {
   showToast('삭제됨');
 };
 
+// ===== 📆 전체 학년 요일 변경 =====
+const DAY_LABEL = { mon:'월요일', tue:'화요일', wed:'수요일', thu:'목요일', fri:'금요일' };
+
+function refreshDaySwapStatus() {
+  const el = document.getElementById('daySwapStatus');
+  const date = document.getElementById('daySwapDate')?.value;
+  if (!el) return;
+  if (!date) { el.innerHTML = ''; return; }
+  const doc = dailyOverridesAll[date];
+  const cur = doc && doc.dayOverride;
+  const dow = ['일','월','화','수','목','금','토'][new Date(date + 'T00:00:00').getDay()];
+  el.innerHTML = cur
+    ? `<span style="color:#7c3aed;font-weight:700;">📆 ${date} (${dow}) — 현재 <b>${DAY_LABEL[cur]}</b> 시간표로 운영 설정됨</span>`
+    : `<span style="color:#94a3b8;">${date} (${dow}) — 요일 변경 없음 (원래 요일 시간표)</span>`;
+}
+document.getElementById('daySwapDate').addEventListener('change', refreshDaySwapStatus);
+
+document.getElementById('btnSaveDaySwap').addEventListener('click', async () => {
+  const date = document.getElementById('daySwapDate').value;
+  const dayKey = document.getElementById('daySwapDay').value;
+  if (!date) return showToast('날짜를 선택하세요');
+  const dt = new Date(date + 'T00:00:00');
+  if (dt.getDay() === 0 || dt.getDay() === 6) return showToast('주말은 설정할 수 없습니다');
+  const dowKor = ['일','월','화','수','목','금','토'][dt.getDay()];
+  if (!confirm(
+    `${date} (${dowKor}요일)에 전교(전체 학년·반)가\n` +
+    `"${DAY_LABEL[dayKey]}" 시간표로 수업하도록 설정합니다.\n\n` +
+    `→ 그날 하루만 적용, 기초 시간표는 변경 없음\n` +
+    `→ 학급별 결보강 변경은 그대로 함께 적용됨\n\n진행할까요?`
+  )) return;
+  try {
+    await db.collection('timetableOverrides').doc(date).set({
+      date, dayOverride: dayKey,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    showToast(`📆 ${date} → ${DAY_LABEL[dayKey]} 시간표 적용됨 (전자칠판 즉시 반영)`);
+  } catch (e) { showToast('오류: ' + e.message); }
+});
+
+document.getElementById('btnClearDaySwap').addEventListener('click', async () => {
+  const date = document.getElementById('daySwapDate').value;
+  if (!date) return showToast('날짜를 선택하세요');
+  const doc = dailyOverridesAll[date];
+  if (!doc || !doc.dayOverride) return showToast('해당 날짜에 요일 변경 설정이 없습니다');
+  if (!confirm(`${date}의 요일 변경(${DAY_LABEL[doc.dayOverride]})을 해제할까요?\n→ 원래 요일 시간표로 돌아갑니다.`)) return;
+  try {
+    const ref = db.collection('timetableOverrides').doc(date);
+    const hasClasses = doc.classes && Object.keys(doc.classes).length;
+    if (hasClasses) {
+      await ref.update({ dayOverride: firebase.firestore.FieldValue.delete() });
+    } else {
+      await ref.delete();  // 학급별 변경도 없으면 문서 자체 삭제
+    }
+    showToast(`↩ ${date} 요일 변경 해제됨`);
+  } catch (e) { showToast('오류: ' + e.message); }
+});
+
 // 일일 변경 실시간 구독
 db.collection('timetableOverrides').onSnapshot(snap => {
   dailyOverridesAll = {};
   snap.docs.forEach(d => dailyOverridesAll[d.id] = d.data());
   renderDailyOverridesList();
   updatePrintRangeOptions();
+  if (typeof refreshDaySwapStatus === 'function') refreshDaySwapStatus();
 });
 
 // 인쇄 기간 선택 옵션 갱신 (데이터에 있는 월만 동적 생성)
