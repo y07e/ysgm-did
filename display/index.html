@@ -2782,9 +2782,9 @@
   // 시간표
   db.collection('timetable').doc(`${grade}-${cls}`).onSnapshot(snap => {
     timetable = snap.exists ? (snap.data() || {}) : {};
-    const idx = getDisplayDayIdx();
-    renderDayTabs(idx);
-    renderPeriods(idx);
+    // 요일 탭은 실제 요일 유지 (요일 착각 방지) — 시간표 내용만 변경 요일 적용
+    renderDayTabs(getWeekdayIdx());
+    renderPeriods(getDisplayDayIdx());
   });
 
   // 일일 시간표 변경 (오늘 날짜만 적용)
@@ -2792,8 +2792,8 @@
   db.collection('timetableOverrides').onSnapshot(snap => {
     dailyOverridesAll = {};
     snap.docs.forEach(d => dailyOverridesAll[d.id] = d.data());
-    // 요일 통째 변경이 있으면 요일탭·배지·점심까지 갱신
-    renderDayTabs(getDisplayDayIdx());
+    // 요일 통째 변경이 있으면 배지·시간표·점심 갱신 (요일 탭은 실제 요일 유지)
+    renderDayTabs(getWeekdayIdx());
     if (typeof applyClassTimes === 'function') applyClassTimes();
     else renderPeriods(getDisplayDayIdx());
   });
@@ -3039,8 +3039,7 @@
   // ============================================================
   // 초기 실행 (모든 함수·상수 정의가 완료된 후 호출)
   // ============================================================
-  const initDay = getDisplayDayIdx();
-  renderDayTabs(initDay);
+  renderDayTabs(getWeekdayIdx());  // 요일 탭은 항상 실제 요일
   fetchLunch();
   setInterval(fetchLunch, 60*60*1000);
 
