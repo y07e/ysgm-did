@@ -1018,6 +1018,31 @@
 
     <!-- ===== 시간표 변경 (일일) ===== -->
     <div class="tab-panel" id="tab-timetable-daily">
+      <!-- 📆 전체 학년 요일 변경 (1순위: 요일 먼저 정하고 → 개별 변경은 그 위에) -->
+      <div class="card" id="daySwapCard">
+        <div class="card-title">📆 전체 학년 요일 변경</div>
+        <p style="font-size:0.85rem;color:#475569;margin-bottom:14px;line-height:1.6;">
+          특정 날짜에 <strong>전교(29개 반)가 다른 요일 시간표로 수업</strong>하는 경우 사용합니다.
+          (예: 수요일인데 금요일 수업 진행)<br>
+          기초 시간표는 건드리지 않으며, 그날 하루만 적용됩니다. 아래 학급별 변경(결보강)은 그 위에 그대로 적용됩니다.
+        </p>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <div><label style="display:block;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:4px;">날짜</label>
+            <input type="date" id="daySwapDate" style="margin-bottom:0;"></div>
+          <div><label style="display:block;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:4px;">적용할 요일 시간표</label>
+            <select id="daySwapDay" style="margin-bottom:0;width:auto;">
+              <option value="mon">월요일 시간표</option>
+              <option value="tue">화요일 시간표</option>
+              <option value="wed">수요일 시간표</option>
+              <option value="thu">목요일 시간표</option>
+              <option value="fri">금요일 시간표</option>
+            </select></div>
+          <button class="btn btn-primary" id="btnSaveDaySwap">💾 적용</button>
+          <button class="btn btn-danger" id="btnClearDaySwap">해제</button>
+        </div>
+        <div id="daySwapStatus" style="margin-top:10px;font-size:0.85rem;"></div>
+      </div>
+
       <div class="card">
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <span>📋 일일 시간표 변경</span>
@@ -1063,31 +1088,6 @@
           <button class="btn btn-primary" id="btnSaveDaily">💾 변경 저장</button>
           <button class="btn btn-danger" id="btnClearDaily">🗑 이 날·반 변경 모두 삭제</button>
         </div>
-      </div>
-
-      <!-- 📆 전체 학년 요일 변경 (예: 수요일에 금요일 시간표로 운영) -->
-      <div class="card" id="daySwapCard">
-        <div class="card-title">📆 전체 학년 요일 변경</div>
-        <p style="font-size:0.85rem;color:#475569;margin-bottom:14px;line-height:1.6;">
-          특정 날짜에 <strong>전교(29개 반)가 다른 요일 시간표로 수업</strong>하는 경우 사용합니다.
-          (예: 수요일인데 금요일 수업 진행)<br>
-          기초 시간표는 건드리지 않으며, 그날 하루만 적용됩니다. 학급별 결보강 변경은 그 위에 그대로 적용됩니다.
-        </p>
-        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-          <div><label style="display:block;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:4px;">날짜</label>
-            <input type="date" id="daySwapDate" style="margin-bottom:0;"></div>
-          <div><label style="display:block;font-size:0.8rem;color:#475569;font-weight:600;margin-bottom:4px;">적용할 요일 시간표</label>
-            <select id="daySwapDay" style="margin-bottom:0;width:auto;">
-              <option value="mon">월요일 시간표</option>
-              <option value="tue">화요일 시간표</option>
-              <option value="wed">수요일 시간표</option>
-              <option value="thu">목요일 시간표</option>
-              <option value="fri">금요일 시간표</option>
-            </select></div>
-          <button class="btn btn-primary" id="btnSaveDaySwap">💾 적용</button>
-          <button class="btn btn-danger" id="btnClearDaySwap">해제</button>
-        </div>
-        <div id="daySwapStatus" style="margin-top:10px;font-size:0.85rem;"></div>
       </div>
 
       <div class="card">
