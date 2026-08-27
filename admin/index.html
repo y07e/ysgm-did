@@ -5078,132 +5078,73 @@ function openWeeklyPrint(weekMonday) {
     return openWeeklyPrint(getMondayOf(parseLocalDate(upcoming.startDate)));
   }
 
-  // 이 주 5일에 대해 오버라이드 확인
+  // 이 주 5일 각각에 실제 적용되는 운영·오버라이드 계산
   const weekDates = [0,1,2,3,4].map(i => {
     const d = new Date(weekMonday); d.setDate(weekMonday.getDate() + i);
     return d;
   });
-  const overridesInWeek = weekDates
-    .map(d => ({ date: d, dateStr: formatDateYMD(d), override: overridesData[formatDateYMD(d)] }))
-    .filter(x => x.override);
 
-  // 📌 특정일 전용 운영(짧은 기간이 우선)이 걸린 날 확인 — 주 대표(sch)와 다른 운영이 적용되는 날
-  const specialDaysInWeek = weekDates
-    .map(d => {
-      const matches = schedulesData.filter(s => {
-        if (!s.startDate || !s.endDate) return false;
-        const st = parseLocalDate(s.startDate); st.setHours(0,0,0,0);
-        const en = parseLocalDate(s.endDate);   en.setHours(23,59,59,999);
-        return d >= st && d <= en;
-      });
-      if (!matches.length) return null;
-      const daySch = matches.reduce((best, s) => {
-        const len = parseLocalDate(s.endDate) - parseLocalDate(s.startDate);
-        const bestLen = parseLocalDate(best.endDate) - parseLocalDate(best.startDate);
-        return len < bestLen ? s : best;
-      });
-      return (daySch !== sch) ? { date: d, dateStr: formatDateYMD(d), sch: daySch } : null;
-    })
-    .filter(Boolean);
-  const specialDateSet = new Set(specialDaysInWeek.map(x => x.dateStr));
+  // 날짜별 적용 운영 — 겹치면 짧은 기간 우선(특정일 전용 운영), 없으면 주 대표(sch)
+  const dayInfos = weekDates.map(d => {
+    const matches = schedulesData.filter(s => {
+      if (!s.startDate || !s.endDate) return false;
+      const st = parseLocalDate(s.startDate); st.setHours(0,0,0,0);
+      const en = parseLocalDate(s.endDate);   en.setHours(23,59,59,999);
+      return d >= st && d <= en;
+    });
+    const daySch = matches.length
+      ? matches.reduce((best, s) => {
+          const len = parseLocalDate(s.endDate) - parseLocalDate(s.startDate);
+          const bestLen = parseLocalDate(best.endDate) - parseLocalDate(best.startDate);
+          return len < bestLen ? s : best;
+        })
+      : sch;
+    return { date: d, sch: daySch, override: overridesData[formatDateYMD(d)] || null };
+  });
 
-  // 일반 주: 한 번에 5일 묶음 인쇄
-  // 오버라이드/특정일 전용 운영 있는 날: 별도 페이지로 인쇄
-  const pages = [];
+  // 같은 운영이 연속 적용되는 날짜끼리 한 장으로 묶기
+  // (월 전환 주: 8/31 한 장 + 9/1~4 한 장 · 오버라이드/특정일 날은 단독 장)
+  const groups = [];
+  dayInfos.forEach(info => {
+    const last = groups[groups.length - 1];
+    if (last && !last.override && !info.override && last.sch === info.sch) {
+      last.days.push(info.date);
+    } else {
+      groups.push({ sch: info.sch, override: info.override, days: [info.date] });
+    }
+  });
 
-  // 진단 정보 계산 (인쇄 페이지에 표시)
-  // 순환 기준일을 우선 사용 (이전 기간 이어받기 시 정확한 주차 계산)
-  const anchorDate = sch.rotationAnchorDate || sch.startDate;
-  const anchorMonday = getMondayOf(parseLocalDate(anchorDate));
-  const weeksDiff = Math.round((weekMonday - anchorMonday) / (7 * 86400000));
-  const weekNum = weeksDiff + 1;   // 1주차부터 시작
-
-  if (overridesInWeek.length === 0 && specialDaysInWeek.length === 0) {
-    // 단일 페이지 — 주 전체
-    pages.push({
-      title: `학급별 급식 순서 (${weekMonday.getMonth()+1}월 ${weekMonday.getDate()}일 ~ ${friday.getMonth()+1}월 ${friday.getDate()}일)`,
-      note: '',
+  const pages = groups.map(g => {
+    const gSch = g.sch;
+    const first = g.days[0], last = g.days[g.days.length - 1];
+    const gAnchor = gSch.rotationAnchorDate || gSch.startDate;
+    const gWeekNum = Math.round((weekMonday - getMondayOf(parseLocalDate(gAnchor))) / (7 * 86400000)) + 1;
+    const isSpecial = gSch.startDate && gSch.startDate === gSch.endDate;
+    const title = (first.getTime() === last.getTime())
+      ? `학급별 급식 순서 (${first.getMonth()+1}월 ${first.getDate()}일)`
+      : `학급별 급식 순서 (${first.getMonth()+1}월 ${first.getDate()}일 ~ ${last.getMonth()+1}월 ${last.getDate()}일)`;
+    return {
+      title,
+      note: g.override ? (g.override.note || '')
+          : (isSpecial ? (gSch.name || '특정일 전용 운영').replace(/^📌\s*/, '') : ''),
       diagnostic: {
-        scheduleName: sch.name || '',
-        startDate: sch.startDate,
-        anchorDate: sch.rotationAnchorDate || sch.startDate,
-        weekNum,
-        floors: sch.floors.map(f => ({
+        scheduleName: gSch.name || '',
+        startDate: gSch.startDate,
+        anchorDate: gAnchor,
+        weekNum: gWeekNum,
+        floors: (gSch.floors || []).map(f => ({
           name: f.name,
           rotation: !!f.weeklyRotation,
           anchorClass: f.startClass,
-          rotatedClass: getRotatedStartClass(f, sch, weekMonday)
+          rotatedClass: getRotatedStartClass(f, gSch, first)
         }))
       },
-      floors: sch.floors.map(f => {
-        const startClass = getRotatedStartClass(f, sch, weekMonday);
-        return { floor: f, times: calcFloorTimes(f, { startClass }) };
+      floors: (gSch.floors || []).map(f => {
+        const startClass = getRotatedStartClass(f, gSch, first);
+        return { floor: f, times: calcFloorTimes(f, { startClass, startTime: g.override ? g.override.startTime : undefined }) };
       })
-    });
-  } else {
-    // 오버라이드·특정일 전용 운영 날짜는 개별 페이지, 나머지 평일은 묶음
-    const normalDays = weekDates.filter(d =>
-      !overridesData[formatDateYMD(d)] && !specialDateSet.has(formatDateYMD(d)));
-    if (normalDays.length) {
-      // 연속된 평일 묶음
-      const firstD = normalDays[0];
-      const lastD = normalDays[normalDays.length-1];
-      pages.push({
-        title: `학급별 급식 순서 (${firstD.getMonth()+1}월 ${firstD.getDate()}일 ~ ${lastD.getMonth()+1}월 ${lastD.getDate()}일)`,
-        note: '',
-        floors: sch.floors.map(f => {
-          const startClass = getRotatedStartClass(f, sch, weekMonday);
-          return { floor: f, times: calcFloorTimes(f, { startClass }) };
-        })
-      });
-    }
-    overridesInWeek.forEach(({date, dateStr, override}) => {
-      if (specialDateSet.has(dateStr)) return;  // 특정일 전용 운영이 있는 날은 그 페이지가 대신함
-      pages.push({
-        title: `학급별 급식 순서 (${date.getMonth()+1}월 ${date.getDate()}일)`,
-        note: override.note || '',
-        diagnostic: {
-          scheduleName: sch.name || '',
-          startDate: sch.startDate,
-          weekNum,
-          floors: sch.floors.map(f => ({
-            name: f.name,
-            rotation: !!f.weeklyRotation,
-            anchorClass: f.startClass,
-            rotatedClass: getRotatedStartClass(f, sch, weekMonday)
-          }))
-        },
-        floors: sch.floors.map(f => {
-          const startClass = getRotatedStartClass(f, sch, weekMonday);
-          return { floor: f, times: calcFloorTimes(f, { startClass, startTime: override.startTime }) };
-        })
-      });
-    });
-
-    // 📌 특정일 전용 운영 페이지 — 그 운영의 구성 그대로
-    specialDaysInWeek.forEach(({date, sch: daySch}) => {
-      pages.push({
-        title: `학급별 급식 순서 (${date.getMonth()+1}월 ${date.getDate()}일)`,
-        note: (daySch.name || '특정일 전용 운영').replace(/^📌\s*/, ''),
-        diagnostic: {
-          scheduleName: daySch.name || '',
-          startDate: daySch.startDate,
-          anchorDate: daySch.startDate,
-          weekNum: 1,
-          floors: (daySch.floors || []).map(f => ({
-            name: f.name,
-            rotation: !!f.weeklyRotation,
-            anchorClass: f.startClass,
-            rotatedClass: getRotatedStartClass(f, daySch, date)
-          }))
-        },
-        floors: (daySch.floors || []).map(f => {
-          const startClass = getRotatedStartClass(f, daySch, date);
-          return { floor: f, times: calcFloorTimes(f, { startClass }) };
-        })
-      });
-    });
-  }
+    };
+  });
 
   renderPrintWindow(pages);
 }
