@@ -3795,9 +3795,16 @@ function attachScheduleListeners() {
 }
 
 // ===== 📅 달력으로 날짜 선택 (showPicker 지원 브라우저는 달력, 아니면 prompt 폴백) =====
-function pickDate(defaultVal, onPick) {
+function pickDate(defaultVal, onPick, anchorEl) {
   const inp = document.getElementById('hiddenDatePicker');
   if (inp && typeof inp.showPicker === 'function') {
+    // 달력이 누른 버튼 근처에 뜨도록 숨은 input을 그 위치로 이동
+    if (anchorEl && anchorEl.getBoundingClientRect) {
+      const r = anchorEl.getBoundingClientRect();
+      inp.style.left = Math.max(0, r.left) + 'px';
+      inp.style.top = Math.min(window.innerHeight - 10, r.bottom) + 'px';
+      inp.style.bottom = 'auto';
+    }
     inp.value = defaultVal || '';
     inp.onchange = () => { if (inp.value) onPick(inp.value); };
     try { inp.showPicker(); return; } catch (e) { /* 폴백으로 진행 */ }
@@ -3807,8 +3814,8 @@ function pickDate(defaultVal, onPick) {
 }
 
 // ===== 📌 특정일 전용 운영 (하루짜리 — 수학여행 등) =====
-document.getElementById('btnAddOneDaySchedule').addEventListener('click', () => {
-  pickDate(formatDateYMD(new Date()), (input) => createOneDaySchedule(input));
+document.getElementById('btnAddOneDaySchedule').addEventListener('click', (e) => {
+  pickDate(formatDateYMD(new Date()), (input) => createOneDaySchedule(input), e.currentTarget);
 });
 
 function createOneDaySchedule(input) {
@@ -5049,13 +5056,13 @@ document.getElementById('btnPrintWeekly').addEventListener('click', () => {
   openWeeklyPrint(monday);
 });
 
-document.getElementById('btnPrintWeeklyChoose').addEventListener('click', () => {
+document.getElementById('btnPrintWeeklyChoose').addEventListener('click', (e) => {
   // 달력에서 아무 날짜나 선택하면 그 주(월~금)를 인쇄
   pickDate(formatDateYMD(getMondayOf(new Date())), (input) => {
     const d = parseLocalDate(input);
     if (!d || isNaN(d.getTime())) { showToast('올바른 날짜 형식이 아닙니다'); return; }
     openWeeklyPrint(getMondayOf(d));
-  });
+  }, e.currentTarget);
 });
 
 function openWeeklyPrint(weekMonday) {
