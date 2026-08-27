@@ -2554,12 +2554,7 @@
 
     // === 회전 계산 상세 ===
     const myKey = `${grade}-${cls}`;
-    const activeSch = schedulesDoc.find(s => {
-      if (!s.startDate || !s.endDate) return false;
-      const start = _parseLocalDate(s.startDate); start.setHours(0,0,0,0);
-      const end   = _parseLocalDate(s.endDate);   end.setHours(23,59,59,999);
-      return today >= start && today <= end;
-    });
+    const activeSch = _findActiveScheduleFor(today);
 
     if (activeSch) {
       const myFloor = (activeSch.floors || []).find(f => (f.classes || []).includes(myKey));
@@ -2620,6 +2615,22 @@
 
   // 운영 기간 (2차 우선순위)
   let schedulesDoc = [];
+
+  // 주어진 날짜의 활성 운영 기간 — 겹치면 기간이 짧은(구체적인) 것 우선
+  // (월간 운영 안의 하루짜리 '특정일 전용 운영'이 그날만 최우선 적용됨)
+  function _findActiveScheduleFor(today) {
+    let best = null, bestLen = Infinity;
+    for (let i = 0; i < schedulesDoc.length; i++) {
+      const s = schedulesDoc[i];
+      if (!s.startDate || !s.endDate) continue;
+      const start = _parseLocalDate(s.startDate); start.setHours(0,0,0,0);
+      const end   = _parseLocalDate(s.endDate);   end.setHours(23,59,59,999);
+      if (today < start || today > end) continue;
+      const len = end - start;
+      if (len < bestLen) { bestLen = len; best = s; }
+    }
+    return best;
+  }
   db.collection('settings').doc('lunchSchedules').onSnapshot(snap => {
     schedulesDoc = (snap.exists && Array.isArray(snap.data().schedules)) ? snap.data().schedules : [];
     applyMyLunch();
@@ -2720,13 +2731,8 @@
 
     const override = overridesDoc[todayStr];
 
-    // 활성 운영 기간 찾기
-    const activeSch = schedulesDoc.find(s => {
-      if (!s.startDate || !s.endDate) return false;
-      const start = _parseLocalDate(s.startDate); start.setHours(0,0,0,0);
-      const end   = _parseLocalDate(s.endDate);   end.setHours(23,59,59,999);
-      return today >= start && today <= end;
-    });
+    // 활성 운영 기간 찾기 (겹치면 기간이 짧은 '특정일 전용 운영' 우선)
+    const activeSch = _findActiveScheduleFor(today);
 
     if (activeSch) {
       for (const floor of (activeSch.floors || [])) {

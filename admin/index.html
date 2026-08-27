@@ -1267,11 +1267,15 @@
       <div class="card" style="border:2px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,white);">
         <div class="card-title" style="color:#92400e;display:flex;justify-content:space-between;align-items:center;">
           <span>📅 급식실 운영 기간 관리</span>
-          <button class="btn btn-success btn-sm" id="btnAddSchedule">+ 운영 기간 추가</button>
+          <span style="display:flex;gap:6px;">
+            <button class="btn btn-secondary btn-sm" id="btnAddOneDaySchedule" title="수학여행·행사 등으로 그날만 층 구성·순서가 완전히 달라지는 날">📌 특정일 전용 운영</button>
+            <button class="btn btn-success btn-sm" id="btnAddSchedule">+ 운영 기간 추가</button>
+          </span>
         </div>
         <p style="font-size:0.85rem;color:#475569;margin-bottom:6px;line-height:1.6;">
           <strong>월별·학기별 다른 급식실 운영을 미리 등록</strong>해두면 시작·종료 날짜에 따라 자동 전환됩니다.<br>
-          각 운영 기간 안에 여러 층(2층/3층)을 설정하고, 층마다 학급 배정·시작학급·시간·간격을 입력하세요.
+          각 운영 기간 안에 여러 층(2층/3층)을 설정하고, 층마다 학급 배정·시작학급·시간·간격을 입력하세요.<br>
+          <span style="color:#92400e;">📌 <strong>특정일 전용 운영</strong>: 수학여행·행사 등으로 그날만 학년·층 구성이 완전히 달라지는 날 — 하루짜리 운영을 만들면 그날만 최우선 적용되고, 지나면 원래 운영으로 자동 복귀합니다.</span>
         </p>
         <div id="activeScheduleIndicator" style="font-size:0.85rem;font-weight:700;color:#15803d;margin-bottom:14px;"></div>
 
@@ -3423,7 +3427,15 @@ function getScheduleStatus(sch) {
   return 'active';
 }
 function getActiveSchedule() {
-  return schedulesData.find(s => getScheduleStatus(s) === 'active');
+  // 같은 날짜에 여러 운영 기간이 겹치면 기간이 짧은(구체적인) 것 우선
+  // → 월간 운영 안에 '특정일 전용 운영'(수학여행 등 하루짜리)을 넣으면 그날만 그것이 적용됨
+  const actives = schedulesData.filter(s => getScheduleStatus(s) === 'active');
+  if (!actives.length) return undefined;
+  return actives.reduce((best, s) => {
+    const len = parseLocalDate(s.endDate) - parseLocalDate(s.startDate);
+    const bestLen = parseLocalDate(best.endDate) - parseLocalDate(best.startDate);
+    return len < bestLen ? s : best;
+  });
 }
 
 // ===== 동일 함수 =====
@@ -3780,6 +3792,55 @@ function attachScheduleListeners() {
     });
   });
 }
+
+// ===== 📌 특정일 전용 운영 (하루짜리 — 수학여행 등) =====
+document.getElementById('btnAddOneDaySchedule').addEventListener('click', () => {
+  const input = prompt(
+    '특정일 전용 운영을 만들 날짜를 입력하세요 (YYYY-MM-DD)\n' +
+    '예: 2026-10-14 (수학여행일 등)\n\n' +
+    '그 날짜의 기존 운영 구성을 복사해서 시작하며,\n' +
+    '학급 배정·순서·시간을 자유롭게 바꾼 뒤 저장하면 그날만 적용됩니다.',
+    formatDateYMD(new Date())
+  );
+  if (!input) return;
+  const d = parseLocalDate(input);
+  if (!d || isNaN(d.getTime())) { showToast('올바른 날짜 형식이 아닙니다 (YYYY-MM-DD)'); return; }
+  const dateStr = formatDateYMD(d);
+  const dowKor = ['일','월','화','수','목','금','토'][d.getDay()];
+
+  // 이미 같은 날짜의 하루짜리 운영이 있으면 중복 방지
+  if (schedulesData.some(s => s.startDate === dateStr && s.endDate === dateStr)) {
+    showToast(`${dateStr}의 특정일 전용 운영이 이미 있습니다`); return;
+  }
+
+  // 그 날짜에 적용 중인 기존(월간) 운영을 복사 기반으로 사용
+  const base = getActiveScheduleFor(d);
+  let floors;
+  if (base) {
+    floors = JSON.parse(JSON.stringify(base.floors || []));
+    floors.forEach(f => {
+      // 시작 학급은 그 주 회전이 반영된 실제 값으로 고정
+      const rotated = getRotatedStartClass(f, base, d);
+      if (rotated) f.startClass = rotated;
+      f.weeklyRotation = false;   // 하루짜리는 순환 없음
+    });
+  } else {
+    floors = [
+      { name: '2층 급식실', classes: [], startClass: '', startTime: '12:30', interval: 2, duration: 30 },
+      { name: '3층 급식실', classes: [], startClass: '', startTime: '12:30', interval: 2, duration: 30 },
+    ];
+  }
+
+  schedulesData.push({
+    id: newScheduleId(),
+    name: `📌 ${d.getMonth()+1}/${d.getDate()}(${dowKor}) 특정일 운영`,
+    startDate: dateStr,
+    endDate: dateStr,
+    floors
+  });
+  renderSchedules();
+  showToast(`📌 ${dateStr} 특정일 전용 운영 생성됨 — 구성 수정 후 💾 저장하세요`);
+});
 
 // ===== 운영 기간 / 급식실 추가·삭제·복제 =====
 document.getElementById('btnAddSchedule').addEventListener('click', () => {
@@ -4958,11 +5019,19 @@ function formatDateYMD(d) {
 }
 
 function getActiveScheduleFor(date) {
-  return schedulesData.find(s => {
+  // 주간 인쇄용 — 그 주를 대표하는 운영 기간이므로 기간이 긴(월간) 것 우선
+  // (하루짜리 '특정일 전용 운영'이 주간표를 대체하지 않도록)
+  const matches = schedulesData.filter(s => {
     if (!s.startDate || !s.endDate) return false;
     const start = parseLocalDate(s.startDate); start.setHours(0,0,0,0);
     const end   = parseLocalDate(s.endDate);   end.setHours(23,59,59,999);
     return date >= start && date <= end;
+  });
+  if (!matches.length) return undefined;
+  return matches.reduce((best, s) => {
+    const len = parseLocalDate(s.endDate) - parseLocalDate(s.startDate);
+    const bestLen = parseLocalDate(best.endDate) - parseLocalDate(best.startDate);
+    return len > bestLen ? s : best;
   });
 }
 
