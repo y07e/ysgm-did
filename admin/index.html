@@ -3804,6 +3804,7 @@ function pickDate(defaultVal, onPick, anchorEl) {
       inp.style.left = Math.max(0, r.left) + 'px';
       inp.style.top = Math.min(window.innerHeight - 10, r.bottom) + 'px';
       inp.style.bottom = 'auto';
+      void inp.offsetHeight;  // 강제 리플로우 — 위치 반영 후 달력이 뜨도록 (첫 클릭에 옛 위치로 뜨는 버그 방지)
     }
     inp.value = defaultVal || '';
     inp.onchange = () => { if (inp.value) onPick(inp.value); };
