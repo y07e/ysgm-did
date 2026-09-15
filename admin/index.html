@@ -4810,10 +4810,23 @@ function _gbParseLines(lines) {
   //   · PDF 셀 안 줄바꿈으로 한 행이 두 줄로 쪼개진 경우 (아래 병합 단계)
   const nospace = s => (s || '').replace(/\s+/g, '');
   const headRe = /^(\d+)\s*학년\s*(\d+)\s*반\s+(\d+)\s*교시\s*/;
+  const headAnywhere = /(\d+)\s*학년\s*(\d+)\s*반\s+(\d+)\s*교시/;
+
+  // 0) 줄 정규화: 표 머리글("학급 변경수업 변경내용")이나 제목이 첫 데이터 행과 같은 높이로
+  //    붙어 한 줄이 된 경우 → 학급 패턴이 나오는 위치부터 잘라 데이터 행으로 취급
+  //    (맨 위 1-1반 행만 누락되던 원인 후보)
+  const normalized = lines.map(l => {
+    if (headRe.test(l)) return l;
+    const idx = l.search(headAnywhere);
+    if (idx > 0 && /학급|변경수업|변경내용|변경시간표|\d{4}\s*-\s*\d{2}/.test(l.slice(0, idx))) {
+      return l.slice(idx).trim();
+    }
+    return l;
+  });
 
   // 1) 줄 병합: 학급 행 뒤에 오는 '학급 접두어 없는' 줄은 이전 행의 이어짐(셀 줄바꿈)으로 간주
   const merged = [];
-  for (const l of lines) {
+  for (const l of normalized) {
     const isHead = headRe.test(l);
     const isMeta = /변경시간표|^학급\s+변경/.test(l) || /\d{4}\s*-\s*\d{2}\s*-\s*\d{2}/.test(l);
     if (!isHead && !isMeta && merged.length && headRe.test(merged[merged.length - 1])) {
