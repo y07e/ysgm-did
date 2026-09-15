@@ -1051,7 +1051,7 @@
         <p style="font-size:0.85rem;color:#475569;margin-bottom:14px;line-height:1.6;">
           <strong>기초 시간표는 그대로 두고</strong>, 선택한 날짜만 변경합니다.<br>
           다음 같은 요일에는 자동으로 원래 시간표로 돌아갑니다.<br>
-          <span style="color:#1e40af;">💡 컴시간 <strong>결보강 PDF</strong>를 업로드하면 전체 반 변경분을 한 번에 입력할 수 있습니다.</span>
+          <span style="color:#1e40af;">💡 컴시간 <strong>결보강 PDF</strong>를 업로드하면 전체 반 변경분을 한 번에 입력할 수 있습니다. <b>미리보기에서 '선택 항목 적용'을 누르면 바로 저장·반영</b>되므로 아래 '변경 저장'은 누르지 않아도 됩니다.</span>
         </p>
         <input type="file" id="gyebogangFile" accept="application/pdf,.pdf" style="display:none;">
 
@@ -4233,12 +4233,18 @@ function updateDailyDayBadge() {
   badge.style.color = (dow === 0 || dow === 6) ? '#dc2626' : '#1e40af';
 }
 
+// 편집 폼을 사용자가 손댔는지 (false면 DB 상태 그대로 → 변경 저장할 것이 없음)
+// ※ PDF 적용 후 갱신되지 않은 폼(기본 1-1반, 전부 '원래 수업')을 "변경 저장"하면
+//    그 반의 변경이 삭제되던 문제의 근본 원인 — 폼은 항상 DB와 동기화하고, 안 건드렸으면 저장 자체를 막음
+let _dailyDirty = false;
+
 async function loadDailyOverrideEditor() {
   const date  = readDailyDate();
   const grade = document.getElementById('dailyGrade').value;
   const cls   = document.getElementById('dailyClass').value;
   const grid  = document.getElementById('dailyPeriodGrid');
   const badge = document.getElementById('dailyDayBadge');
+  _dailyDirty = false;
 
   if (!date || !grade || !cls) {
     grid.innerHTML = '<div style="color:#94a3b8;text-align:center;padding:20px;">학년·반·날짜를 선택하세요</div>';
@@ -4320,6 +4326,7 @@ async function loadDailyOverrideEditor() {
 
     grid.querySelectorAll('.dp-select').forEach(sel => {
       sel.addEventListener('change', () => {
+        _dailyDirty = true;
         const period = sel.dataset.period;
         const custom = grid.querySelector(`.dp-custom[data-period="${period}"]`);
         const row    = grid.querySelector(`.daily-period-row[data-period="${period}"]`);
@@ -4336,6 +4343,7 @@ async function loadDailyOverrideEditor() {
     });
     grid.querySelectorAll('.dp-custom').forEach(inp => {
       inp.addEventListener('input', () => {
+        _dailyDirty = true;
         const row = grid.querySelector(`.daily-period-row[data-period="${inp.dataset.period}"]`);
         row.classList.toggle('overridden', !!inp.value.trim());
       });
@@ -4371,6 +4379,16 @@ document.getElementById('btnSaveDaily').addEventListener('click', async () => {
   const classKey = `${grade}-${cls}`;
   const docRef = db.collection('timetableOverrides').doc(date);
 
+  // 폼을 건드리지 않았으면 저장할 것이 없음 — 오래된 폼 상태로 DB를 덮어쓰는 사고 방지
+  if (!_dailyDirty) {
+    const saved = ((dailyOverridesAll[date] || {}).classes || {})[classKey];
+    const cnt = saved ? Object.keys(saved).length : 0;
+    showToast(cnt
+      ? `ℹ️ 바꾼 내용이 없습니다 — ${classKey}반은 이미 ${cnt}개 교시가 저장되어 전자칠판에 반영 중입니다`
+      : 'ℹ️ 바꾼 내용이 없습니다 (PDF로 적용한 변경은 이미 반영되어 있습니다)');
+    return;
+  }
+
   try {
     const snap = await docRef.get();
     const data = snap.exists ? snap.data() : { date, classes: {} };
@@ -4391,6 +4409,7 @@ document.getElementById('btnSaveDaily').addEventListener('click', async () => {
       const cnt = Object.keys(overrides).length;
       showToast(`✅ ${date} ${classKey}반 ${cnt}개 교시 변경 저장 — 전자칠판 즉시 반영`);
     }
+    _dailyDirty = false;
   } catch (e) {
     showToast('오류: ' + e.message);
   }
@@ -4609,7 +4628,13 @@ db.collection('timetableOverrides').onSnapshot(snap => {
   renderDailyOverridesList();
   updatePrintRangeOptions();
   if (typeof refreshDaySwapStatus === 'function') refreshDaySwapStatus();
+  // 편집 폼이 떠 있고 사용자가 손대지 않았으면 최신 DB 상태로 다시 그림
+  // (PDF 일괄 적용·다른 관리자 수정 후 폼이 옛 상태로 남아 있다가 덮어쓰는 것 방지)
+  const grid = document.getElementById('dailyPeriodGrid');
+  if (grid && grid.querySelector('.dp-select') && !_dailyDirty) loadDailyOverrideEditor();
 });
+// 변경 사유 입력도 '손댐'으로 간주
+document.getElementById('dailyReason').addEventListener('input', () => { _dailyDirty = true; });
 
 // 인쇄 기간 선택 옵션 갱신 (데이터에 있는 월만 동적 생성)
 function updatePrintRangeOptions() {
@@ -5022,9 +5047,12 @@ document.getElementById('gbApply').addEventListener('click', async () => {
     }
     if (!data.date) data.date = date;
     await docRef.set(data);
-    showToast(`✅ ${chosen.length}건 적용 완료 (${date})`);
+    showToast(`✅ ${chosen.length}건 적용 완료 (${date}) — 전자칠판에 바로 반영됨, 아래 '변경 저장'은 누르지 않아도 됩니다`);
     document.getElementById('gbModal').classList.remove('show');
     _gbParsed = null;
+    // 아래 편집 폼을 방금 저장한 상태로 갱신 (옛 폼 상태로 '변경 저장' 시 덮어쓰기 방지)
+    dailyOverridesAll[date] = data;
+    loadDailyOverrideEditor();
   } catch (err) {
     console.error(err);
     showToast('❌ 적용 실패: ' + err.message);
