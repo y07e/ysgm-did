@@ -4470,6 +4470,7 @@ function _ovDateGroupHtml(date, dStr, data, isOpen) {
       ${swapBadge}
       <span class="ov-date-count">${classEntries.length}개 반</span>
       ${data.reason ? `<span class="ov-date-reason">${escapeHtml(data.reason)}</span>` : '<span style="flex:1;"></span>'}
+      ${data.dayOverride ? `<button class="btn btn-secondary btn-sm" style="color:#7c3aed;border-color:#c4b5fd;" onclick="event.stopPropagation(); clearDaySwapFor('${date}')" title="이 날짜의 전체 학년 요일 변경을 해제">↩ 요일 변경 해제</button>` : ''}
       ${classEntries.length ? `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteDailyOverrideDate('${date}')" title="이 날짜의 학급별 변경을 모두 삭제">🗑 이 날 전체 삭제</button>` : ''}
     </div>
     <div class="ov-date-body">${items}</div>
@@ -4624,12 +4625,12 @@ document.getElementById('btnSaveDaySwap').addEventListener('click', async () => 
   } catch (e) { showToast('오류: ' + e.message); }
 });
 
-document.getElementById('btnClearDaySwap').addEventListener('click', async () => {
-  const date = document.getElementById('daySwapDate').value;
+// 특정 날짜의 요일 변경 해제 — 상단 카드 버튼과 목록 헤더 버튼이 공용
+window.clearDaySwapFor = async (date) => {
   if (!date) return showToast('날짜를 선택하세요');
   const doc = dailyOverridesAll[date];
   if (!doc || !doc.dayOverride) return showToast('해당 날짜에 요일 변경 설정이 없습니다');
-  if (!confirm(`${date}의 요일 변경(${DAY_LABEL[doc.dayOverride]})을 해제할까요?\n→ 원래 요일 시간표로 돌아갑니다.`)) return;
+  if (!confirm(`${date}의 요일 변경(${DAY_LABEL[doc.dayOverride]})을 해제할까요?\n→ 원래 요일 시간표로 돌아갑니다. (학급별 변경은 그대로 유지)`)) return;
   try {
     const ref = db.collection('timetableOverrides').doc(date);
     const hasClasses = doc.classes && Object.keys(doc.classes).length;
@@ -4638,8 +4639,11 @@ document.getElementById('btnClearDaySwap').addEventListener('click', async () =>
     } else {
       await ref.delete();  // 학급별 변경도 없으면 문서 자체 삭제
     }
-    showToast(`↩ ${date} 요일 변경 해제됨`);
+    showToast(`↩ ${date} 요일 변경 해제됨 — 전자칠판 즉시 반영`);
   } catch (e) { showToast('오류: ' + e.message); }
+};
+document.getElementById('btnClearDaySwap').addEventListener('click', () => {
+  clearDaySwapFor(document.getElementById('daySwapDate').value);
 });
 
 // 일일 변경 실시간 구독
