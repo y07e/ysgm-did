@@ -4470,6 +4470,7 @@ function _ovDateGroupHtml(date, dStr, data, isOpen) {
       ${swapBadge}
       <span class="ov-date-count">${classEntries.length}개 반</span>
       ${data.reason ? `<span class="ov-date-reason">${escapeHtml(data.reason)}</span>` : '<span style="flex:1;"></span>'}
+      ${classEntries.length ? `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteDailyOverrideDate('${date}')" title="이 날짜의 학급별 변경을 모두 삭제">🗑 이 날 전체 삭제</button>` : ''}
     </div>
     <div class="ov-date-body">${items}</div>
   </div>`;
@@ -4562,6 +4563,26 @@ window.deleteDailyOverride = async (date, classKey) => {
   if (Object.keys(data.classes).length === 0) await docRef.delete();
   else await docRef.set(data);
   showToast('삭제됨');
+};
+
+// 그날의 학급별 변경 전체 삭제 (요일 변경 설정은 별도 기능이므로 유지)
+window.deleteDailyOverrideDate = async (date) => {
+  const doc = dailyOverridesAll[date] || {};
+  const keys = Object.keys(doc.classes || {});
+  if (!keys.length) return showToast('삭제할 변경이 없습니다');
+  const [y, m, d] = date.split('-').map(Number);
+  const dow = ['일','월','화','수','목','금','토'][new Date(y, m-1, d).getDay()];
+  const swapNote = doc.dayOverride ? `\n(📆 요일 변경 설정은 유지됩니다 — 해제는 위 '전체 학년 요일 변경'에서)` : '';
+  if (!confirm(`${date} (${dow}요일) 일일 변경 ${keys.length}개 반을 모두 삭제하시겠습니까?\n→ 기초 시간표는 그대로 유지됩니다${swapNote}`)) return;
+  try {
+    const docRef = db.collection('timetableOverrides').doc(date);
+    if (doc.dayOverride) {
+      await docRef.update({ classes: {}, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    } else {
+      await docRef.delete();
+    }
+    showToast(`✅ ${date} 일일 변경 ${keys.length}개 반 모두 삭제 — 전자칠판 즉시 반영`);
+  } catch (e) { showToast('오류: ' + e.message); }
 };
 
 // ===== 📆 전체 학년 요일 변경 =====
