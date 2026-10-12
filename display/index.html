@@ -1602,6 +1602,217 @@
       .emergency-title   { font-size: 1.8rem; }
       .emergency-message { font-size: 1rem; }
     }
+
+    /* ===== 📝 시험 날 전체 화면 (고사 관리 연동) — 기존 학급 화면과 같은 남색 카드 톤 ===== */
+    .exam-screen { display: none; }
+    body.exam-mode .main,
+    body.exam-mode .dday-bar { display: none !important; }
+    body.exam-mode .exam-screen {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px; padding: 14px;
+      flex: 1; min-height: 0; overflow: hidden;
+    }
+    .ex-card {
+      background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+      display: flex; flex-direction: column;
+      overflow: hidden; min-width: 0; min-height: 0;
+      padding: 1.6vh 1.6vw 1.4vh;
+    }
+    .ex-head {
+      display: flex; align-items: center; gap: 0.6em; flex-wrap: nowrap;
+      font-size: 2.5vh; padding-bottom: 0.7em; margin-bottom: 0.8em;
+      border-bottom: 1px solid #334155; white-space: nowrap; overflow: hidden;
+    }
+    .ex-head-title { font-weight: 800; color: #cbd5e1; font-size: 1.15em; }
+    .ex-head-sub { margin-left: auto; color: #64748b; font-size: 0.8em; overflow: hidden; text-overflow: ellipsis; }
+    .ex-pill { border-radius: 999px; padding: 0.15em 0.75em; font-weight: 800; font-size: 0.9em; }
+    .ex-pill.date { background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); }
+    .ex-pill.day  { background: linear-gradient(135deg, #f59e0b, #ef4444); color: white; }
+    .ex-pill.cls  { color: white; background: linear-gradient(135deg, #3b82f6, #8b5cf6); }
+    .ex-pill.cls.grade-2 { background: linear-gradient(135deg, #10b981, #06b6d4); }
+    .ex-pill.cls.grade-3 { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+    .ex-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .ex-fit { width: 100%; height: 100%; }
+    .ex-foot {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.6em;
+      font-size: 2.8vh; height: 2.4em; flex-shrink: 0; padding-top: 0.5em; margin-top: 0.5em;
+      border-top: 1px dashed #334155; color: #93c5fd; font-weight: 700;
+      white-space: nowrap; overflow: hidden;
+    }
+    .ex-foot-info { display: flex; align-items: center; gap: 0.35em; min-width: 0; overflow: hidden; }
+    .ex-foot b { color: #e0f2fe; margin: 0 0.2em; }
+    .ex-nx { background: #0f172a; border: 1px solid #334155; border-radius: 0.4em; padding: 0.05em 0.55em; margin-left: 0.35em; color: #e2e8f0; }
+    .ex-nx.study { color: #64748b; }
+
+    /* 시정표 행 */
+    .ex-rows { display: flex; flex-direction: column; gap: 0.14em; }
+    .ex-row { flex: 1; display: flex; flex-direction: column; justify-content: center;
+      background: #0f172a; border: 2px solid #1e293b; border-radius: 0.2em; padding: 0.12em 0.35em; transition: background-color 0.3s, border-color 0.3s; }
+    .ex-row-main { display: flex; align-items: center; gap: 0.3em; white-space: nowrap; }
+    .ex-badge {
+      flex-shrink: 0; text-align: center; line-height: 1;
+      font-size: 0.55em; font-weight: 900; color: #94a3b8;
+      background: #1e293b; border-radius: 0.35em; padding: 0.35em 0.4em; min-width: 1.9em;
+    }
+    .ex-badge small { display: block; font-size: 0.42em; margin-top: 0.25em; font-weight: 700; }
+    .ex-info { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+    .ex-subj { font-size: 0.8em; font-weight: 900; color: #f1f5f9; letter-spacing: -0.02em; }
+    /* 과목명 폭을 4글자 기준으로 통일 — 2·3글자 과목은 글자 사이를 벌려 같은 폭으로 (5글자 이상은 자연 폭) */
+    .ex-sname { display: inline-flex; justify-content: space-between; min-width: 4em; vertical-align: middle; }
+    .ex-sname i { font-style: normal; }
+    .ex-code {
+      font-style: normal; font-size: 0.6em; font-weight: 800; color: #cbd5e1;
+      background: #1e293b; border: 2px solid #475569; border-radius: 0.3em; padding: 0.02em 0.35em;
+      margin-left: 0.4em; vertical-align: 0.12em; font-variant-numeric: tabular-nums;
+    }
+    .ex-time { font-size: 0.4em; color: #cbd5e1; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 0.12em; }
+    .ex-time small { font-size: 0.75em; color: #94a3b8; font-weight: 600; margin-left: 0.4em; }
+    .ex-row.now { background: #065f46; border-color: #10b981; box-shadow: 0 0 0.4em rgba(16,185,129,0.35); }
+    .ex-row.now .ex-badge { background: rgba(255,255,255,0.15); color: #ecfdf5; }
+    .ex-row.now .ex-time, .ex-row.now .ex-time small, .ex-row.now .ex-code { color: #d1fae5; border-color: #6ee7b7; }
+    .ex-row.now .ex-code { background: rgba(255,255,255,0.12); }
+    .ex-row.done { opacity: 0.45; }
+    .ex-row.study .ex-subj { color: #64748b; font-weight: 700; }
+
+    /* 결시 현황 — 위: 재적·결시·응시 가로 3칸 / 아래: 결시자·공번 큰 칸 */
+    .ex-rbody { display: flex; flex-direction: column; gap: 0.14em; }
+    .ex-tiles { display: flex; flex-direction: column; gap: 0.12em; flex: 1.45 1 0; min-height: 0; }
+    .ex-tile {
+      flex: 1; min-height: 0; display: flex; flex-direction: row; align-items: center; justify-content: space-between;
+      background: #0f172a; border-radius: 0.2em; padding: 0 0.45em 0 0.4em;
+      border: 2px solid #1e293b; border-left: 0.09em solid #475569;
+    }
+    .ex-tl { font-size: 0.42em; font-weight: 800; color: #94a3b8; letter-spacing: 0.2em; }
+    .ex-tn { font-size: 0.82em; font-weight: 900; color: #f1f5f9; font-variant-numeric: tabular-nums; line-height: 1.1; white-space: nowrap; }
+    .ex-tn small { font-size: 0.38em; color: #94a3b8; font-weight: 700; margin-left: 0.12em; }
+    .ex-tile.t-enroll { border-left-color: #38bdf8; }
+    .ex-tile.t-absent { border-left-color: #64748b; }
+    .ex-tile.t-absent .ex-tn { color: #94a3b8; }
+    .ex-tile.t-absent.has { border-left-color: #ef4444; background: rgba(127,29,29,0.35); }
+    .ex-tile.t-absent.has .ex-tn { color: #f87171; }
+    .ex-tile.t-take { border-left-color: #10b981; }
+    .ex-tile.t-take .ex-tn { color: #6ee7b7; }
+    .ex-abs {
+      flex: 1 1 0; min-height: 0; overflow: hidden;
+      background: #0f172a; border: 2px solid #1e293b; border-radius: 0.2em;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ex-abs-list { padding: 0.2em 0.5em; display: flex; flex-direction: column; gap: 0.25em; max-width: 100%; }
+    .ex-abs-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3em; }
+    .ex-abs-label { font-weight: 900; color: #94a3b8; margin-right: 0.2em; }
+    .ex-abs-label.ab { color: #fca5a5; }
+    .ex-vac { background: #1e293b; border: 2px dashed #64748b; color: #e2e8f0; border-radius: 999px; padding: 0.02em 0.65em; font-weight: 800; }
+    .ex-chips-label { color: #fca5a5; font-weight: 800; margin-right: 0.1em; }
+    .ex-chip {
+      display: inline-flex; align-items: baseline; gap: 0.3em;
+      background: rgba(127,29,29,0.35); border: 1px solid rgba(239,68,68,0.5);
+      border-radius: 999px; padding: 0.02em 0.65em; color: #fecaca; font-weight: 800; white-space: nowrap;
+    }
+    .ex-chip b { color: #f87171; font-weight: 900; }
+    .ex-chip small { color: #fca5a5; font-size: 0.75em; font-weight: 500; }
+    .ex-chip.off { opacity: 0.4; }
+    .ex-none { color: #64748b; font-weight: 700; }
+    .ex-reason { font-style: normal; font-size: 0.85em; font-weight: 800; border-radius: 0.4em; padding: 0.02em 0.4em; background: #475569; color: #f1f5f9; }
+    .ex-reason.r-illness { background: #b45309; color: #fffbeb; }
+    .ex-reason.r-unauthorized { background: #b91c1c; color: #fef2f2; }
+    .ex-reason.r-approved { background: #1d4ed8; color: #eff6ff; }
+    .ex-allin { color: #6ee7b7; font-weight: 800; }
+    .ex-warn { color: #fbbf24; font-size: 0.85em; }
+    .ex-input-btn {
+      margin-left: auto; flex-shrink: 0; font-family: inherit; font-size: 0.8em; font-weight: 700;
+      color: #cbd5e1; background: #0f172a;
+      border: 1px solid #334155; border-radius: 0.5em;
+      padding: 0.35em 0.9em; cursor: pointer;
+    }
+    .ex-input-btn:active { background: #334155; color: #f1f5f9; }
+    @media (max-width: 899px) {
+      body.exam-mode .exam-screen { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; overflow-y: auto; }
+    }
+
+    /* ===== ✏️ 교실 결시자 입력 모달 ===== */
+    .abs-modal {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9500;
+      background: rgba(2, 6, 23, 0.78);
+      align-items: center; justify-content: center;
+    }
+    .abs-modal.show { display: flex; }
+    .abs-box {
+      width: 94vw; max-width: 980px; max-height: 94vh; overflow-y: auto;
+      background: #1e293b; border: 1px solid #334155; border-radius: 16px;
+      padding: 20px 24px; color: #f1f5f9;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .abs-h { font-size: 1.4rem; font-weight: 900; color: #38bdf8; margin-bottom: 6px; }
+    .abs-h small { font-size: 0.9rem; color: #94a3b8; font-weight: 500; }
+    .abs-err { min-height: 1.4em; font-size: 1rem; font-weight: 700; color: #fbbf24; margin-bottom: 4px; }
+    .abs-label { font-size: 0.95rem; color: #94a3b8; font-weight: 700; margin: 10px 0 6px; }
+    .abs-pin-dots { font-size: 2.2rem; letter-spacing: 0.3em; text-align: center; color: #f1f5f9; min-height: 1.4em; }
+    .abs-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 420px; margin: 8px auto 0; }
+    .abs-key, .abs-num, .abs-chip, .abs-btn {
+      font-family: inherit; cursor: pointer; border-radius: 10px;
+      border: 1px solid #334155; background: #0f172a; color: #f1f5f9; font-weight: 700;
+    }
+    .abs-key { font-size: 1.6rem; padding: 16px 0; }
+    .abs-key.ok { background: #1d4ed8; border-color: #3b82f6; }
+    .abs-key:active, .abs-num:active, .abs-chip:active { background: #334155; }
+    .abs-nums { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+    .abs-num { font-size: 1.15rem; padding: 8px 0; line-height: 1.15; }
+    .abs-num small { display: block; font-size: 0.68rem; font-weight: 500; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
+    .abs-num.on small { color: #d1fae5; }
+    .abs-num.on, .abs-chip.on { background: #065f46; border-color: #10b981; color: #ecfdf5; }
+    .abs-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .abs-chip { font-size: 1.05rem; padding: 10px 16px; }
+    .abs-chip.ghost { color: #93c5fd; }
+    .abs-row2 { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
+    .abs-input {
+      width: 100%; font-family: inherit; font-size: 1.15rem; padding: 10px 12px;
+      background: #0f172a; color: #f1f5f9; border: 1px solid #334155; border-radius: 10px;
+    }
+    .abs-foot { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+    .abs-btn { font-size: 1.1rem; padding: 12px 24px; background: #1d4ed8; border-color: #3b82f6; }
+    .abs-btn.ghost { background: #0f172a; border-color: #334155; color: #cbd5e1; }
+    .abs-btn.danger { background: #7f1d1d; border-color: #ef4444; }
+    .abs-btn.sm { font-size: 0.9rem; padding: 6px 12px; }
+    .abs-list { display: flex; flex-direction: column; gap: 6px; }
+    .abs-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: #0f172a; border: 1px solid #334155; border-radius: 10px;
+      padding: 8px 12px; font-size: 1rem;
+    }
+    .abs-item b { color: #fca5a5; }
+    .abs-empty { color: #64748b; font-size: 0.95rem; }
+    .abs-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .abs-sec { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 4px 14px 12px; margin-top: 8px; }
+    .abs-sec.new { border-color: #1d4ed8; }
+    .abs-hint { font-weight: 500; color: #64748b; font-size: 0.85rem; }
+    .abs-cnt { background: #7f1d1d; color: #fecaca; border-radius: 999px; padding: 1px 10px; font-size: 0.85rem; margin-left: 4px; }
+    .abs-stu { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+      background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 8px 12px; }
+    .abs-stu-name { font-size: 1.1rem; font-weight: 700; }
+    .abs-stu-name b { color: #fca5a5; }
+    .abs-stu-name small { color: #94a3b8; font-size: 0.85rem; margin-left: 4px; }
+    .abs-stu-ps { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .abs-pchip { font-family: inherit; cursor: pointer; font-size: 0.95rem; font-weight: 700; color: #fecaca;
+      background: rgba(127,29,29,0.45); border: 1px solid #ef4444; border-radius: 999px; padding: 6px 12px; }
+    .abs-pchip i { font-style: normal; color: #f87171; margin-left: 4px; }
+    .abs-num.reg { border-color: #ef4444; color: #fca5a5; }
+    .abs-num.reg.on { color: #ecfdf5; }
+    .abs-sel { display: flex; flex-direction: column; gap: 6px; }
+    .abs-sel-row { display: grid; grid-template-columns: 4em 1fr 10em auto; gap: 8px; align-items: center; font-size: 1.1rem; }
+    .abs-sel-row b { color: #6ee7b7; }
+    .abs-reason { padding: 9px 8px; }
+    .abs-btn.big { font-size: 1.3rem; padding: 14px 34px; background: #059669; border-color: #10b981; }
+    .abs-btn.dim { opacity: 0.5; }
+    .abs-info { font-size: 1rem; color: #94a3b8; margin: 2px 0 4px; }
+    .abs-info b { color: #e2e8f0; }
+    .abs-num.vac { opacity: 0.35; cursor: default; border-style: dashed; }
+    .abs-num.vacsel { background: #334155; border: 2px dashed #94a3b8; color: #cbd5e1; }
+    .abs-stepper { display: flex; align-items: center; gap: 16px; }
+    .abs-stepper .abs-key { width: 72px; padding: 10px 0; }
+    .abs-count { font-size: 2.4rem; font-weight: 900; min-width: 3.5em; text-align: center; }
+    .abs-count small { font-size: 1rem; color: #94a3b8; margin-left: 4px; }
+    .ex-input-btn.morning { background: #059669; border-color: #10b981; color: white; animation: changedPulse 2s ease-in-out infinite; }
   </style>
 </head>
 <body>
@@ -1686,6 +1897,14 @@
   </div>
 </main>
 
+<!-- 📝 시험 날 전체 화면 (고사 관리 연동) — body.exam-mode 일 때만 표시 -->
+<section class="exam-screen" id="examScreen"></section>
+
+<!-- ✏️ 교실 결시자 입력 모달 -->
+<div class="abs-modal" id="absModal">
+  <div class="abs-box" id="absBody"></div>
+</div>
+
 <!-- BREAK BAR -->
 <div class="break-bar" id="breakBar">
   <div class="break-bar-title">쉬는 시간</div>
@@ -1709,6 +1928,7 @@
 <script src="../config.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 
 <script>
   // ============================================================
@@ -1989,6 +2209,21 @@
   function getPeriodState(now) {
     const cur = now.getHours()*60 + now.getMinutes();
 
+    // 📝 시험 날: 교시·쉬는 시간을 시험 시정(평가 관리 데이터) 기준으로 판단
+    if (examState && examState.today.length) {
+      const sl = examState.today;
+      for (let i = 0; i < sl.length; i++)
+        if (cur >= toMin(sl[i].start_time) && cur < toMin(sl[i].end_time))
+          return { type:'class', period: sl[i].period };
+      if (cur >= toMin(myLunch.start) && cur < toMin(myLunch.end))
+        return { type:'lunch', end: myLunch.end };
+      for (let i = 0; i < sl.length - 1; i++) {
+        if (cur >= toMin(sl[i].end_time) && cur < toMin(sl[i+1].start_time))
+          return { type:'break', nextPeriod: sl[i+1].period, nextStart: sl[i+1].start_time };
+      }
+      return { type:'other' };
+    }
+
     for (const p of classTimes)
       if (cur >= toMin(p.start) && cur < toMin(p.end))
         return { type:'class', period: p.period };
@@ -2144,7 +2379,8 @@
   // ============================================================
   function updatePeriodState(now) {
     const dayIdx = getDisplayDayIdx();
-    renderPeriods(dayIdx);
+    if (examState) renderExamScreen();   // 📝 시험 날: 큰 화면 갱신(변화 있을 때만 DOM 교체)
+    else renderPeriods(dayIdx);
 
     const state = getPeriodState(now);
     const cur   = now.getHours()*60 + now.getMinutes();
@@ -2163,7 +2399,9 @@
     const lunchEndMin   = toMin(myLunch.end);
     const minsToLunch   = lunchStartMin - cur;
 
-    if (state.type === 'break') {
+    if (state.type === 'break' && examState) {
+      // 📝 시험 날: 종소리와 어긋날 수 있어 쉬는 시간 카운트다운 막대 표시 안 함
+    } else if (state.type === 'break') {
       const remaining = toMin(state.nextStart) - cur;
       document.getElementById('breakBarInfo').textContent = `${state.nextPeriod}교시 시작까지 ${remaining}분`;
       breakBar.classList.add('active');
@@ -2486,6 +2724,588 @@
       renderPeriods(getDisplayDayIdx());
     }
   }
+
+  // ============================================================
+  // 📝 시험 기간 모드 — 평가 관리(exam-manager, Supabase)에서 읽기 전용으로 가져옴
+  //   · settings/examLink      { enabled, url, anonKey, showNames }
+  //   · settings/classEnrollment { counts: { "1-1": 28, ... } }  (재적)
+  //   · 시험 날 + 이 학년 시험이 있을 때만 시간표 칸을 시험 보드로 대체
+  //   ※ Chrome 69 호환 유지 (옵셔널 체이닝·?? 금지)
+  // ============================================================
+  var examLink = null;
+  var examEnroll = {};
+  var examVacant = [];      // 공번 (전출 등으로 비어 있는 번호) — classEnrollment/{학년-반}.vacant
+  var examState = null;   // { name, dayNo, totalDays, today:[slot], nextDate, next:[slot], absents:[] }
+  var examTimer = null;
+
+  function _ymd(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function examFetch(path) {
+    const base = String(examLink.url).replace(/\/+$/, '');
+    return fetch(base + '/rest/v1/' + path, {
+      headers: { apikey: examLink.anonKey, Authorization: 'Bearer ' + examLink.anonKey },
+      cache: 'no-store'
+    }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+  }
+
+  function setExamState(st) {
+    examState = st;
+    document.body.classList.toggle('exam-mode', !!st);
+    _examLastHtml = '';          // 강제 재렌더
+    renderExamScreen();
+    if (!st) renderPeriods(getDisplayDayIdx());
+  }
+
+  function scheduleExamPoll(ms) {
+    if (examTimer) clearTimeout(examTimer);
+    examTimer = setTimeout(refreshExam, ms);
+  }
+
+  async function refreshExam() {
+    if (!examLink || !examLink.enabled || !examLink.url || !examLink.anonKey) {
+      setExamState(null);
+      return;
+    }
+    // 시범 운영: pilotClasses 가 지정되어 있으면 그 학급만 시험 화면 (비어 있으면 전체)
+    const pilot = Array.isArray(examLink.pilotClasses) ? examLink.pilotClasses : [];
+    if (pilot.length && pilot.indexOf(grade + '-' + cls) === -1) { setExamState(null); return; }
+    const today = _ymd(new Date());
+    try {
+      const exams = await examFetch('exams?select=id,name,start_date,end_date&is_active=eq.true'
+        + '&start_date=lte.' + today + '&end_date=gte.' + today + '&order=start_date.desc&limit=1');
+      if (!exams.length) { setExamState(null); scheduleExamPoll(15*60*1000); return; }
+      const ex = exams[0];
+      const scheds = await examFetch('exam_schedules?select=id,exam_date,period,subject,start_time,end_time'
+        + '&exam_id=eq.' + ex.id + '&grade=eq.' + grade + '&order=exam_date.asc,period.asc');
+      const todaySlots = scheds.filter(s => s.exam_date === today);
+      if (!todaySlots.length) { setExamState(null); scheduleExamPoll(15*60*1000); return; }
+      const dates = [];
+      scheds.forEach(s => { if (dates.indexOf(s.exam_date) === -1) dates.push(s.exam_date); });
+      const nextDate = dates.filter(d => d > today)[0] || '';
+      const ids = todaySlots.filter(s => s.subject !== '자습').map(s => s.id);
+      let absents = [];
+      if (ids.length) {
+        absents = await examFetch('absent_students?select=id,exam_schedule_id,student_number,student_name,reason'
+          + '&exam_schedule_id=in.(' + ids.join(',') + ')&grade=eq.' + grade + '&class_number=eq.' + cls
+          + '&order=student_number.asc');
+      }
+      setExamState({
+        name: ex.name,
+        dayNo: dates.indexOf(today) + 1,
+        totalDays: dates.length,
+        today: todaySlots,
+        nextDate: nextDate,
+        next: nextDate ? scheds.filter(s => s.exam_date === nextDate) : [],
+        absents: absents
+      });
+      scheduleExamPoll(60*1000);   // 시험 날은 1분마다 결시 현황 갱신
+    } catch (e) {
+      // 일시적 네트워크 오류 — 기존 화면 유지(시험 중 일반 시간표로 튀지 않게) 후 재시도
+      console.warn('[시험 연동] 불러오기 실패:', e.message);
+      scheduleExamPoll(2*60*1000);
+    }
+  }
+
+  // 고사 관리의 기본 과목코드 (exam-manager src/lib/constants.ts DEFAULT_SUBJECT_CODES와 동일)
+  var EXAM_SUBJECT_CODES = { '국어':'01','도덕':'02','사회':'03','수학':'04','과학':'05','기술가정':'06','체육':'07',
+    '음악':'08','미술':'09','영어':'10','정보':'11','한문':'12','중국어':'13','일본어':'14','역사':'15' };
+  function _subjCode(subj) {
+    const custom = (examLink && examLink.subjectCodes) || {};
+    const s = String(subj || '').trim();
+    if (custom[s]) return custom[s];
+    if (EXAM_SUBJECT_CODES[s]) return EXAM_SUBJECT_CODES[s];
+    const base = s.replace(/\s*\d+$/, '');      // "국어1" → "국어"
+    return custom[base] || EXAM_SUBJECT_CODES[base] || '';
+  }
+  var EXAM_REASONS = { illness:'질병결석', unauthorized:'미인정결석', approved:'인정결석', other:'기타결석' };
+  var _examLastHtml = '';
+
+  // 결시 수를 보여줄 '기준 교시' — 시험 중이면 그 교시, 쉬는 시간이면 다음 교시, 다 끝나면 마지막 교시
+  function _examBasisSlot(slots, cur) {
+    if (!slots.length) return null;
+    for (let i = 0; i < slots.length; i++) if (cur < toMin(slots[i].end_time)) return slots[i];
+    return slots[slots.length - 1];
+  }
+
+  // 과목명 글자를 하나씩 나눠 4글자 폭에 고르게 배치 (2~4글자 모두 같은 폭 → 과목 코드 위치 일치)
+  function _spreadName(name) {
+    const chars = Array.from(String(name || ''));
+    if (chars.length > 4 || chars.length < 2) return escapeHtml(name);   // 4글자도 칸 끝까지 맞춤 (코드 간격 통일)
+    return chars.map(ch => `<i>${escapeHtml(ch)}</i>`).join('');
+  }
+
+  function renderExamScreen() {
+    const box = document.getElementById('examScreen');
+    if (!box) return;
+    const st = examState;
+    if (!st) { box.innerHTML = ''; _examLastHtml = ''; return; }
+    const now = new Date();
+    const cur = now.getHours()*60 + now.getMinutes();
+    const state = getPeriodState(now);
+    const examSlots = st.today.filter(s => s.subject !== '자습');
+    const basis = _examBasisSlot(examSlots, cur);
+
+    // ── 왼쪽: 시험 시정표 ──
+    const p = st.today[0].exam_date.split('-').map(Number);
+    const dw = ['일','월','화','수','목','금','토'][new Date(p[0], p[1]-1, p[2]).getDay()];
+    const rows = st.today.map(s => {
+      const study = s.subject === '자습';
+      const code = study ? '' : _subjCode(s.subject);
+      const sMin = toMin(s.start_time), eMin = toMin(s.end_time);
+      let c = 'ex-row' + (study ? ' study' : '');
+      // 상태는 색으로만: 진행 중 = 초록 강조, 종료 = 희미하게 (배지·남은 시간 표시 없음)
+      if (cur >= sMin && cur < eMin) c += ' now';
+      else if (cur >= eMin) c += ' done';
+      const dur = (sMin >= 0 && eMin > sMin) ? (eMin - sMin) : 0;
+      return `<div class="${c}">
+        <div class="ex-row-main">
+          <span class="ex-badge">${s.period}<small>교시</small></span>
+          <span class="ex-info">
+            <span class="ex-subj"><span class="ex-sname">${_spreadName(s.subject)}</span>${code ? `<em class="ex-code">${escapeHtml(code)}</em>` : ''}</span>
+            <span class="ex-time">${escapeHtml(s.start_time)} ~ ${escapeHtml(s.end_time)}${dur ? `<small>(${dur}분)</small>` : ''}</span>
+          </span>
+        </div>
+      </div>`;
+    }).join('');
+    let next = '';
+    if (st.nextDate && st.next.length) {
+      const q = st.nextDate.split('-').map(Number);
+      const qw = ['일','월','화','수','목','금','토'][new Date(q[0], q[1]-1, q[2]).getDay()];
+      next = `📌 다음 시험 <b>${q[1]}/${q[2]}(${qw})</b> ${st.next.map(s => `<span class="ex-nx${s.subject === '자습' ? ' study' : ''}">${escapeHtml(s.subject)}</span>`).join('')}`;
+    } else if (st.dayNo === st.totalDays) {
+      next = '🎉 오늘이 시험 마지막 날입니다. 끝까지 힘내세요!';
+    }
+
+    // ── 오른쪽: 재적 · 결시 · 응시 ──
+    const enroll = parseInt(examEnroll[grade + '-' + cls], 10);
+    const hasEnroll = enroll > 0;
+    const absentCnt = basis ? st.absents.filter(a => a.exam_schedule_id === basis.id).length : 0;
+    // 결시자 — 학생별로 묶어 표시 (사유는 화면에 표시하지 않음)
+    const byStu = {}; const order = [];
+    st.absents.forEach(a => {
+      const slot = examSlots.filter(s => s.id === a.exam_schedule_id)[0];
+      if (!slot) return;
+      const k = String(a.student_number);
+      if (!byStu[k]) { byStu[k] = { no: a.student_number, name: a.student_name, reasons: [], periods: [] }; order.push(k); }
+      if (byStu[k].periods.indexOf(slot.period) === -1) byStu[k].periods.push(slot.period);
+      if (a.reason && byStu[k].reasons.indexOf(a.reason) === -1) byStu[k].reasons.push(a.reason);
+    });
+    // 정렬: 지금(기준) 교시 결시자 먼저 → 번호순
+    const inBasis = k => !basis || byStu[k].periods.indexOf(basis.period) !== -1;
+    order.sort((x, y) => (inBasis(y) - inBasis(x)) || (byStu[x].no - byStu[y].no));
+    const showNames = examLink.showNames !== false;
+    const chips = order.map(k => {
+      const b = byStu[k];
+      const pTxt = b.periods.length === examSlots.length ? '전 교시' : b.periods.sort((x, y) => x - y).join('·') + '교시';
+      // 결시 사유 (교시마다 다르면 모두 표시)
+      const rTxt = b.reasons.map(r => EXAM_REASONS[r] || '').filter(Boolean).join('·');
+      // 지금(기준) 교시에 결시가 아닌 학생은 흐리게 — 감독 교사가 이번 교시 결시자만 바로 옮겨 적도록
+      const off = basis && b.periods.indexOf(basis.period) === -1;
+      return `<span class="ex-chip${off ? ' off' : ''}"><b>${b.no}</b>${showNames && b.name ? escapeHtml(b.name) : '번'}${rTxt ? `<em class="ex-reason r-${b.reasons[0]}">${rTxt}</em>` : ''}<small>${pTxt}</small></span>`;
+    }).join('');
+
+    const html = `
+      <div class="ex-card ex-left">
+        <div class="ex-head">
+          <span class="ex-head-title">📝 오늘의 시험 시정표</span>
+          <span class="ex-pill date">${p[1]}/${p[2]} (${dw})</span>
+          <span class="ex-pill day">${st.dayNo}일차 / ${st.totalDays}일</span>
+          <span class="ex-head-sub">${escapeHtml(st.name)}</span>
+        </div>
+        <div class="ex-body"><div class="ex-fit ex-rows">${rows}</div></div>
+        <div class="ex-foot">${next || '&nbsp;'}</div>
+      </div>
+      <div class="ex-card ex-right">
+        <div class="ex-head">
+          <span class="ex-head-title">📋 결시 현황</span>
+          <span class="ex-pill cls grade-${grade}">${grade}학년 ${cls}반</span>
+          ${basis && examSlots.length > 1 ? `<span class="ex-head-sub">${basis.period}교시 ${escapeHtml(basis.subject)} 기준</span>` : ''}
+        </div>
+        <div class="ex-body"><div class="ex-fit ex-rbody">
+          <div class="ex-tiles">
+            <div class="ex-tile t-enroll"><span class="ex-tl">재적</span><span class="ex-tn">${hasEnroll ? enroll : '-'}<small>명</small></span></div>
+            <div class="ex-tile t-absent${absentCnt ? ' has' : ''}"><span class="ex-tl">결시</span><span class="ex-tn">${absentCnt}<small>명</small></span></div>
+            <div class="ex-tile t-take"><span class="ex-tl">응시</span><span class="ex-tn">${hasEnroll ? enroll - absentCnt : '-'}<small>명</small></span></div>
+          </div>
+          <div class="ex-abs"><div class="ex-abs-list">
+            <div class="ex-abs-line"><span class="ex-abs-label ab">결시자</span>${order.length ? chips : '<span class="ex-allin">✨ 전원 응시</span>'}</div>
+            ${examVacant.length
+              ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span>${examVacant.map(n => `<span class="ex-vac">${n}</span>`).join('')}</div>`
+              : (hasEnroll ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span><span class="ex-none">없음</span></div>` : '')}
+          </div></div>
+        </div></div>
+        <div class="ex-foot">
+          <span class="ex-foot-info">${hasEnroll ? '' : '<span class="ex-warn">※ 재적 미입력 — 결시자 입력 &gt; 재적·공번 설정</span>'}</span>
+          <button class="ex-input-btn${examSlots.length && cur < toMin(examSlots[0].start_time) ? ' morning' : ''}" onclick="openAbsentInput()">✏️ ${examSlots.length && cur < toMin(examSlots[0].start_time) ? '아침 조회 결시 입력' : '결시자 입력'}</button>
+        </div>
+      </div>`;
+
+    if (html === _examLastHtml) return;    // 변화 없으면 DOM 유지 (1초마다 호출됨)
+    _examLastHtml = html;
+    box.innerHTML = html;
+    fitExamCards();
+  }
+
+  // 각 카드 글자를 카드 크기에 맞춰 최대한 크게 (vh 기준 시작 → 넘치면 줄임)
+  function fitExamCards() {
+    const bodies = document.querySelectorAll('#examScreen .ex-body');
+    const sizes = [];
+    for (let i = 0; i < bodies.length; i++) {
+      const body = bodies[i];
+      const fit = body.querySelector('.ex-fit');
+      let size = Math.max(window.innerHeight, 300) * 0.13;   // 시작: 화면 높이의 13% → 넘치면 줄임
+      fit.style.fontSize = size + 'px';
+      let guard = 0;
+      const lines = fit.querySelectorAll('.ex-row-main, .ex-tile');
+      const overflow = () => {
+        if (fit.scrollHeight > body.clientHeight || fit.scrollWidth > body.clientWidth) return true;
+        for (let k = 0; k < lines.length; k++) if (lines[k].scrollWidth > lines[k].clientWidth + 1) return true;
+        return false;
+      };
+      while (overflow() && size > 10 && guard < 90) {
+        size *= 0.95; fit.style.fontSize = size + 'px'; guard++;
+      }
+      sizes.push(size);
+    }
+    // 좌우 글자 크기 기준을 같게 — 작은 쪽에 맞춰 두 칸의 균형 유지
+    if (sizes.length === 2) {
+      const m = Math.min(sizes[0], sizes[1]);
+      for (let i = 0; i < bodies.length; i++) bodies[i].querySelector('.ex-fit').style.fontSize = m + 'px';
+    }
+    // 결시자·공번 칸: 그 칸 안에서만 최대한 크게 (인원이 많으면 이 칸 글자만 줄어듦)
+    const box = document.querySelector('#examScreen .ex-abs');
+    const list = box && box.querySelector('.ex-abs-list');
+    if (list) {
+      let fs = Math.max(window.innerHeight, 300) * 0.06;
+      list.style.fontSize = fs + 'px';
+      let g = 0;
+      while ((list.scrollHeight > box.clientHeight || list.scrollWidth > box.clientWidth) && fs > 9 && g < 60) {
+        fs *= 0.93; list.style.fontSize = fs + 'px'; g++;
+      }
+    }
+  }
+  window.addEventListener('resize', () => { if (examState) { _examLastHtml = ''; renderExamScreen(); } });
+
+  // ============================================================
+  // ✏️ 교실에서 결시자 입력 — 담임 PIN 확인 후 고사 관리(absent_students)에 직접 등록
+  // ============================================================
+  var _absUnlock = null;      // { name, until }
+  var _absRoster = {};        // 번호 → 이름 (classRosters/{학년-반}, 로그인 후에만 읽기 가능)
+  var _absAutoName = '';      // 자동으로 채운 이름 (사용자가 고쳤는지 구분)
+  var _absPin = '';
+  // 선택 상태: 교시(여러 개) + 학생(여러 명, 학생별 이름·사유)
+  var _absSel = { periods: [], students: {}, order: [] };
+  var _absMsg = '';
+
+  async function _hashPin(pin) {
+    const data = new TextEncoder().encode(pin + ':ysgm-pin-salt-v1');
+    const buf = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function openAbsentInput() {
+    if (!examState) return;
+    document.getElementById('absModal').classList.add('show');
+    if (_absUnlock && _absUnlock.until > Date.now()) showAbsentForm();
+    else showAbsentPin();
+  }
+  function closeAbsentInput() {
+    document.getElementById('absModal').classList.remove('show');
+    _absPin = '';
+  }
+
+  function showAbsentPin(msg) {
+    _absPin = '';
+    const keys = ['1','2','3','4','5','6','7','8','9','지움','0','확인'];
+    document.getElementById('absBody').innerHTML = `
+      <div class="abs-h">🔒 ${grade}학년 ${cls}반 담임 PIN 입력</div>
+      <div class="abs-pin-dots" id="absPinDots">&nbsp;</div>
+      <div class="abs-err" id="absErr">${msg || ''}</div>
+      <div class="abs-pad">${keys.map(k => `<button class="abs-key${k === '확인' ? ' ok' : ''}" onclick="absPinKey('${k}')">${k}</button>`).join('')}</div>
+      <div class="abs-foot"><button class="abs-btn ghost" onclick="closeAbsentInput()">닫기</button></div>`;
+  }
+  function absPinKey(k) {
+    if (k === '지움') _absPin = _absPin.slice(0, -1);
+    else if (k === '확인') { verifyAbsentPin(); return; }
+    else if (_absPin.length < 8) _absPin += k;
+    document.getElementById('absPinDots').textContent = _absPin ? '●'.repeat(_absPin.length) : ' ';
+  }
+  async function verifyAbsentPin() {
+    const err = document.getElementById('absErr');
+    if (!/^\d{4,8}$/.test(_absPin)) { err.textContent = '4~8자리 숫자 PIN을 입력하세요'; return; }
+    err.textContent = '확인 중...';
+    try {
+      if (!firebase.auth().currentUser) await firebase.auth().signInAnonymously();
+      const snap = await db.collection('teachers').where('grade', '==', String(grade)).where('class', '==', String(cls)).get();
+      const hashed = await _hashPin(_absPin);
+      const t = snap.docs.map(d => d.data()).filter(x => x.pinHash && x.pinHash === hashed)[0];
+      if (!t) { showAbsentPin('PIN이 일치하지 않습니다'); return; }
+      _absUnlock = { name: t.name || (grade + '-' + cls + ' 담임'), until: Date.now() + 10*60*1000 };
+      try {
+        const rs = await db.collection('classRosters').doc(grade + '-' + cls).get();
+        _absRoster = (rs.exists && rs.data().students) || {};
+      } catch (e) { _absRoster = {}; }
+      _absResetSel();
+      showAbsentForm();
+    } catch (e) {
+      showAbsentPin('확인 실패: ' + e.message);
+    }
+  }
+
+  function _absSlots() { return examState.today.filter(s => s.subject !== '자습'); }
+  // 아침 조회 기준: 아직 끝나지 않은 시험 교시 전체를 기본 선택 (결석생은 보통 하루 종일 결시)
+  function _absRemainingIds() {
+    const cur = new Date().getHours()*60 + new Date().getMinutes();
+    const sl = _absSlots();
+    const rem = sl.filter(s => cur < toMin(s.end_time)).map(s => s.id);
+    return rem.length ? rem : sl.map(s => s.id);
+  }
+  function _absResetSel() { _absSel = { periods: _absRemainingIds(), students: {}, order: [] }; }
+  function _absTouch() { if (_absUnlock) _absUnlock.until = Date.now() + 10*60*1000; }
+
+  function showAbsentForm() {
+    const st = examState;
+    const slots = _absSlots();
+    const enroll = parseInt(examEnroll[grade + '-' + cls], 10);
+    const maxNo = _absMaxNo();
+
+    // 이미 등록된 결시자 — 학생별로 묶기
+    const reg = {}; const regOrder = [];
+    st.absents.forEach(a => {
+      const sl = slots.filter(x => x.id === a.exam_schedule_id)[0];
+      if (!sl) return;
+      const k = String(a.student_number);
+      if (!reg[k]) { reg[k] = { no: a.student_number, name: a.student_name, reason: a.reason, items: [] }; regOrder.push(k); }
+      reg[k].items.push({ id: a.id, period: sl.period, subject: sl.subject });
+    });
+    regOrder.sort((x, y) => reg[x].no - reg[y].no);
+    const regHtml = regOrder.map(k => {
+      const r = reg[k];
+      r.items.sort((x, y) => x.period - y.period);
+      return `<div class="abs-stu">
+        <div class="abs-stu-name"><b>${r.no}번</b> ${escapeHtml(r.name || '')} <small>${EXAM_REASONS[r.reason] || ''}</small></div>
+        <div class="abs-stu-ps">${r.items.map(it => `<button class="abs-pchip" onclick="absDelete('${it.id}','${it.period}교시 ${escapeHtml(it.subject)}')">${it.period}교시 ${escapeHtml(it.subject)} <i>✕</i></button>`).join('')}
+          <button class="abs-btn danger sm" onclick="absDeleteStudent(${r.no})">전체 삭제</button></div>
+      </div>`;
+    }).join('');
+
+    // 번호 버튼 (여러 명 선택) — 이미 등록된 학생은 붉은 표시
+    let nums = '';
+    for (let n = 1; n <= maxNo; n++) {
+      const k = String(n);
+      if (examVacant.indexOf(n) !== -1) { nums += `<button class="abs-num vac" disabled>${n}<small>공번</small></button>`; continue; }
+      const on = !!_absSel.students[k];
+      const nm = _absRoster[k];
+      nums += `<button class="abs-num${on ? ' on' : ''}${reg[k] ? ' reg' : ''}" onclick="absPick('no',${n})">${n}${nm ? `<small>${escapeHtml(nm)}</small>` : ''}</button>`;
+    }
+    // 선택한 학생 줄 (이름·사유 학생별)
+    const selRows = _absSel.order.map(k => {
+      const it = _absSel.students[k];
+      return `<div class="abs-sel-row">
+        <b>${k}번</b>
+        <input class="abs-input" value="${escapeHtml(it.name)}" placeholder="이름 (선택)" maxlength="20" oninput="absSetName('${k}', this.value)">
+        <select class="abs-input abs-reason" onchange="absSetReason('${k}', this.value)">${Object.keys(EXAM_REASONS).map(r => `<option value="${r}"${it.reason === r ? ' selected' : ''}>${EXAM_REASONS[r]}</option>`).join('')}</select>
+        <button class="abs-btn ghost sm" onclick="absPick('no',${k})">빼기</button>
+      </div>`;
+    }).join('');
+    const nSel = _absSel.order.length, nP = _absSel.periods.length;
+    const msg = _absMsg; _absMsg = '';
+
+    document.getElementById('absBody').innerHTML = `
+      <div class="abs-top">
+        <div class="abs-h">✏️ ${grade}학년 ${cls}반 결시 입력 <small>${escapeHtml(_absUnlock.name)} 선생님</small></div>
+        <div style="display:flex;gap:8px;">
+          <button class="abs-btn ghost" onclick="showAbsentSettings()">⚙️ 재적·공번 설정</button>
+          <button class="abs-btn ghost" onclick="closeAbsentInput()">닫기</button>
+        </div>
+      </div>
+      <div class="abs-err" id="absErr">${msg}</div>
+      <div class="abs-info">재적 <b>${enroll > 0 ? enroll + '명' : '미입력'}</b>${examVacant.length ? ` · 공번 <b>${examVacant.join(', ')}</b>` : ''}</div>
+
+      <div class="abs-sec">
+        <div class="abs-label">📋 오늘 등록된 결시자 ${regOrder.length ? `<span class="abs-cnt">${regOrder.length}명</span>` : ''}</div>
+        <div class="abs-list">${regHtml || '<div class="abs-empty">아직 등록된 결시자가 없습니다</div>'}</div>
+      </div>
+
+      <div class="abs-sec new">
+        <div class="abs-label">➕ 새로 등록 — ① 결시 교시 <span class="abs-hint">(기본: 오늘 남은 시험 전체)</span></div>
+        <div class="abs-chips">${slots.map(s => `<button class="abs-chip${_absSel.periods.indexOf(s.id) !== -1 ? ' on' : ''}" onclick="absPick('period','${s.id}')">${s.period}교시 ${escapeHtml(s.subject)}</button>`).join('')}
+          <button class="abs-chip ghost" onclick="absPick('allPeriods')">전 교시</button></div>
+        <div class="abs-label">② 결시 학생 번호 <span class="abs-hint">(여러 명 선택 가능 · 붉은 번호는 이미 등록됨)</span></div>
+        <div class="abs-nums">${nums}</div>
+        ${nSel ? `<div class="abs-label">③ 이름·사유 확인 <span class="abs-hint">${Object.keys(_absRoster).length ? '(명단에서 자동 입력 · 고칠 수 있음)' : '(이름은 비워도 됩니다)'}</span></div><div class="abs-sel">${selRows}</div>` : ''}
+        <div class="abs-foot">
+          <button class="abs-btn big${nSel && nP ? '' : ' dim'}" onclick="absSave()">💾 ${nSel ? nSel + '명 · ' + nP + '개 교시 ' : ''}결시 등록</button>
+        </div>
+      </div>`;
+  }
+
+  // 번호 버튼 범위: 재적 + 공번 수 (재적 미입력이면 35번까지)
+  function _absMaxNo() {
+    const enroll = parseInt(examEnroll[grade + '-' + cls], 10);
+    const vmax = examVacant.length ? examVacant[examVacant.length - 1] : 0;
+    return Math.max(enroll > 0 ? enroll + examVacant.length : 35, vmax);
+  }
+
+  // ⚙️ 재적·공번 설정 (담임이 교실에서 바로)
+  var _absSet = null;   // { count, vacant: [] }
+  function showAbsentSettings(msg) {
+    if (_absExpired()) return;
+    if (!_absSet) {
+      const enroll = parseInt(examEnroll[grade + '-' + cls], 10);
+      _absSet = { count: enroll > 0 ? enroll : 0, vacant: examVacant.slice() };
+    }
+    const top = Math.max(_absSet.count + _absSet.vacant.length + 3, 30);
+    let nums = '';
+    for (let n = 1; n <= top; n++) {
+      const v = _absSet.vacant.indexOf(n) !== -1;
+      nums += `<button class="abs-num${v ? ' vacsel' : ''}" onclick="absSetVacant(${n})">${n}${v ? '<small>공번</small>' : ''}</button>`;
+    }
+    const last = _absSet.count + _absSet.vacant.length;
+    document.getElementById('absBody').innerHTML = `
+      <div class="abs-top">
+        <div class="abs-h">⚙️ ${grade}학년 ${cls}반 재적·공번 설정</div>
+        <button class="abs-btn ghost" onclick="_absSet=null;showAbsentForm()">← 결시 입력으로</button>
+      </div>
+      <div class="abs-err" id="absErr">${msg || ''}</div>
+      <div class="abs-sec">
+        <div class="abs-label">👥 재적 인원 (현재 학생 수)</div>
+        <div class="abs-stepper">
+          <button class="abs-key" onclick="absSetCount(-1)">−</button>
+          <span class="abs-count">${_absSet.count || '-'}<small>명</small></span>
+          <button class="abs-key" onclick="absSetCount(1)">＋</button>
+        </div>
+      </div>
+      <div class="abs-sec">
+        <div class="abs-label">🚫 공번 <span class="abs-hint">(전출 등으로 비어 있는 번호를 누르세요 · 다시 누르면 해제)</span></div>
+        <div class="abs-nums">${nums}</div>
+        <div class="abs-info" style="margin-top:8px;">${_absSet.count ? `번호는 1번부터 <b>${last}번</b>까지 (재적 ${_absSet.count}명 + 공번 ${_absSet.vacant.length}개)` : '재적 인원을 먼저 입력하세요'}</div>
+      </div>
+      <div class="abs-foot"><button class="abs-btn big" onclick="absSaveSettings()">💾 저장</button></div>`;
+  }
+  function absSetCount(d) { _absTouch(); _absSet.count = Math.max(0, Math.min(60, (_absSet.count || 0) + d)); showAbsentSettings(); }
+  function absSetVacant(n) {
+    _absTouch();
+    const i = _absSet.vacant.indexOf(n);
+    if (i === -1) _absSet.vacant.push(n); else _absSet.vacant.splice(i, 1);
+    _absSet.vacant.sort((a, b) => a - b);
+    showAbsentSettings();
+  }
+  async function absSaveSettings() {
+    if (_absExpired()) return;
+    if (!(_absSet.count > 0)) { showAbsentSettings('재적 인원을 입력하세요'); return; }
+    try {
+      await db.collection('classEnrollment').doc(grade + '-' + cls).set({
+        count: _absSet.count, vacant: _absSet.vacant,
+        updatedBy: _absUnlock.name + ' (전자칠판)', updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      examEnroll[grade + '-' + cls] = _absSet.count; examVacant = _absSet.vacant.slice();
+      _absSet = null;
+      _absMsg = '✅ 재적·공번을 저장했습니다';
+      _examLastHtml = ''; renderExamScreen();
+      showAbsentForm();
+    } catch (e) { showAbsentSettings('❌ 저장 실패: ' + e.message); }
+  }
+
+  function absPick(kind, v) {
+    _absTouch();
+    const slots = _absSlots();
+    if (kind === 'no') {
+      const k = String(v);
+      if (_absSel.students[k]) {
+        delete _absSel.students[k];
+        _absSel.order = _absSel.order.filter(x => x !== k);
+      } else {
+        _absSel.students[k] = { name: _absRoster[k] || '', reason: 'illness' };
+        _absSel.order.push(k);
+        _absSel.order.sort((x, y) => Number(x) - Number(y));
+      }
+    }
+    else if (kind === 'allPeriods') _absSel.periods = slots.map(s => s.id);
+    else if (kind === 'period') {
+      const i = _absSel.periods.indexOf(v);
+      if (i === -1) _absSel.periods.push(v); else _absSel.periods.splice(i, 1);
+    }
+    showAbsentForm();
+  }
+  function absSetName(k, v) { if (_absSel.students[k]) _absSel.students[k].name = v; _absTouch(); }
+  function absSetReason(k, v) { if (_absSel.students[k]) _absSel.students[k].reason = v; _absTouch(); }
+
+  function _absWrite(method, path, body) {
+    const base = String(examLink.url).replace(/\/+$/, '');
+    const opt = { method: method, headers: {
+      apikey: examLink.anonKey, Authorization: 'Bearer ' + examLink.anonKey,
+      'Content-Type': 'application/json', Prefer: 'return=minimal' } };
+    if (body) opt.body = JSON.stringify(body);
+    return fetch(base + '/rest/v1/' + path, opt);
+  }
+  function _absExpired() {
+    if (!_absUnlock || _absUnlock.until < Date.now()) { showAbsentPin('시간이 지나 다시 PIN을 입력해 주세요'); return true; }
+    return false;
+  }
+
+  async function absSave() {
+    if (_absExpired()) return;
+    if (!_absSel.periods.length) { _absMsg = '결시 교시를 선택하세요'; showAbsentForm(); return; }
+    if (!_absSel.order.length) { _absMsg = '결시 학생 번호를 선택하세요'; showAbsentForm(); return; }
+    document.getElementById('absErr').textContent = '저장 중...';
+    let ok = 0, dup = 0, fail = '';
+    for (let i = 0; i < _absSel.order.length; i++) {
+      const k = _absSel.order[i], it = _absSel.students[k];
+      for (let j = 0; j < _absSel.periods.length; j++) {
+        const r = await _absWrite('POST', 'absent_students', {
+          exam_schedule_id: _absSel.periods[j], grade: Number(grade), class_number: Number(cls),
+          student_number: Number(k), student_name: (it.name || '').trim(), reason: it.reason,
+          reported_by: _absUnlock.name + ' (전자칠판)'
+        });
+        if (r.ok) ok++; else if (r.status === 409) dup++; else fail = 'HTTP ' + r.status;
+      }
+    }
+    const nStu = _absSel.order.length;
+    await refreshExam();
+    _absResetSel();
+    _absMsg = fail ? ('❌ 일부 저장 실패 (' + fail + ') — 다시 시도해 주세요')
+      : ('✅ ' + nStu + '명 결시 등록 완료' + (dup ? ' · ' + dup + '건은 이미 등록되어 있어 건너뜀' : '') + ' — 화면에 바로 반영됩니다');
+    showAbsentForm();
+  }
+
+  async function absDelete(id, label) {
+    if (_absExpired()) return;
+    if (!confirm((label || '이 교시') + ' 결시를 삭제할까요?\n(지각 후 응시한 경우 등)')) return;
+    const r = await _absWrite('DELETE', 'absent_students?id=eq.' + encodeURIComponent(id));
+    await refreshExam();
+    _absMsg = r.ok ? '🗑 삭제했습니다' : '❌ 삭제 실패: HTTP ' + r.status;
+    showAbsentForm();
+  }
+  async function absDeleteStudent(no) {
+    if (_absExpired()) return;
+    const ids = _absSlots().map(s => s.id);
+    const mine = examState.absents.filter(a => a.student_number === no && ids.indexOf(a.exam_schedule_id) !== -1);
+    if (!mine.length || !confirm(no + '번 학생의 오늘 결시 ' + mine.length + '건을 모두 삭제할까요?')) return;
+    let bad = 0;
+    for (let i = 0; i < mine.length; i++) {
+      const r = await _absWrite('DELETE', 'absent_students?id=eq.' + encodeURIComponent(mine[i].id));
+      if (!r.ok) bad++;
+    }
+    await refreshExam();
+    _absMsg = bad ? '❌ 일부 삭제 실패' : '🗑 ' + no + '번 결시를 모두 삭제했습니다';
+    showAbsentForm();
+  }
+
+  db.collection('settings').doc('examLink').onSnapshot(snap => {
+    examLink = snap.exists ? snap.data() : null;
+    refreshExam();
+  });
+  // 우리 반 재적 인원 (classEnrollment/{학년-반}.count — 담임·관리자가 입력)
+  db.collection('classEnrollment').doc(grade + '-' + cls).onSnapshot(snap => {
+    examEnroll = {}; examVacant = [];
+    if (snap.exists && snap.data().count > 0) examEnroll[grade + '-' + cls] = snap.data().count;
+    if (snap.exists && Array.isArray(snap.data().vacant)) examVacant = snap.data().vacant.map(Number).filter(n => n > 0).sort((a, b) => a - b);
+    if (examState) { _examLastHtml = ''; renderExamScreen(); }
+  });
+  // 화면이 다시 켜지면 즉시 재확인
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && examLink && examLink.enabled) refreshExam(); });
 
   db.collection('settings').doc('classTimes').onSnapshot(snap => {
     if (snap.exists) {

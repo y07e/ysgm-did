@@ -86,6 +86,29 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 학급별 재적 인원·공번 (시험 결시 현황용) — 문서 ID "1-9", { count, vacant: [15, 22] }
+    // 읽기: 전자칠판(비로그인)에서 재적·응시 수 표시
+    // 쓰기: 담임(PIN 익명 로그인)·관리자 — 숫자 0~60만 허용
+    match /classEnrollment/{classId} {
+      allow read: if true;
+      allow create, update: if isLoggedIn()
+        && request.resource.data.count is int
+        && request.resource.data.count >= 0
+        && request.resource.data.count <= 60
+        && (!('vacant' in request.resource.data)
+            || (request.resource.data.vacant is list && request.resource.data.vacant.size() <= 60));
+      allow delete: if isLoggedIn();
+    }
+
+    // 학급별 학생 명단 (번호 → 이름) — 문서 ID "1-9"
+    // 학생 이름은 개인정보라 공개 읽기 금지: 로그인 사용자(담임 PIN·관리자)만 읽기
+    //   ※ 담임 PIN 로그인이 익명 인증이라 teachers 컬렉션과 같은 수준의 보호
+    // 쓰기: 관리자 일괄 업로드만
+    match /classRosters/{classId} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin();
+    }
+
     // 단축 수업 일 — 특정 날짜의 교시 시각 오버라이드
     match /classTimeOverrides/{date} {
       allow read: if true;

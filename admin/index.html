@@ -227,6 +227,31 @@
     .btn-secondary { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
     .btn-secondary:hover { background: #e2e8f0; }
     .btn-sm { padding: 4px 10px; font-size: 0.76rem; }
+    /* ✏️ 시험 결시 입력 */
+    .ea-label { font-size: 0.82rem; color: #64748b; font-weight: 700; margin: 12px 0 6px; }
+    .ea-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ea-chip, .ea-num {
+      font-family: inherit; cursor: pointer; border: 1px solid #cbd5e1; background: white;
+      border-radius: 8px; font-weight: 700; color: #334155;
+    }
+    .ea-chip { padding: 7px 14px; font-size: 0.88rem; }
+    .ea-chip.ghost { color: #2563eb; border-style: dashed; }
+    .ea-nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 5px; max-width: 760px; }
+    .ea-num { padding: 6px 0; font-size: 0.95rem; line-height: 1.2; }
+    .ea-num small { display: block; font-size: 0.66rem; font-weight: 500; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
+    .ea-num.on small { color: #d1fae5; }
+    .ea-num.reg { border-color: #ef4444; color: #dc2626; }
+    .ea-num.vac { opacity: 0.4; border-style: dashed; cursor: default; background: #f1f5f9; }
+    .ea-num.reg.on { color: white; }
+    .ea-sel-row { display: grid; grid-template-columns: 3.5em 1fr 9em auto; gap: 8px; align-items: center; margin-bottom: 6px; max-width: 640px; }
+    .ea-sel-row b { color: #059669; }
+    .ea-chip.on, .ea-num.on { background: #059669; border-color: #059669; color: white; }
+    .ea-period { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+    .ea-period-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 800; color: #1e293b; }
+    .ea-period-head .ea-stat { font-size: 0.8rem; font-weight: 700; color: #64748b; }
+    .ea-period-head .ea-stat b { color: #dc2626; }
+    .ea-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px dashed #e2e8f0; font-size: 0.88rem; }
+    .ea-row:first-of-type { border-top: none; }
     .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 
     /* ===== CHECKBOX GROUPS ===== */
@@ -1127,6 +1152,116 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ===== 📝 시험 기간 (평가 관리 연동) ===== -->
+    <div class="tab-panel" id="tab-exam">
+      <div class="card" style="border-left:4px solid #f59e0b;">
+        <div class="card-title">📝 시험 기간 전자칠판 표시</div>
+        <p style="font-size:0.85rem;color:#475569;line-height:1.7;margin-bottom:12px;">
+          <b>양산여중 고사 관리</b>에 등록된 시험 시간표와 결시자를 전자칠판에 자동으로 보여줍니다.<br>
+          시험 날이 되면 각 반 화면의 <b>오늘 시간표</b> 칸이 <b>시험 시간표 + 결시 현황(재적·결시·응시·결시자)</b>으로 바뀌고,
+          시험 기간이 끝나면 원래 시간표로 자동 복귀합니다. 결시자는 고사 관리에서 입력하면 1분 안에 반영됩니다.
+        </p>
+        <label class="toggle-row off" id="examEnabledRow">
+          <span class="toggle-switch"><input type="checkbox" id="examEnabled"></span>
+          <div class="toggle-content">
+            <span class="toggle-title">전자칠판에 시험 시간표·결시 현황 표시</span>
+            <span class="toggle-desc" id="examEnabledDesc">꺼짐 — 시험 날에도 평소 시간표가 표시됩니다.</span>
+          </div>
+          <span class="toggle-badge" id="examEnabledBadge">꺼짐</span>
+        </label>
+        <label class="toggle-row on" id="examNamesRow" style="margin-top:8px;">
+          <span class="toggle-switch"><input type="checkbox" id="examShowNames" checked></span>
+          <div class="toggle-content">
+            <span class="toggle-title">결시자 이름 표시</span>
+            <span class="toggle-desc" id="examNamesDesc">켜짐 — "12 홍길동 질병결석 1·2교시" 형태</span>
+          </div>
+          <span class="toggle-badge" id="examNamesBadge">켜짐</span>
+        </label>
+        <div class="form-row" style="margin-top:10px;">
+          <label>🧪 시범 운영 학급 (비우면 전체 학급)</label>
+          <input type="text" id="examPilot" placeholder="예: 1-9, 2-3  (학년-반, 쉼표로 구분)">
+          <p style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">여기에 적은 반만 시험 날 시험 화면으로 바뀝니다. 전체 운영하려면 비워 두고 저장하세요.</p>
+        </div>
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer;font-size:0.85rem;color:#64748b;">🔗 고사 관리 연결 정보 (처음 한 번만 설정)</summary>
+          <div class="form-grid cols2" style="margin-top:10px;">
+            <div class="form-row"><label>Supabase URL</label><input type="text" id="examUrl" placeholder="https://xxxx.supabase.co"></div>
+            <div class="form-row"><label>anon 공개 키</label><input type="password" id="examKey" placeholder="eyJ..."></div>
+          </div>
+          <p style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">고사 관리 앱의 .env.local 에 있는 NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY 값입니다. 전자칠판은 읽기만 하며 고사 관리 데이터를 수정하지 않습니다.</p>
+        </details>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="btnSaveExamLink">💾 설정 저장</button>
+          <button class="btn btn-secondary" id="btnTestExamLink">🔍 연결 확인 · 시험 시간표 불러오기</button>
+        </div>
+        <div id="examLinkStatus" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">👥 학급별 재적 인원</div>
+        <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;">
+          결시 현황의 <b>재적</b>·<b>응시</b>(재적 − 결시) 계산에 쓰입니다. 비워 두면 해당 반은 결시 수만 표시됩니다.<br>
+          담임 선생님도 <b>✏️ 시험 결시 입력</b> 메뉴에서 자기 반 재적을 직접 저장할 수 있습니다.
+        </p>
+        <div id="enrollGrid"></div>
+        <button class="btn btn-primary" id="btnSaveEnroll" style="margin-top:12px;">💾 재적 인원 저장</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🖥️ 시험 날 화면 미리보기</div>
+        <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:10px;">
+          선택한 반의 전자칠판 화면을 해당 시험 날짜·시각으로 미리 봅니다. (위 표시 설정이 <b>켜짐</b>이어야 시험 화면이 보입니다)
+        </p>
+        <div class="form-grid cols3">
+          <div class="form-row"><label>학년</label><select id="examPvGrade"></select></div>
+          <div class="form-row"><label>반</label><select id="examPvClass"></select></div>
+          <div class="form-row"><label>시각</label><input type="time" id="examPvTime" value="09:30"></div>
+        </div>
+        <div id="examPvDates" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+    </div>
+
+    <!-- ===== ✏️ 시험 결시 입력 (담임·관리자) ===== -->
+    <div class="tab-panel" id="tab-exam-absent">
+      <div class="card" style="border-left:4px solid #ef4444;">
+        <div class="card-title">✏️ 시험 결시자 입력</div>
+        <p style="font-size:0.84rem;color:#475569;line-height:1.7;margin-bottom:12px;">
+          여기서 입력한 결시자는 <b>양산여중 고사 관리</b>에 바로 저장되고, 우리 반 전자칠판 결시 현황에도 1분 안에 반영됩니다.
+          (교실 전자칠판의 ✏️ 결시자 입력 버튼과 같은 기능입니다)
+        </p>
+        <div class="form-grid cols3" id="eaPickRow">
+          <div class="form-row" id="eaGradeWrap"><label>학년</label><select id="eaGrade"></select></div>
+          <div class="form-row" id="eaClassWrap"><label>반</label><select id="eaClass"></select></div>
+          <div class="form-row"><label>시험 날짜</label><select id="eaDate"></select></div>
+        </div>
+        <div id="eaStatus" style="margin-top:10px;"></div>
+        <div id="eaEnrollRow" style="display:none;margin-top:10px;align-items:center;gap:8px;flex-wrap:wrap;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;">
+          <span style="font-weight:700;color:#334155;">👥 <span id="eaEnrollLabel">우리 반</span> 재적</span>
+          <input type="number" id="eaEnrollInput" min="1" max="60" style="width:80px;text-align:center;"> 명
+          <span style="font-weight:700;color:#334155;margin-left:10px;">🚫 공번</span>
+          <input type="text" id="eaVacantInput" placeholder="예: 15, 22 (없으면 비움)" style="width:180px;">
+          <button class="btn btn-secondary btn-sm" id="btnEaEnroll">저장</button>
+          <span id="eaEnrollHint" style="font-size:0.78rem;color:#94a3b8;width:100%;">전출 등으로 바뀌면 고쳐서 저장하세요. 공번은 전자칠판 결시 현황에 표시되고, 번호 선택에서 제외됩니다.</span>
+        </div>
+      </div>
+      <div class="card" id="eaFormCard" style="display:none;">
+        <div class="card-title">➕ 결시자 등록</div>
+        <div class="ea-label">① 결시 교시 <span style="font-weight:500;color:#94a3b8;">(기본: 오늘 남은 시험 전체 · 여러 개 선택 가능)</span></div>
+        <div class="ea-chips" id="eaPeriods"></div>
+        <div class="ea-label">② 결시 학생 번호 <span style="font-weight:500;color:#94a3b8;">(여러 명 선택 가능 · 붉은 테두리는 이미 등록됨)</span></div>
+        <div class="ea-nums" id="eaNums"></div>
+        <div id="eaSelWrap"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-primary" id="btnEaSave">💾 결시 등록</button>
+          <span id="eaMsg" style="font-size:0.85rem;font-weight:700;"></span>
+        </div>
+      </div>
+      <div class="card" id="eaListCard" style="display:none;">
+        <div class="card-title">📋 교시별 결시 현황</div>
+        <div id="eaList"></div>
       </div>
     </div>
 
@@ -2031,6 +2166,8 @@ const ADMIN_TABS = [
       { key:'timetable-daily', label:'📋 일일 시간표 변경' },
       { key:'events',          label:'📆 학사일정' },
       { key:'dday',            label:'🎯 D-Day' },
+      { key:'exam',            label:'📝 시험 기간' },
+      { key:'exam-absent',     label:'✏️ 시험 결시 입력' },
     ]
   },
   { key:'lunch', label:'🍱 급식 시간' },
@@ -2049,6 +2186,7 @@ const ADMIN_TABS = [
 const TEACHER_TABS = [
   { key:'classboard',     label:'📋 내 학급 게시판' },
   { key:'timetable-daily', label:'📋 일일 시간표 변경' },
+  { key:'exam-absent',    label:'✏️ 시험 결시 입력' },
 ];
 
 function buildTabBar() {
@@ -2106,6 +2244,8 @@ function showPanel(key) {
   );
   if (key === 'classboard') initClassBoard();
   if (key === 'timetable-daily' && typeof initDailyOverrideTab === 'function') initDailyOverrideTab();
+  if (key === 'exam' && typeof initExamTab === 'function') initExamTab();
+  if (key === 'exam-absent' && typeof initExamAbsentTab === 'function') initExamAbsentTab();
 }
 
 // ============================================================
@@ -4809,6 +4949,443 @@ document.getElementById('btnPrintDailyOverrides').addEventListener('click', () =
   if (!w) { showToast('팝업 차단을 해제해주세요'); return; }
   w.document.write(html);
   w.document.close();
+});
+
+// ============================================================
+// 📝 시험 기간 — 고사 관리(Supabase) 연동 설정 · 재적 인원 · 미리보기
+//   settings/examLink        { enabled, showNames, url, anonKey }
+//   settings/classEnrollment { counts: { "1-1": 28, ... } }
+// ============================================================
+let _examLink = {};
+let _examEnroll = {};
+let _examTabInited = false;
+let _examDates = [];
+
+function initExamTab() {
+  if (_examTabInited) return;
+  _examTabInited = true;
+  db.collection('settings').doc('examLink').onSnapshot(s => {
+    _examLink = s.exists ? s.data() : {};
+    _renderExamLinkForm();
+  });
+  db.collection('classEnrollment').onSnapshot(snap => {
+    _examEnroll = {};
+    snap.docs.forEach(d => { if (d.data().count > 0) _examEnroll[d.id] = d.data().count; });
+    _renderEnrollGrid();
+  });
+  // 미리보기 학년·반
+  const gSel = document.getElementById('examPvGrade');
+  gSel.innerHTML = Object.keys(GC).map(g => `<option value="${g}">${g}학년</option>`).join('');
+  buildClassSelect('examPvGrade', 'examPvClass', gSel.value);
+  gSel.addEventListener('change', () => buildClassSelect('examPvGrade', 'examPvClass', gSel.value));
+}
+
+function _setToggleUI(rowId, badgeId, descId, on, onText, offText) {
+  const row = document.getElementById(rowId);
+  row.classList.toggle('on', on); row.classList.toggle('off', !on);
+  document.getElementById(badgeId).textContent = on ? '켜짐' : '꺼짐';
+  document.getElementById(descId).textContent = on ? onText : offText;
+}
+const _EXAM_ON_TXT  = '켜짐 — 시험 날 각 반 화면에 시험 시간표와 결시 현황이 표시됩니다.';
+const _EXAM_OFF_TXT = '꺼짐 — 시험 날에도 평소 시간표가 표시됩니다.';
+const _NAMES_ON_TXT = '켜짐 — "12 홍길동 질병결석 1·2교시" 형태';
+const _NAMES_OFF_TXT = '꺼짐 — "12번 질병결석 1·2교시"처럼 이름 없이 표시';
+
+function _renderExamLinkForm() {
+  const en = !!_examLink.enabled;
+  const nm = _examLink.showNames !== false;
+  document.getElementById('examEnabled').checked = en;
+  document.getElementById('examShowNames').checked = nm;
+  _setToggleUI('examEnabledRow', 'examEnabledBadge', 'examEnabledDesc', en, _EXAM_ON_TXT, _EXAM_OFF_TXT);
+  _setToggleUI('examNamesRow', 'examNamesBadge', 'examNamesDesc', nm, _NAMES_ON_TXT, _NAMES_OFF_TXT);
+  document.getElementById('examPilot').value = (Array.isArray(_examLink.pilotClasses) ? _examLink.pilotClasses : []).join(', ');
+  document.getElementById('examUrl').value = _examLink.url || '';
+  document.getElementById('examKey').value = _examLink.anonKey || '';
+}
+document.getElementById('examEnabled').addEventListener('change', e =>
+  _setToggleUI('examEnabledRow', 'examEnabledBadge', 'examEnabledDesc', e.target.checked, _EXAM_ON_TXT, _EXAM_OFF_TXT));
+document.getElementById('examShowNames').addEventListener('change', e =>
+  _setToggleUI('examNamesRow', 'examNamesBadge', 'examNamesDesc', e.target.checked, _NAMES_ON_TXT, _NAMES_OFF_TXT));
+
+function _examFormValues() {
+  return {
+    enabled: document.getElementById('examEnabled').checked,
+    showNames: document.getElementById('examShowNames').checked,
+    pilotClasses: document.getElementById('examPilot').value.split(/[,\s]+/).map(x => x.trim()).filter(x => /^\d+-\d+$/.test(x)),
+    url: document.getElementById('examUrl').value.trim().replace(/\/+$/, ''),
+    anonKey: document.getElementById('examKey').value.trim(),
+  };
+}
+
+async function _examFetch(cfg, path) {
+  const r = await fetch(`${cfg.url}/rest/v1/${path}`, {
+    headers: { apikey: cfg.anonKey, Authorization: 'Bearer ' + cfg.anonKey }, cache: 'no-store'
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+document.getElementById('btnSaveExamLink').addEventListener('click', async () => {
+  const v = _examFormValues();
+  if (v.enabled && (!v.url || !v.anonKey)) return showToast('연결 정보(URL·키)를 먼저 입력하세요');
+  try {
+    await db.collection('settings').doc('examLink').set({
+      ...v, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    showToast(v.enabled ? '✅ 저장 — 시험 날 전자칠판에 시험 화면이 표시됩니다' : '✅ 저장 — 시험 화면 표시 꺼짐');
+  } catch (e) { showToast('오류: ' + e.message); }
+});
+
+// 연결 확인 + 진행 중/다가오는 시험의 학년별 시간표 표시
+document.getElementById('btnTestExamLink').addEventListener('click', async () => {
+  const v = _examFormValues();
+  const box = document.getElementById('examLinkStatus');
+  if (!v.url || !v.anonKey) { box.innerHTML = '<span style="color:#dc2626;">연결 정보(URL·키)를 입력하세요</span>'; return; }
+  box.innerHTML = '<span style="color:#64748b;">불러오는 중...</span>';
+  try {
+    const today = todayLocalYMD();
+    const exams = await _examFetch(v, `exams?select=id,name,start_date,end_date&is_active=eq.true&end_date=gte.${today}&order=start_date.asc&limit=1`);
+    if (!exams.length) {
+      box.innerHTML = '<span style="color:#059669;">✅ 연결 성공</span> — 진행 중이거나 다가오는 활성 시험이 없습니다 (고사 관리에서 시험을 활성화하세요).';
+      _examDates = []; _renderExamPvDates(); return;
+    }
+    const ex = exams[0];
+    const sc = await _examFetch(v, `exam_schedules?select=id,exam_date,period,grade,subject,start_time,end_time&exam_id=eq.${ex.id}&order=exam_date.asc,grade.asc,period.asc`);
+    _examDates = [...new Set(sc.map(s => s.exam_date))];
+    // 오늘 결시자 수 (전체 반)
+    const todayIds = sc.filter(s => s.exam_date === today && s.subject !== '자습').map(s => s.id);
+    let absToday = [];
+    if (todayIds.length) absToday = await _examFetch(v, `absent_students?select=exam_schedule_id,grade,class_number&exam_schedule_id=in.(${todayIds.join(',')})`);
+
+    const grades = [...new Set(sc.map(s => s.grade))].sort();
+    const dow = d => ['일','월','화','수','목','금','토'][new Date(d + 'T00:00:00').getDay()];
+    let html = `<div style="color:#059669;font-weight:700;margin-bottom:6px;">✅ 연결 성공 — ${escapeHtml(ex.name)} (${ex.start_date} ~ ${ex.end_date})</div>
+      <div style="overflow-x:auto;"><table style="border-collapse:collapse;font-size:0.8rem;width:100%;min-width:480px;">
+      <tr style="background:#f1f5f9;"><th style="padding:5px;border:1px solid #e2e8f0;">날짜</th>${grades.map(g => `<th style="padding:5px;border:1px solid #e2e8f0;">${g}학년</th>`).join('')}</tr>`;
+    _examDates.forEach(d => {
+      html += `<tr${d === today ? ' style="background:#fef3c7;"' : ''}><td style="padding:5px;border:1px solid #e2e8f0;white-space:nowrap;font-weight:700;">${d.slice(5)} (${dow(d)})${d === today ? ' · 오늘' : ''}</td>`;
+      grades.forEach(g => {
+        const cells = sc.filter(s => s.exam_date === d && s.grade === g)
+          .map(s => `${s.period}. ${escapeHtml(s.subject)} <span style="color:#94a3b8;">${s.start_time}~${s.end_time}</span>`).join('<br>');
+        html += `<td style="padding:5px;border:1px solid #e2e8f0;line-height:1.5;">${cells || '-'}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</table></div>';
+    if (todayIds.length) {
+      const byClass = {};
+      absToday.forEach(a => { const k = `${a.grade}-${a.class_number}`; byClass[k] = (byClass[k] || 0) + 1; });
+      const keys = Object.keys(byClass).sort((a, b) => { const [ga, ca] = a.split('-').map(Number), [gb, cb] = b.split('-').map(Number); return ga - gb || ca - cb; });
+      html += `<div style="margin-top:8px;font-size:0.82rem;color:#475569;">📋 오늘 결시 입력: ${keys.length ? keys.map(k => `${k}반 ${byClass[k]}건`).join(', ') : '없음'}</div>`;
+    }
+    const missing = [];
+    Object.keys(GC).forEach(g => { for (let c = 1; c <= GC[g]; c++) if (!(parseInt(_examEnroll[`${g}-${c}`], 10) > 0)) missing.push(`${g}-${c}`); });
+    if (missing.length) html += `<div style="margin-top:6px;font-size:0.8rem;color:#b45309;">⚠️ 재적 인원 미입력: ${missing.length}개 반 (아래 표에서 입력)</div>`;
+    box.innerHTML = html;
+    _renderExamPvDates();
+  } catch (e) {
+    box.innerHTML = `<span style="color:#dc2626;">❌ 연결 실패: ${escapeHtml(e.message)}</span> — URL·키를 확인하세요.`;
+  }
+});
+
+function _renderEnrollGrid() {
+  const el = document.getElementById('enrollGrid');
+  el.innerHTML = Object.keys(GC).map(g => {
+    let cells = '';
+    for (let c = 1; c <= GC[g]; c++) {
+      const v = _examEnroll[`${g}-${c}`] || '';
+      cells += `<label style="display:flex;flex-direction:column;align-items:center;gap:2px;font-size:0.75rem;color:#64748b;">${c}반
+        <input type="number" min="0" max="60" class="enroll-input" data-key="${g}-${c}" value="${v}" style="width:56px;text-align:center;padding:5px 2px;"></label>`;
+    }
+    return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+      <b style="width:48px;color:#1e40af;">${g}학년</b>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">${cells}</div></div>`;
+  }).join('');
+}
+
+document.getElementById('btnSaveEnroll').addEventListener('click', async () => {
+  // 바뀐 반만 저장 (빈칸은 삭제) — 담임이 직접 고친 값과 충돌 최소화
+  const batch = db.batch();
+  let n = 0;
+  document.querySelectorAll('.enroll-input').forEach(inp => {
+    const key = inp.dataset.key;
+    const v = parseInt(inp.value, 10);
+    const cur = _examEnroll[key] || 0;
+    const ref = db.collection('classEnrollment').doc(key);
+    if (v > 0 && v !== cur) { batch.set(ref, { count: v, updatedBy: '관리자', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); n++; }
+    else if (!(v > 0) && cur) { batch.delete(ref); n++; }
+  });
+  if (!n) return showToast('바뀐 내용이 없습니다');
+  try {
+    await batch.commit();
+    showToast(`✅ 재적 인원 ${n}개 반 저장 — 전자칠판 즉시 반영`);
+  } catch (e) { showToast('오류: ' + e.message); }
+});
+
+function _renderExamPvDates() {
+  const el = document.getElementById('examPvDates');
+  if (!_examDates.length) { el.innerHTML = '<span style="font-size:0.8rem;color:#94a3b8;">위의 "연결 확인"을 누르면 시험 날짜 버튼이 나타납니다.</span>'; return; }
+  el.innerHTML = _examDates.map(d => {
+    const w = ['일','월','화','수','목','금','토'][new Date(d + 'T00:00:00').getDay()];
+    return `<button class="btn btn-secondary btn-sm" data-pvdate="${d}">🖥️ ${d.slice(5)}(${w}) 화면 보기</button>`;
+  }).join('');
+}
+document.getElementById('examPvDates').addEventListener('click', e => {
+  const b = e.target.closest('[data-pvdate]');
+  if (!b) return;
+  const g = document.getElementById('examPvGrade').value;
+  const c = document.getElementById('examPvClass').value;
+  const t = document.getElementById('examPvTime').value || '09:30';
+  window.open(`${location.origin}/display/?grade=${g}&class=${c}&desktop=1&date=${b.dataset.pvdate}&time=${t}`, '_blank');
+});
+
+// ============================================================
+// ✏️ 시험 결시 입력 (담임: 자기 반 / 관리자: 학년·반 선택)
+//   고사 관리 Supabase absent_students 에 직접 등록·삭제 (전자칠판 교실 입력과 동일)
+// ============================================================
+const EA_REASONS = { illness:'질병결석', unauthorized:'미인정결석', approved:'인정결석', other:'기타결석' };
+let _eaInited = false, _eaExam = null, _eaScheds = [], _eaAbsents = [];
+let _eaSel = { periods: [], students: {}, order: [] };   // 교시 여러 개 + 학생 여러 명(학생별 이름·사유)
+let _eaLink = null, _eaEnroll = {}, _eaVacant = {};   // 공번: { "1-9": [15, 22] }
+let _eaRoster = {}, _eaRosterKey = '', _eaSelKey = '';
+
+function _eaWrite(method, path, body) {
+  const opt = { method, headers: {
+    apikey: _eaLink.anonKey, Authorization: 'Bearer ' + _eaLink.anonKey,
+    'Content-Type': 'application/json', Prefer: 'return=minimal' } };
+  if (body) opt.body = JSON.stringify(body);
+  return fetch(`${_eaLink.url.replace(/\/+$/, '')}/rest/v1/${path}`, opt);
+}
+function _eaGC() {
+  if (currentRole === 'teacher' && myTeacherData) return { g: String(myTeacherData.grade), c: String(myTeacherData.class) };
+  return { g: document.getElementById('eaGrade').value, c: document.getElementById('eaClass').value };
+}
+
+function initExamAbsentTab() {
+  const isTeacher = currentRole === 'teacher';
+  document.getElementById('eaGradeWrap').style.display = isTeacher ? 'none' : '';
+  document.getElementById('eaClassWrap').style.display = isTeacher ? 'none' : '';
+  if (!_eaInited) {
+    _eaInited = true;
+    const gSel = document.getElementById('eaGrade');
+    gSel.innerHTML = Object.keys(GC).map(g => `<option value="${g}">${g}학년</option>`).join('');
+    buildClassSelect('eaGrade', 'eaClass', gSel.value);
+    gSel.addEventListener('change', () => { buildClassSelect('eaGrade', 'eaClass', gSel.value); _eaLoad(); });
+    document.getElementById('eaClass').addEventListener('change', _eaLoad);
+    document.getElementById('eaDate').addEventListener('change', _eaLoad);
+    db.collection('classEnrollment').onSnapshot(snap => {
+      _eaEnroll = {}; _eaVacant = {};
+      snap.docs.forEach(d => {
+        if (d.data().count > 0) _eaEnroll[d.id] = d.data().count;
+        if (Array.isArray(d.data().vacant)) _eaVacant[d.id] = d.data().vacant.map(Number).filter(n => n > 0).sort((a, b) => a - b);
+      });
+      if (_eaExam) _eaRender();
+    });
+    document.getElementById('btnEaEnroll').addEventListener('click', async () => {
+      const { g, c } = _eaGC();
+      const v = parseInt(document.getElementById('eaEnrollInput').value, 10);
+      if (!(v > 0 && v <= 60)) return showToast('1~60 사이 숫자를 입력하세요');
+      const who = (currentRole === 'teacher' && myTeacherData && myTeacherData.name) ? myTeacherData.name : '관리자';
+      try {
+        // 공번 입력칸: "15, 22" → [15, 22]
+        const vac = document.getElementById('eaVacantInput').value.split(/[^0-9]+/).map(Number).filter(n => n > 0 && n <= 70);
+        const vacant = vac.filter((n, i) => vac.indexOf(n) === i).sort((a, b) => a - b);
+        await db.collection('classEnrollment').doc(`${g}-${c}`).set({ count: v, vacant, updatedBy: who, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        showToast(`✅ ${g}학년 ${c}반 재적 ${v}명${vacant.length ? ` · 공번 ${vacant.join(', ')}` : ''} 저장 — 전자칠판 즉시 반영`);
+      } catch (e) { showToast('오류: ' + e.message); }
+    });
+  }
+  _eaStart();
+}
+
+async function _eaStart() {
+  const st = document.getElementById('eaStatus');
+  st.innerHTML = '<span style="color:#64748b;">고사 관리에서 시험 정보를 불러오는 중...</span>';
+  try {
+    const snap = await db.collection('settings').doc('examLink').get();
+    _eaLink = snap.exists ? snap.data() : null;
+    if (!_eaLink || !_eaLink.url || !_eaLink.anonKey) {
+      st.innerHTML = '<span style="color:#b45309;">⚠️ 고사 관리 연결 정보가 아직 설정되지 않았습니다 (관리자 &gt; 일정 관리 &gt; 시험 기간).</span>';
+      return;
+    }
+    const today = todayLocalYMD();
+    const exams = await _examFetch(_eaLink, `exams?select=id,name,start_date,end_date&is_active=eq.true&end_date=gte.${today}&order=start_date.asc&limit=1`);
+    if (!exams.length) { st.innerHTML = '<span style="color:#64748b;">진행 중이거나 다가오는 시험이 없습니다.</span>'; _eaExam = null; _eaShowCards(false); return; }
+    _eaExam = exams[0];
+    const dates = [];
+    const sc = await _examFetch(_eaLink, `exam_schedules?select=exam_date&exam_id=eq.${_eaExam.id}&order=exam_date.asc`);
+    sc.forEach(r => { if (dates.indexOf(r.exam_date) === -1) dates.push(r.exam_date); });
+    const dSel = document.getElementById('eaDate');
+    const prev = dSel.value;
+    dSel.innerHTML = dates.map(d => {
+      const w = ['일','월','화','수','목','금','토'][new Date(d + 'T00:00:00').getDay()];
+      return `<option value="${d}">${d.slice(5).replace('-', '/')} (${w})${d === today ? ' · 오늘' : ''}</option>`;
+    }).join('');
+    dSel.value = dates.indexOf(prev) !== -1 ? prev : (dates.indexOf(today) !== -1 ? today : dates[0]);
+    await _eaLoad();
+  } catch (e) {
+    st.innerHTML = `<span style="color:#dc2626;">❌ 불러오기 실패: ${escapeHtml(e.message)}</span>`;
+  }
+}
+
+function _eaShowCards(on) {
+  document.getElementById('eaFormCard').style.display = on ? '' : 'none';
+  document.getElementById('eaListCard').style.display = on ? '' : 'none';
+}
+
+async function _eaLoad() {
+  if (!_eaExam) return;
+  const { g, c } = _eaGC();
+  const date = document.getElementById('eaDate').value;
+  try {
+    _eaScheds = (await _examFetch(_eaLink, `exam_schedules?select=id,period,subject,start_time,end_time&exam_id=eq.${_eaExam.id}&exam_date=eq.${date}&grade=eq.${g}&order=period.asc`))
+      .filter(s => s.subject !== '자습');
+    _eaAbsents = _eaScheds.length
+      ? await _examFetch(_eaLink, `absent_students?select=id,exam_schedule_id,student_number,student_name,reason,reported_by&exam_schedule_id=in.(${_eaScheds.map(s => s.id).join(',')})&grade=eq.${g}&class_number=eq.${c}&order=student_number.asc`)
+      : [];
+    // 학생 명단 (번호 → 이름) — 반이 바뀔 때만 다시 읽음
+    if (_eaRosterKey !== `${g}-${c}`) {
+      _eaRosterKey = `${g}-${c}`;
+      try {
+        const rs = await db.collection('classRosters').doc(_eaRosterKey).get();
+        _eaRoster = (rs.exists && rs.data().students) || {};
+      } catch (e) { _eaRoster = {}; }
+    }
+    // 반·날짜가 바뀌면 선택 초기화 — 교시 기본값: 오늘이면 아직 안 끝난 교시 전체, 다른 날이면 전 교시
+    const selKey = `${g}-${c}-${date}`;
+    if (_eaSelKey !== selKey) {
+      _eaSelKey = selKey;
+      const now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
+      const toM = t => { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
+      let ids = _eaScheds.map(s => s.id);
+      if (date === todayLocalYMD()) { const rem = _eaScheds.filter(s => cur < toM(s.end_time)).map(s => s.id); if (rem.length) ids = rem; }
+      _eaSel = { periods: ids, students: {}, order: [] };
+    }
+    _eaRender();
+  } catch (e) {
+    document.getElementById('eaStatus').innerHTML = `<span style="color:#dc2626;">❌ 불러오기 실패: ${escapeHtml(e.message)}</span>`;
+  }
+}
+
+function _eaRender() {
+  const { g, c } = _eaGC();
+  const st = document.getElementById('eaStatus');
+  if (!_eaScheds.length) {
+    st.innerHTML = `<span style="color:#64748b;">${escapeHtml(_eaExam.name)} — 이 날짜에는 ${g}학년 시험이 없습니다 (자습만 있는 날 포함).</span>`;
+    _eaShowCards(false); return;
+  }
+  const enroll = parseInt(_eaEnroll[`${g}-${c}`], 10);
+  const _vac = _eaVacant[`${g}-${c}`] || [];
+  st.innerHTML = `<b style="color:#1e40af;">${escapeHtml(_eaExam.name)}</b> · <b>${g}학년 ${c}반</b>${enroll > 0 ? ` · 재적 ${enroll}명` : ' · <span style="color:#b45309;">재적 미입력</span>'}${_vac.length ? ` · 공번 ${_vac.join(', ')}` : ''}`;
+  _eaShowCards(true);
+  const er = document.getElementById('eaEnrollRow');
+  er.style.display = 'flex';
+  document.getElementById('eaEnrollLabel').textContent = currentRole === 'teacher' ? '우리 반' : `${g}학년 ${c}반`;
+  const ei = document.getElementById('eaEnrollInput');
+  if (document.activeElement !== ei) ei.value = enroll > 0 ? enroll : '';
+  const vacant = _eaVacant[`${g}-${c}`] || [];
+  const vi = document.getElementById('eaVacantInput');
+  if (document.activeElement !== vi) vi.value = vacant.join(', ');
+  const rosterCnt = Object.keys(_eaRoster).length;
+  const registered = {};
+  _eaAbsents.forEach(a => { registered[String(a.student_number)] = true; });
+
+  document.getElementById('eaPeriods').innerHTML =
+    _eaScheds.map(s => `<button class="ea-chip${_eaSel.periods.indexOf(s.id) !== -1 ? ' on' : ''}" data-ea="period" data-v="${s.id}">${s.period}교시 ${escapeHtml(s.subject)}</button>`).join('')
+    + `<button class="ea-chip ghost" data-ea="all">전 교시</button>`;
+  const maxNo = Math.max(enroll > 0 ? enroll + vacant.length : 35, vacant.length ? vacant[vacant.length - 1] : 0);
+  let nums = '';
+  for (let n = 1; n <= maxNo; n++) {
+    if (vacant.indexOf(n) !== -1) { nums += `<button class="ea-num vac" disabled>${n}<small>공번</small></button>`; continue; }
+    const k = String(n), nm = _eaRoster[k];
+    nums += `<button class="ea-num${_eaSel.students[k] ? ' on' : ''}${registered[k] ? ' reg' : ''}" data-ea="no" data-v="${n}">${n}${nm ? `<small>${escapeHtml(nm)}</small>` : ''}</button>`;
+  }
+  document.getElementById('eaNums').innerHTML = nums;
+  // 선택한 학생 줄 (학생별 이름·사유)
+  document.getElementById('eaSelWrap').innerHTML = _eaSel.order.length ? `
+    <div class="ea-label">③ 이름·사유 확인 <span style="font-weight:500;color:#94a3b8;">${rosterCnt ? '(명단에서 자동 입력 · 고칠 수 있음)' : '(이름은 비워도 됩니다)'}</span></div>
+    ${_eaSel.order.map(k => { const it = _eaSel.students[k]; return `<div class="ea-sel-row">
+      <b>${k}번</b>
+      <input type="text" maxlength="20" placeholder="이름 (선택)" value="${escapeHtml(it.name)}" data-ea-name="${k}">
+      <select data-ea-reason="${k}">${Object.keys(EA_REASONS).map(r => `<option value="${r}"${it.reason === r ? ' selected' : ''}>${EA_REASONS[r]}</option>`).join('')}</select>
+      <button class="btn btn-secondary btn-sm" data-ea="no" data-v="${k}">빼기</button>
+    </div>`; }).join('')}` : '';
+  document.getElementById('btnEaSave').textContent = _eaSel.order.length
+    ? `💾 ${_eaSel.order.length}명 · ${_eaSel.periods.length}개 교시 결시 등록` : '💾 결시 등록';
+
+  document.getElementById('eaList').innerHTML = _eaScheds.map(s => {
+    const list = _eaAbsents.filter(a => a.exam_schedule_id === s.id);
+    const rows = list.map(a => `<div class="ea-row">
+        <span><b style="color:#dc2626;">${a.student_number}번</b> ${escapeHtml(a.student_name || '')} · ${EA_REASONS[a.reason] || ''} <span style="color:#94a3b8;font-size:0.78rem;">(${escapeHtml(a.reported_by || '')})</span></span>
+        <button class="btn btn-danger btn-sm" data-ea="del" data-v="${a.id}">삭제</button>
+      </div>`).join('');
+    return `<div class="ea-period">
+      <div class="ea-period-head">${s.period}교시 ${escapeHtml(s.subject)} <span class="ea-stat">${s.start_time}~${s.end_time}</span>
+        <span class="ea-stat">결시 <b>${list.length}</b>명${enroll > 0 ? ` · 응시 ${enroll - list.length}명` : ''}</span></div>
+      ${rows || '<div style="color:#059669;font-size:0.85rem;padding-top:4px;">결시자 없음</div>'}
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('tab-exam-absent').addEventListener('click', async e => {
+  const b = e.target.closest('[data-ea]');
+  if (!b) return;
+  const kind = b.dataset.ea, v = b.dataset.v;
+  if (kind === 'no') {
+    const k = String(v);
+    if (_eaSel.students[k]) { delete _eaSel.students[k]; _eaSel.order = _eaSel.order.filter(x => x !== k); }
+    else {
+      _eaSel.students[k] = { name: _eaRoster[k] || '', reason: 'illness' };   // 명단 있으면 이름 자동
+      _eaSel.order.push(k); _eaSel.order.sort((x, y) => Number(x) - Number(y));
+    }
+  }
+  else if (kind === 'all') _eaSel.periods = _eaScheds.map(s => s.id);
+  else if (kind === 'period') {
+    const i = _eaSel.periods.indexOf(v);
+    if (i === -1) _eaSel.periods.push(v); else _eaSel.periods.splice(i, 1);
+  } else if (kind === 'del') {
+    if (!confirm('이 결시 기록을 삭제할까요? (고사 관리에서도 삭제됩니다)')) return;
+    const r = await _eaWrite('DELETE', 'absent_students?id=eq.' + encodeURIComponent(v));
+    showToast(r.ok ? '🗑 삭제했습니다' : '❌ 삭제 실패: HTTP ' + r.status);
+    await _eaLoad(); return;
+  }
+  _eaRender();
+});
+
+document.getElementById('tab-exam-absent').addEventListener('input', e => {
+  const k = e.target.dataset.eaName;
+  if (k && _eaSel.students[k]) _eaSel.students[k].name = e.target.value;
+});
+document.getElementById('tab-exam-absent').addEventListener('change', e => {
+  const k = e.target.dataset.eaReason;
+  if (k && _eaSel.students[k]) _eaSel.students[k].reason = e.target.value;
+});
+
+document.getElementById('btnEaSave').addEventListener('click', async () => {
+  const msg = document.getElementById('eaMsg');
+  if (!_eaSel.periods.length) { msg.style.color = '#dc2626'; msg.textContent = '교시를 선택하세요'; return; }
+  if (!_eaSel.order.length) { msg.style.color = '#dc2626'; msg.textContent = '결시 학생 번호를 선택하세요'; return; }
+  const { g, c } = _eaGC();
+  const who = (currentRole === 'teacher' && myTeacherData && myTeacherData.name) ? myTeacherData.name
+    : ((auth.currentUser && (auth.currentUser.displayName || auth.currentUser.email)) || '관리자');
+  msg.style.color = '#64748b'; msg.textContent = '저장 중...';
+  let ok = 0, dup = 0, fail = '';
+  for (const k of _eaSel.order) {
+    const it = _eaSel.students[k];
+    for (const sid of _eaSel.periods) {
+      const r = await _eaWrite('POST', 'absent_students', {
+        exam_schedule_id: sid, grade: Number(g), class_number: Number(c),
+        student_number: Number(k), student_name: (it.name || '').trim(), reason: it.reason,
+        reported_by: who + ' (DID 관리자)'
+      });
+      if (r.ok) ok++; else if (r.status === 409) dup++; else fail = 'HTTP ' + r.status;
+    }
+  }
+  const nStu = _eaSel.order.length;
+  msg.style.color = fail ? '#dc2626' : '#059669';
+  msg.textContent = fail ? `❌ 일부 실패: ${fail}` : `✅ ${nStu}명 결시 등록${dup ? ` · ${dup}건은 이미 등록되어 건너뜀` : ''}`;
+  _eaSel.students = {}; _eaSel.order = [];
+  await _eaLoad();
 });
 
 // ============================================================

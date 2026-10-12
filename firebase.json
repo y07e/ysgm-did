@@ -15,7 +15,8 @@
       "**/*.pptx",
       "**/*.docx",
       "**/*.apk",
-      "**/*.keystore"
+      "**/*.keystore",
+      ".claude/**"
     ],
     "rewrites": [],
     "headers": [

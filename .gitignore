@@ -21,3 +21,6 @@ Thumbs.db
 # APK build artifacts (regeneratable, contains private keystore)
 _apk_build/
 apk-downloads/
+
+# Claude 로컬 미리보기 설정
+.claude/
