@@ -5276,7 +5276,7 @@ function _eaRender() {
   }
   const enroll = parseInt(_eaEnroll[`${g}-${c}`], 10);
   const _vac = _eaVacant[`${g}-${c}`] || [];
-  st.innerHTML = `<b style="color:#1e40af;">${escapeHtml(_eaExam.name)}</b> · <b>${g}학년 ${c}반</b>${enroll > 0 ? ` · 재적 ${enroll}명` : ' · <span style="color:#b45309;">재적 미입력</span>'}${_vac.length ? ` · 공번 ${_vac.join(', ')}` : ''}`;
+  st.innerHTML = `<b style="color:#1e40af;">${escapeHtml(_eaExam.name)}</b> · <b>${g}학년 ${c}반</b>${enroll > 0 ? ` · 재적 ${enroll}명` : ' · <span style="color:#b45309;">재적 미입력</span>'}${enroll > 0 ? ` · 공번 ${_vac.length ? _vac.join(', ') : '없음'}` : ''}`;
   _eaShowCards(true);
   const er = document.getElementById('eaEnrollRow');
   er.style.display = 'flex';

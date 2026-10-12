@@ -3125,7 +3125,7 @@
         </div>
       </div>
       <div class="abs-err" id="absErr">${msg}</div>
-      <div class="abs-info">재적 <b>${enroll > 0 ? enroll + '명' : '미입력'}</b>${examVacant.length ? ` · 공번 <b>${examVacant.join(', ')}</b>` : ''}</div>
+      <div class="abs-info">재적 <b>${enroll > 0 ? enroll + '명' : '미입력'}</b> · 공번 <b>${examVacant.length ? examVacant.join(', ') : '없음'}</b></div>
 
       <div class="abs-sec">
         <div class="abs-label">📋 오늘 등록된 결시자 ${regOrder.length ? `<span class="abs-cnt">${regOrder.length}명</span>` : ''}</div>
@@ -3184,7 +3184,7 @@
       <div class="abs-sec">
         <div class="abs-label">🚫 공번 <span class="abs-hint">(전출 등으로 비어 있는 번호를 누르세요 · 다시 누르면 해제)</span></div>
         <div class="abs-nums">${nums}</div>
-        <div class="abs-info" style="margin-top:8px;">${_absSet.count ? `번호는 1번부터 <b>${last}번</b>까지 (재적 ${_absSet.count}명 + 공번 ${_absSet.vacant.length}개)` : '재적 인원을 먼저 입력하세요'}</div>
+        <div class="abs-info" style="margin-top:8px;">${_absSet.count ? `번호는 1번부터 <b>${last}번</b>까지 (재적 ${_absSet.count}명 · 공번 ${_absSet.vacant.length ? _absSet.vacant.join(', ') : '없음'})` : '재적 인원을 먼저 입력하세요'}</div>
       </div>
       <div class="abs-foot"><button class="abs-btn big" onclick="absSaveSettings()">💾 저장</button></div>`;
   }
