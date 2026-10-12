@@ -1674,6 +1674,15 @@
     .ex-row.now .ex-code { background: rgba(255,255,255,0.12); }
     .ex-row.done { opacity: 0.45; }
     .ex-row.study .ex-subj { color: #64748b; font-weight: 700; }
+    .ex-lunch {
+      flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: 0.5em;
+      font-size: 0.42em; font-weight: 800; color: #6ee7b7; white-space: nowrap;
+      background: rgba(16,185,129,0.12); border: 2px solid rgba(16,185,129,0.45); border-radius: 0.5em; padding: 0.25em 0.6em;
+    }
+    .ex-lunch b { font-size: 1.15em; font-weight: 900; color: #a7f3d0; font-variant-numeric: tabular-nums; }
+    .ex-lunch.now { background: #065f46; border-color: #10b981; color: #ecfdf5; }
+    .ex-lunch.now b { color: #fff; }
+    .ex-lunch.done { opacity: 0.45; }
 
     /* 결시 현황 — 위: 재적·결시·응시 가로 3칸 / 아래: 결시자·공번 큰 칸 */
     .ex-rbody { display: flex; flex-direction: column; gap: 0.14em; }
@@ -2924,6 +2933,16 @@
         </div>
       </div>`;
     }).join('');
+    // 🍽️ 우리반 급식 시간 (시험 끝난 뒤) — 급식 시간이면 초록, 지나면 흐리게
+    let lunchRow = '';
+    const lS = toMin(myLunch && myLunch.start), lE = toMin(myLunch && myLunch.end);
+    if (lS > 0) {
+      let lc = 'ex-lunch';
+      if (cur >= lS && cur < lE) lc += ' now';
+      else if (lE > 0 && cur >= lE) lc += ' done';
+      lunchRow = `<div class="${lc}"><span>🍽️ 우리반 급식 시간</span><b>${escapeHtml(myLunch.start)}</b></div>`;
+    }
+
     let next = '';
     if (st.nextDate && st.next.length) {
       const q = st.nextDate.split('-').map(Number);
@@ -2968,7 +2987,7 @@
           <span class="ex-pill date">${p[1]}/${p[2]} (${dw})</span>
           <span class="ex-pill day">${st.dayNo}일차 / ${st.totalDays}일</span>
         </div>
-        <div class="ex-body"><div class="ex-fit ex-rows">${rows}</div></div>
+        <div class="ex-body"><div class="ex-fit ex-rows">${rows}${lunchRow}</div></div>
         <div class="ex-foot">${next || '&nbsp;'}</div>
       </div>
       <div class="ex-card ex-right">
@@ -3012,7 +3031,7 @@
       let size = Math.max(window.innerHeight, 300) * 0.13;   // 시작: 화면 높이의 13% → 넘치면 줄임
       fit.style.fontSize = size + 'px';
       let guard = 0;
-      const lines = fit.querySelectorAll('.ex-row-main, .ex-tile');
+      const lines = fit.querySelectorAll('.ex-row-main, .ex-tile, .ex-lunch');
       const overflow = () => {
         if (fit.scrollHeight > body.clientHeight || fit.scrollWidth > body.clientWidth) return true;
         for (let k = 0; k < lines.length; k++) if (lines[k].scrollWidth > lines[k].clientWidth + 1) return true;
