@@ -1696,11 +1696,13 @@
     .ex-abs {
       flex: 1 1 0; min-height: 0; overflow: hidden;
       background: #0f172a; border: 2px solid #1e293b; border-radius: 0.2em;
-      display: flex; align-items: center; justify-content: center;
+      display: flex; align-items: center; justify-content: flex-start;
     }
     .ex-abs-list { padding: 0.2em 0.5em; display: flex; flex-direction: column; gap: 0.25em; max-width: 100%; }
-    .ex-abs-line { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3em; }
-    .ex-abs-label { font-weight: 900; color: #94a3b8; margin-right: 0.2em; }
+    /* 왼쪽 정렬: 라벨은 위 재적·결시·응시 글자와 같은 세로선, 값은 두 줄이 같은 위치에서 시작 */
+    .ex-abs-line { display: flex; align-items: flex-start; gap: 0.5em; }
+    .ex-abs-label { flex-shrink: 0; width: 3.4em; font-weight: 900; color: #94a3b8; letter-spacing: 0.1em; line-height: 1.6; }
+    .ex-abs-vals { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3em; min-width: 0; line-height: 1.5; }
     .ex-abs-label.ab { color: #fca5a5; }
     .ex-vac { background: #1e293b; border: 2px dashed #64748b; color: #e2e8f0; border-radius: 999px; padding: 0.02em 0.65em; font-weight: 800; }
     .ex-chips-label { color: #fca5a5; font-weight: 800; margin-right: 0.1em; }
@@ -2929,10 +2931,10 @@
             <div class="ex-tile t-take"><span class="ex-tl">응시</span><span class="ex-tn">${hasEnroll ? enroll - absentCnt : '-'}<small>명</small></span></div>
           </div>
           <div class="ex-abs"><div class="ex-abs-list">
-            <div class="ex-abs-line"><span class="ex-abs-label ab">결시자</span>${order.length ? chips : '<span class="ex-allin">없음 ✨</span>'}</div>
+            <div class="ex-abs-line"><span class="ex-abs-label ab">결시자</span><span class="ex-abs-vals">${order.length ? chips : '<span class="ex-allin">없음 ✨</span>'}</span></div>
             ${examVacant.length
-              ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span>${examVacant.map(n => `<span class="ex-vac">${n}</span>`).join('')}</div>`
-              : (hasEnroll ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span><span class="ex-none">없음</span></div>` : '')}
+              ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span><span class="ex-abs-vals">${examVacant.map(n => `<span class="ex-vac">${n}</span>`).join('')}</span></div>`
+              : (hasEnroll ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span><span class="ex-abs-vals"><span class="ex-none">없음</span></span></div>` : '')}
           </div></div>
         </div></div>
         <div class="ex-foot">
@@ -2977,6 +2979,8 @@
     const box = document.querySelector('#examScreen .ex-abs');
     const list = box && box.querySelector('.ex-abs-list');
     if (list) {
+      const tl = document.querySelector('#examScreen .ex-tile .ex-tl');
+      if (tl) list.style.paddingLeft = Math.max(0, tl.getBoundingClientRect().left - box.getBoundingClientRect().left - 2) + 'px';
       let fs = Math.max(window.innerHeight, 300) * 0.06;
       list.style.fontSize = fs + 'px';
       let g = 0;
