@@ -1817,6 +1817,39 @@
     .abs-stepper .abs-key { width: 72px; padding: 10px 0; }
     .abs-count { font-size: 2.4rem; font-weight: 900; min-width: 3.5em; text-align: center; }
     .abs-count small { font-size: 1rem; color: #94a3b8; margin-left: 4px; }
+    /* ✏️ 입력 창 — 전자칠판(960×540)처럼 낮은 화면에서는 촘촘하게, 등록 버튼은 항상 아래에 고정 */
+    .abs-sec.new .abs-foot { position: sticky; bottom: -12px; background: #0f172a; margin: 8px -14px -12px; padding: 8px 14px 10px; border-top: 1px solid #1e293b; border-radius: 0 0 12px 12px; }
+    @media (max-height: 620px) {
+      .abs-box { padding: 10px 16px 12px; max-height: 97vh; }
+      .abs-h { font-size: 1.05rem; margin-bottom: 2px; }
+      .abs-h small { font-size: 0.8rem; }
+      .abs-top .abs-btn { font-size: 0.9rem; padding: 6px 14px; }
+      .abs-err { min-height: 1.2em; font-size: 0.85rem; margin-bottom: 2px; }
+      .abs-info { font-size: 0.85rem; margin: 0 0 2px; }
+      .abs-label { font-size: 0.8rem; margin: 6px 0 4px; }
+      .abs-sec { padding: 2px 12px 10px; margin-top: 6px; }
+      .abs-sec.new .abs-foot { margin: 6px -12px -10px; padding: 6px 12px 8px; bottom: -10px; }
+      .abs-pin-dots { font-size: 1.5rem; min-height: 1.3em; }
+      .abs-pad { gap: 6px; max-width: 330px; margin-top: 4px; }
+      .abs-key { font-size: 1.25rem; padding: 7px 0; }
+      .abs-foot { margin-top: 8px; }
+      .abs-nums { gap: 4px; }
+      .abs-num { font-size: 0.95rem; padding: 4px 0; }
+      .abs-num small { font-size: 0.6rem; }
+      .abs-chip { font-size: 0.9rem; padding: 6px 12px; }
+      .abs-stu { padding: 5px 10px; }
+      .abs-stu-name { font-size: 0.95rem; }
+      .abs-pchip { font-size: 0.85rem; padding: 4px 10px; }
+      .abs-sel { gap: 4px; }
+      .abs-sel-row { font-size: 0.95rem; gap: 6px; }
+      .abs-input { font-size: 0.95rem; padding: 5px 8px; }
+      .abs-reason { padding: 5px 6px; }
+      .abs-btn { font-size: 0.95rem; padding: 8px 18px; }
+      .abs-btn.big { font-size: 1.1rem; padding: 9px 26px; }
+      .abs-btn.sm { font-size: 0.8rem; padding: 4px 10px; }
+      .abs-stepper .abs-key { width: 56px; padding: 6px 0; }
+      .abs-count { font-size: 1.8rem; }
+    }
     .ex-input-btn.morning { background: #059669; border-color: #10b981; color: white; animation: changedPulse 2s ease-in-out infinite; }
   </style>
 </head>
