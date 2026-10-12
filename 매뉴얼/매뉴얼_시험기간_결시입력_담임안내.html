@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>시험 기간 전자칠판 결시자 입력 안내 (담임용)</title>
+<style>
+  @page { size: A4; margin: 12mm 12mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif; color: #1e293b; font-size: 11.5pt; line-height: 1.55; }
+  .page { page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  h1 { font-size: 19pt; color: #1e3a8a; letter-spacing: -0.5px; }
+  .sub { color: #475569; margin-top: 3px; font-size: 10.5pt; }
+  .hero { display: flex; gap: 10px; align-items: center; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 10px; padding: 8px 12px; margin: 10px 0 12px; font-weight: 700; color: #065f46; }
+  .hero span { font-size: 18pt; }
+  h2 { font-size: 13.5pt; color: #fff; background: #1d4ed8; display: inline-block; padding: 3px 12px; border-radius: 999px; margin: 6px 0 8px; }
+  h2.g { background: #059669; } h2.o { background: #d97706; } h2.p { background: #7c3aed; }
+  .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+  .step { border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px; background: #fff; }
+  .step .t { font-weight: 800; font-size: 12pt; margin-bottom: 5px; display: flex; gap: 7px; align-items: center; }
+  .n { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: #1d4ed8; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11pt; font-weight: 900; }
+  .step img, .wide img { width: 100%; border-radius: 6px; border: 1px solid #cbd5e1; display: block; }
+  .step .d { font-size: 10pt; color: #475569; margin-top: 5px; }
+  .tip { background: #f8fafc; border-left: 4px solid #94a3b8; padding: 6px 10px; border-radius: 4px; font-size: 10pt; color: #334155; margin-top: 8px; }
+  .row { display: grid; grid-template-columns: 1.05fr 1fr; gap: 12px; align-items: center; margin-bottom: 10px; }
+  .row .txt p { margin-bottom: 4px; }
+  b.k { background: #dbeafe; color: #1e40af; padding: 0 5px; border-radius: 4px; }
+  b.r { color: #dc2626; }
+  .foot { margin-top: 10px; display: flex; gap: 10px; }
+  .foot div { flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; font-size: 10pt; background: #fff; }
+  .contact { text-align: right; color: #64748b; font-size: 9.5pt; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <h1>📝 시험 기간 전자칠판 사용 안내</h1>
+  <div class="sub">담임 선생님용 · 아침 조회 때 1분이면 끝납니다</div>
+
+  <div class="hero"><span>✅</span> 시험 날에는 우리 반 전자칠판이 <u>자동으로</u> 시험 화면으로 바뀝니다. 따로 켜실 필요 없어요.</div>
+
+  <h2>아침 조회 때 결시자 입력 — 4단계</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="t"><span class="n">1</span> 오른쪽 아래 <b class="k">✏️ 결시자 입력</b> 터치</div>
+      <img src="img_시험결시/1_exam_morning.png" alt="">
+      <div class="d">시험 시작 전에는 버튼이 초록색으로 깜빡여요.</div>
+    </div>
+    <div class="step">
+      <div class="t"><span class="n">2</span> 담임 PIN 입력 → <b class="k">확인</b></div>
+      <img src="img_시험결시/2_pin.png" alt="">
+      <div class="d">관리자 페이지 담임 로그인 번호와 같아요. (바꾸지 않았다면 <b>2026</b>)</div>
+    </div>
+    <div class="step">
+      <div class="t"><span class="n">3</span> 결석한 학생 <b class="k">번호</b> 터치 (여러 명 가능)</div>
+      <img src="img_시험결시/3_select.png" alt="">
+      <div class="d">교시는 <b>오늘 남은 시험 전체</b>가 자동으로 골라져 있어요. 이름은 명단이 있는 반은 자동으로 나와요.</div>
+    </div>
+    <div class="step">
+      <div class="t"><span class="n">4</span> 사유 확인 → <b class="k">💾 결시 등록</b> 터치</div>
+      <img src="img_시험결시/6_exam_during.png" alt="">
+      <div class="d">끝! 전자칠판의 <b>결시 · 응시 수</b>와 결시자가 바로 바뀝니다.</div>
+    </div>
+  </div>
+  <div class="tip">💡 버튼을 누를 때마다 PIN을 물어봐요. 창을 닫거나 3분간 손대지 않으면 자동으로 잠겨서 학생이 만질 수 없습니다.</div>
+</div>
+
+<div class="page">
+  <h2 class="o">🕘 지각한 학생이 시험을 본 경우</h2>
+  <div class="row">
+    <div class="wide"><img src="img_시험결시/4_delete.png" alt=""></div>
+    <div class="txt">
+      <p><b class="k">✏️ 결시자 입력</b> → PIN 입력</p>
+      <p>위쪽 <b>오늘 등록된 결시자</b>에서 그 학생의 <b>교시 칸을 한 번</b> 누르면 빨갛게 <b class="r">"삭제?"</b>로 바뀌어요.</p>
+      <p><b>한 번 더</b> 누르면 삭제됩니다.</p>
+      <p style="color:#64748b;font-size:10pt;">예) 1교시 결시 후 2교시부터 시험 → 2·3교시 칸만 삭제</p>
+    </div>
+  </div>
+
+  <h2 class="p">⚙️ 처음 한 번만 — 우리 반 재적·공번 확인</h2>
+  <div class="row">
+    <div class="wide"><img src="img_시험결시/5_settings.png" alt=""></div>
+    <div class="txt">
+      <p>결시자 입력 창 오른쪽 위 <b class="k">⚙️ 재적·공번 설정</b></p>
+      <p><b>재적</b>: −/＋ 로 우리 반 학생 수</p>
+      <p><b>공번</b>: 전출 등으로 비어 있는 번호를 터치</p>
+      <p><b class="k">💾 저장</b> → 화면에 재적·응시·공번이 표시돼요.</p>
+    </div>
+  </div>
+
+  <h2 class="g">👀 감독 선생님께</h2>
+  <p>전자칠판 <b>오른쪽 결시 현황</b>을 보고 답안지 봉투에 기록하시면 됩니다. <b>지금 교시 결시자</b>가 앞쪽에 또렷하게, 다른 교시만 결시한 학생은 흐리게 보여요.</p>
+
+  <div class="foot">
+    <div>💻 <b>교무실 PC에서도 가능</b><br>관리자 페이지 → <b>✏️ 시험 결시 입력</b></div>
+    <div>🔒 결시 기록은 <b>전자칠판에만</b> 저장되며 고사 관리 프로그램과는 별개입니다.</div>
+  </div>
+  <div class="contact">문의: 1학년 9반 윤근관</div>
+</div>
+
+</body>
+</html>
