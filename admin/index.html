@@ -227,6 +227,23 @@
     .btn-secondary { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
     .btn-secondary:hover { background: #e2e8f0; }
     .btn-sm { padding: 4px 10px; font-size: 0.76rem; }
+    /* 🗓️ 신학년 준비 */
+    .ys-step { display: flex; gap: 14px; align-items: flex-start; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+    .ys-step.done { border-color: #a7f3d0; background: #f0fdf4; }
+    .ys-step.warn { border-color: #fde68a; background: #fffbeb; }
+    .ys-num { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; background: #e2e8f0; color: #475569; }
+    .ys-step.done .ys-num { background: #10b981; color: white; }
+    .ys-step.warn .ys-num { background: #f59e0b; color: white; }
+    .ys-body { flex: 1; min-width: 0; }
+    .ys-title { font-weight: 800; color: #1e293b; font-size: 0.98rem; }
+    .ys-desc { font-size: 0.8rem; color: #64748b; margin-top: 3px; line-height: 1.6; }
+    .ys-status { font-size: 0.84rem; font-weight: 700; margin-top: 6px; }
+    .ys-step.done .ys-status { color: #047857; }
+    .ys-step.warn .ys-status { color: #b45309; }
+    .ys-step.todo .ys-status { color: #64748b; }
+    .ys-acts { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; align-items: stretch; }
+    @media (max-width: 640px) { .ys-step { flex-wrap: wrap; } .ys-acts { flex-direction: row; width: 100%; } }
+
     /* ✏️ 시험 결시 입력 */
     .ea-label { font-size: 0.82rem; color: #64748b; font-weight: 700; margin: 12px 0 6px; }
     .ea-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1200,6 +1217,21 @@
         <div id="examLinkStatus" style="margin-top:12px;"></div>
       </div>
 
+      <div class="card" id="subjectCodeCard">
+        <div class="card-title">🔢 과목 코드 <span id="scYearBadge" style="font-size:0.75rem;font-weight:700;margin-left:6px;"></span></div>
+        <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:10px;line-height:1.6;">
+          시험 화면의 과목명 옆에 표시되는 코드입니다. <b>해마다 첫 시험 전에 한 번</b> 답안지 코드와 같은지 확인하고 저장하세요.<br>
+          기본값은 고사 관리의 기본 코드표입니다. 과목명은 시험 시간표의 과목명과 같아야 합니다 (예: 기술가정).
+        </p>
+        <div id="scGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <input type="text" id="scNewName" placeholder="과목명 추가 (예: 진로)" style="width:160px;">
+          <input type="text" id="scNewCode" placeholder="코드" style="width:70px;">
+          <button class="btn btn-secondary btn-sm" id="btnScAdd">＋ 추가</button>
+          <button class="btn btn-primary" id="btnScSave" style="margin-left:auto;">💾 과목 코드 저장 (올해 확인 완료)</button>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-title">👥 학급별 재적 인원</div>
         <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;">
@@ -1222,6 +1254,25 @@
         </div>
         <div id="examPvDates" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"></div>
       </div>
+    </div>
+
+    <!-- ===== 🗓️ 신학년 준비 (해마다 할 기초 작업 한 화면) ===== -->
+    <div class="tab-panel" id="tab-yearsetup">
+      <div class="card" style="border-left:4px solid #7c3aed;">
+        <div class="card-title">🗓️ 신학년 준비 — 한 해 운영을 위한 기초 작업</div>
+        <p style="font-size:0.85rem;color:#475569;line-height:1.7;margin-bottom:10px;">
+          새 학년도마다(2월 말~3월 초) 관리자 한 명이 아래 순서대로 처리하면 1년 운영이 그대로 이어집니다.<br>
+          각 항목의 <b>바로가기</b>로 해당 화면에 가서 작업하고, 돌아오면 상태가 자동으로 갱신됩니다.
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <label style="font-weight:700;color:#334155;">준비할 학년도</label>
+          <select id="ysYear" style="width:auto;"></select>
+          <button class="btn btn-secondary btn-sm" id="btnYsRefresh">🔄 상태 새로고침</button>
+          <span id="ysProgress" style="margin-left:auto;font-weight:800;"></span>
+        </div>
+        <div style="height:8px;background:#e2e8f0;border-radius:999px;margin-top:10px;overflow:hidden;"><div id="ysBar" style="height:100%;width:0;background:linear-gradient(90deg,#7c3aed,#10b981);transition:width .3s;"></div></div>
+      </div>
+      <div id="ysList"></div>
     </div>
 
     <!-- ===== ✏️ 시험 결시 입력 (담임·관리자) ===== -->
@@ -2175,6 +2226,7 @@ const ADMIN_TABS = [
   {
     key: 'config', label: '⚙️ 설정',
     sub: [
+      { key:'yearsetup', label:'🗓️ 신학년 준비' },
       { key:'school',    label:'🏫 학교 설정' },
       { key:'settings',  label:'⏰ 수업 시간 설정' },
       { key:'teachers',  label:'👥 교사 관리' },
@@ -2246,6 +2298,7 @@ function showPanel(key) {
   if (key === 'timetable-daily' && typeof initDailyOverrideTab === 'function') initDailyOverrideTab();
   if (key === 'exam' && typeof initExamTab === 'function') initExamTab();
   if (key === 'exam-absent' && typeof initExamAbsentTab === 'function') initExamAbsentTab();
+  if (key === 'yearsetup' && typeof renderYearSetup === 'function') renderYearSetup();
 }
 
 // ============================================================
@@ -4956,6 +5009,10 @@ document.getElementById('btnPrintDailyOverrides').addEventListener('click', () =
 //   settings/examLink        { enabled, showNames, url, anonKey }
 //   settings/classEnrollment { counts: { "1-1": 28, ... } }
 // ============================================================
+// 학년도: 3월~다음 해 2월. 명단·재적 문서의 year 가 지금 학년도와 다르면 작년 자료로 보고 무시 (year 없으면 2026)
+function schoolYearNow() { const d = new Date(); return d.getMonth() + 1 >= 3 ? d.getFullYear() : d.getFullYear() - 1; }
+function _isThisYear(data) { return Number((data && data.year) || 2026) === schoolYearNow(); }
+
 let _examLink = {};
 let _examEnroll = {};
 let _examTabInited = false;
@@ -4967,10 +5024,11 @@ function initExamTab() {
   db.collection('settings').doc('examLink').onSnapshot(s => {
     _examLink = s.exists ? s.data() : {};
     _renderExamLinkForm();
+    _scWork = null; _renderSubjectCodes();
   });
   db.collection('classEnrollment').onSnapshot(snap => {
     _examEnroll = {};
-    snap.docs.forEach(d => { if (d.data().count > 0) _examEnroll[d.id] = d.data().count; });
+    snap.docs.forEach(d => { if (_isThisYear(d.data()) && d.data().count > 0) _examEnroll[d.id] = d.data().count; });
     _renderEnrollGrid();
   });
   // 미리보기 학년·반
@@ -4979,6 +5037,42 @@ function initExamTab() {
   buildClassSelect('examPvGrade', 'examPvClass', gSel.value);
   gSel.addEventListener('change', () => buildClassSelect('examPvGrade', 'examPvClass', gSel.value));
 }
+
+// ── 🔢 과목 코드 (settings/examLink.subjectCodes, subjectCodesYear) ──
+const DEFAULT_SUBJECT_CODES = { '국어':'01','도덕':'02','사회':'03','수학':'04','과학':'05','기술가정':'06','체육':'07',
+  '음악':'08','미술':'09','영어':'10','정보':'11','한문':'12','중국어':'13','일본어':'14','역사':'15' };
+let _scWork = null;   // 편집 중인 코드표
+function _renderSubjectCodes() {
+  const grid = document.getElementById('scGrid');
+  if (!grid) return;
+  if (!_scWork) _scWork = Object.assign({}, DEFAULT_SUBJECT_CODES, _examLink.subjectCodes || {});
+  grid.innerHTML = Object.keys(_scWork).map(name => `
+    <label style="display:flex;align-items:center;gap:6px;border:1px solid #e2e8f0;border-radius:8px;padding:5px 8px;font-size:0.85rem;">
+      <span style="flex:1;font-weight:700;color:#334155;">${escapeHtml(name)}</span>
+      <input type="text" class="sc-code" data-name="${escapeHtml(name)}" value="${escapeHtml(_scWork[name])}" style="width:52px;text-align:center;padding:3px;">
+    </label>`).join('');
+  const ok = Number(_examLink.subjectCodesYear) === schoolYearNow();
+  document.getElementById('scYearBadge').innerHTML = ok
+    ? `<span style="color:#059669;">✅ ${schoolYearNow()}학년도 확인 완료</span>`
+    : `<span style="color:#b45309;">⚠️ ${schoolYearNow()}학년도 확인 필요</span>`;
+}
+document.addEventListener('input', e => {
+  if (e.target.classList && e.target.classList.contains('sc-code') && _scWork) _scWork[e.target.dataset.name] = e.target.value.trim();
+});
+document.getElementById('btnScAdd').addEventListener('click', () => {
+  const n = document.getElementById('scNewName').value.trim(), c = document.getElementById('scNewCode').value.trim();
+  if (!n || !c) return showToast('과목명과 코드를 모두 입력하세요');
+  _scWork[n] = c; document.getElementById('scNewName').value = ''; document.getElementById('scNewCode').value = '';
+  _renderSubjectCodes();
+});
+document.getElementById('btnScSave').addEventListener('click', async () => {
+  const codes = {};
+  Object.keys(_scWork).forEach(k => { if (_scWork[k]) codes[k] = _scWork[k]; });
+  try {
+    await db.collection('settings').doc('examLink').set({ subjectCodes: codes, subjectCodesYear: schoolYearNow() }, { merge: true });
+    showToast(`✅ 과목 코드 저장 — ${schoolYearNow()}학년도 확인 완료`);
+  } catch (e) { showToast('오류: ' + e.message); }
+});
 
 function _setToggleUI(rowId, badgeId, descId, on, onText, offText) {
   const row = document.getElementById(rowId);
@@ -5031,7 +5125,7 @@ document.getElementById('btnSaveExamLink').addEventListener('click', async () =>
   try {
     await db.collection('settings').doc('examLink').set({
       ...v, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    }, { merge: true });   // 과목 코드 등 다른 설정 보존
     showToast(v.enabled ? '✅ 저장 — 시험 날 전자칠판에 시험 화면이 표시됩니다' : '✅ 저장 — 시험 화면 표시 꺼짐');
   } catch (e) { showToast('오류: ' + e.message); }
 });
@@ -5115,7 +5209,7 @@ document.getElementById('btnSaveEnroll').addEventListener('click', async () => {
     const v = parseInt(inp.value, 10);
     const cur = _examEnroll[key] || 0;
     const ref = db.collection('classEnrollment').doc(key);
-    if (v > 0 && v !== cur) { batch.set(ref, { count: v, updatedBy: '관리자', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); n++; }
+    if (v > 0 && v !== cur) { batch.set(ref, { count: v, year: schoolYearNow(), updatedBy: '관리자', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); n++; }
     else if (!(v > 0) && cur) { batch.delete(ref); n++; }
   });
   if (!n) return showToast('바뀐 내용이 없습니다');
@@ -5172,6 +5266,7 @@ function initExamAbsentTab() {
     db.collection('classEnrollment').onSnapshot(snap => {
       _eaEnroll = {}; _eaVacant = {};
       snap.docs.forEach(d => {
+        if (!_isThisYear(d.data())) return;   // 작년 재적·공번은 무시
         if (d.data().count > 0) _eaEnroll[d.id] = d.data().count;
         if (Array.isArray(d.data().vacant)) _eaVacant[d.id] = d.data().vacant.map(Number).filter(n => n > 0).sort((a, b) => a - b);
       });
@@ -5186,7 +5281,7 @@ function initExamAbsentTab() {
         // 공번 입력칸: "15, 22" → [15, 22]
         const vac = document.getElementById('eaVacantInput').value.split(/[^0-9]+/).map(Number).filter(n => n > 0 && n <= 70);
         const vacant = vac.filter((n, i) => vac.indexOf(n) === i).sort((a, b) => a - b);
-        await db.collection('classEnrollment').doc(`${g}-${c}`).set({ count: v, vacant, updatedBy: who, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        await db.collection('classEnrollment').doc(`${g}-${c}`).set({ count: v, vacant, year: schoolYearNow(), updatedBy: who, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
         showToast(`✅ ${g}학년 ${c}반 재적 ${v}명${vacant.length ? ` · 공번 ${vacant.join(', ')}` : ''} 저장 — 전자칠판 즉시 반영`);
       } catch (e) { showToast('오류: ' + e.message); }
     });
@@ -5247,7 +5342,7 @@ async function _eaLoad() {
       _eaRosterKey = `${g}-${c}`;
       try {
         const rs = await db.collection('classRosters').doc(_eaRosterKey).get();
-        _eaRoster = (rs.exists && rs.data().students) || {};
+        _eaRoster = (rs.exists && _isThisYear(rs.data()) && rs.data().students) || {};   // 작년 명단은 무시
       } catch (e) { _eaRoster = {}; }
     }
     // 반·날짜가 바뀌면 선택 초기화 — 교시 기본값: 오늘이면 아직 안 끝난 교시 전체, 다른 날이면 전 교시
@@ -5392,6 +5487,161 @@ document.getElementById('btnEaSave').addEventListener('click', async () => {
   _eaSel.students = {}; _eaSel.order = [];
   await _eaLoad();
 });
+
+// ============================================================
+// 🗓️ 신학년 준비 — 해마다 할 기초 작업을 한 화면에서 순서대로 (상태 자동 확인)
+//   settings/yearSetup { lastBackupAt, lastResetAt, checks: { "2027": { school:true, ... } } }
+// ============================================================
+function goPanel(key) {
+  // 메뉴 구조에서 key가 속한 상위 탭을 찾아 이동
+  const top = ADMIN_TABS.find(t => t.key === key || (t.sub && t.sub.some(x => x.key === key)));
+  if (!top) return;
+  switchTopTab(top);
+  if (top.sub) switchSubTab(key);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function _ysDefaultYear() {
+  const d = new Date(), m = d.getMonth() + 1, y = d.getFullYear();
+  if (m >= 11) return y + 1;   // 11~12월: 다음 학년도 준비
+  if (m <= 2) return y;        // 1~2월: 곧 시작할 학년도
+  return y;                    // 3~10월: 올해 학년도 점검
+}
+
+async function renderYearSetup() {
+  const sel = document.getElementById('ysYear');
+  if (!sel.options.length) {
+    const d = _ysDefaultYear();
+    sel.innerHTML = [d - 1, d, d + 1].map(y => `<option value="${y}">${y}학년도</option>`).join('');
+    sel.value = String(d);
+    sel.addEventListener('change', renderYearSetup);
+    document.getElementById('btnYsRefresh').addEventListener('click', renderYearSetup);
+  }
+  const T = Number(sel.value);
+  const list = document.getElementById('ysList');
+  list.innerHTML = '<div class="card" style="color:#64748b;">상태를 확인하는 중...</div>';
+
+  const totalClasses = Object.keys(GC).reduce((n, g) => n + Number(GC[g] || 0), 0);
+  const prepStart = new Date(T - 1, 10, 1);   // 직전 해 11월 1일 이후 작업만 '이번 준비'로 인정
+  const fmt = ts => ts && ts.toDate ? ts.toDate().toLocaleDateString('ko-KR') : '';
+  const safe = async fn => { try { return await fn(); } catch (e) { return null; } };
+
+  const [ysSnap, tSnap, ttSnap, lunchSnap, evSnap, rosSnap, enSnap, linkSnap, ctSnap] = await Promise.all([
+    safe(() => db.collection('settings').doc('yearSetup').get()),
+    safe(() => db.collection('teachers').get()),
+    safe(() => db.collection('timetable').get()),
+    safe(() => db.collection('settings').doc('lunchSchedules').get()),
+    safe(() => db.collection('schoolEvents').get()),
+    safe(() => db.collection('classRosters').get()),
+    safe(() => db.collection('classEnrollment').get()),
+    safe(() => db.collection('settings').doc('examLink').get()),
+    safe(() => db.collection('settings').doc('classTimes').get()),
+  ]);
+  const ys = (ysSnap && ysSnap.exists) ? ysSnap.data() : {};
+  const checks = (ys.checks && ys.checks[String(T)]) || {};
+  const after = ts => ts && ts.toDate && ts.toDate() >= prepStart;
+
+  // 담임 배정 (반 단위)
+  const homerooms = new Set();
+  (tSnap ? tSnap.docs : []).forEach(d => { const t = d.data(); if (t.role === 'teacher' && t.grade && t.class) homerooms.add(`${t.grade}-${t.class}`); });
+  // 기초 시간표
+  let ttCount = 0;
+  (ttSnap ? ttSnap.docs : []).forEach(d => { const x = d.data(); if (['mon','tue','wed','thu','fri'].some(k => Array.isArray(x[k]) && x[k].some(v => v))) ttCount++; });
+  // 급식 운영 기간 (그 학년도 3월 이후를 포함하는 기간)
+  const schedules = (lunchSnap && lunchSnap.exists && lunchSnap.data().schedules) || [];
+  const ysStart = `${T}-03-01`, ysEnd = `${T + 1}-02-28`;
+  const lunchIn = schedules.filter(x => x.endDate >= ysStart && x.startDate <= ysEnd);
+  // 학사일정 (그 학년도)
+  const evIn = (evSnap ? evSnap.docs : []).filter(d => { const x = d.data(); const dt = x.date && x.date.toDate ? x.date.toDate() : null; return dt && dt >= new Date(T, 2, 1) && dt < new Date(T + 1, 2, 1); }).length;
+  // 명단·재적 (그 학년도)
+  const yr = x => Number(x.year || 2026);
+  const rosterN = (rosSnap ? rosSnap.docs : []).filter(d => yr(d.data()) === T).length;
+  const enrollN = (enSnap ? enSnap.docs : []).filter(d => yr(d.data()) === T && d.data().count > 0).length;
+  // 시험 연동
+  const link = (linkSnap && linkSnap.exists) ? linkSnap.data() : {};
+  const pilot = Array.isArray(link.pilotClasses) ? link.pilotClasses : [];
+
+  const st = (cond, warn) => cond ? 'done' : (warn ? 'warn' : 'todo');
+  const steps = [
+    { key: 'backup', title: '💾 지난 학년도 전체 백업',
+      desc: '공지·시간표·교사·설정·명단·결시 기록까지 모든 자료를 파일로 저장합니다. 초기화 전에 반드시 먼저!',
+      state: st(after(ys.lastBackupAt)),
+      status: ys.lastBackupAt ? `마지막 백업: ${fmt(ys.lastBackupAt)}${after(ys.lastBackupAt) ? '' : ' (이번 준비 기간 전)'}` : '백업 기록 없음',
+      acts: [['💾 지금 백업', "document.getElementById('btnBackup').click()"], ['백업·복원 화면', "goPanel('backup')"]] },
+    { key: 'reset', title: '🆕 새 학년도 초기화',
+      desc: '지난 공지·학급 게시판·지난 학사일정·D-Day, 학생 명단·재적·결시 기록을 정리합니다. (시간표·교사·설정은 유지)',
+      state: st(after(ys.lastResetAt)),
+      status: ys.lastResetAt ? `마지막 초기화: ${fmt(ys.lastResetAt)}` : '초기화 기록 없음',
+      acts: [['초기화 화면', "goPanel('backup')"]] },
+    { key: 'school', title: '🏫 학교 기본 설정 (학급 수)',
+      desc: '학년별 학급 수가 바뀌었으면 고칩니다. 학급 선택 메뉴·셋업 페이지·시험 화면 등에 모두 반영됩니다.',
+      state: st(checks.school, false),
+      status: `현재 ${Object.keys(GC).map(g => `${g}학년 ${GC[g]}반`).join(' · ')} = ${totalClasses}학급${checks.school ? ' · 확인 완료' : ''}`,
+      acts: [['바로가기', "goPanel('school')"], [checks.school ? '✔ 확인 취소' : '✔ 확인 완료', `ysCheck('school', ${!checks.school})`]] },
+    { key: 'teachers', title: '👥 교사·담임 등록',
+      desc: `부서표(PDF/엑셀)로 담임 일괄 등록 → 담임 PIN은 기본값 ${T}로 설정됩니다. 관리자 계정은 유지됩니다.`,
+      state: st(homerooms.size >= totalClasses && checks.teachers, homerooms.size > 0),
+      status: `담임 배정 ${homerooms.size}/${totalClasses}반${checks.teachers ? ' · 확인 완료' : ' · 새 담임으로 바꿨으면 확인 완료를 누르세요'}`,
+      acts: [['바로가기', "goPanel('teachers')"], [checks.teachers ? '✔ 확인 취소' : '✔ 확인 완료', `ysCheck('teachers', ${!checks.teachers})`]] },
+    { key: 'timetable', title: '📅 기초 시간표 업로드 (나이스)',
+      desc: '나이스 "주간 기초 시간표" 엑셀을 학년별로 올립니다. 2학기 시작 때도 다시 올립니다.',
+      state: st(ttCount >= totalClasses && checks.timetable, ttCount > 0),
+      status: `시간표 등록 ${ttCount}/${totalClasses}반${checks.timetable ? ' · 올해 시간표로 교체 확인' : ' · 올해 시간표로 바꿨으면 확인 완료를 누르세요'}`,
+      acts: [['바로가기', "goPanel('timetable')"], [checks.timetable ? '✔ 확인 취소' : '✔ 확인 완료', `ysCheck('timetable', ${!checks.timetable})`]] },
+    { key: 'classtimes', title: '⏰ 수업 시간(시정) 확인',
+      desc: '교시별 시작·끝 시간이 올해 시정과 같은지 확인합니다.',
+      state: st(checks.classtimes, false),
+      status: (ctSnap && ctSnap.exists && Array.isArray(ctSnap.data().periods)) ? `${ctSnap.data().periods.length}교시 설정됨${checks.classtimes ? ' · 확인 완료' : ''}` : '기본 시정 사용 중',
+      acts: [['바로가기', "goPanel('settings')"], [checks.classtimes ? '✔ 확인 취소' : '✔ 확인 완료', `ysCheck('classtimes', ${!checks.classtimes})`]] },
+    { key: 'lunch', title: '🍱 급식 운영 기간·순서',
+      desc: '학기별 급식실·학급 순서 운영 기간을 만듭니다. (3월 첫 주 순환 기준 확인)',
+      state: st(lunchIn.length > 0),
+      status: lunchIn.length ? `${T}학년도 운영 기간 ${lunchIn.length}개: ${lunchIn.map(x => escapeHtml(x.name || '')).join(', ')}` : `${T}학년도 운영 기간 없음`,
+      acts: [['바로가기', "goPanel('lunch')"]] },
+    { key: 'events', title: '📆 학사일정·D-Day',
+      desc: '연간 학사일정과 주요 D-Day(시험·방학 등)를 등록합니다. 학급 화면 주간 일정과 D-Day 띠에 표시됩니다.',
+      state: st(evIn > 0),
+      status: evIn ? `${T}학년도 학사일정 ${evIn}건 등록` : `${T}학년도 학사일정 없음`,
+      acts: [['학사일정', "goPanel('events')"], ['D-Day', "goPanel('dday')"]] },
+    { key: 'roster', title: '🧑‍🎓 학생 명렬 (명단·재적)',
+      desc: '학년별 명렬 파일로 반별 명단과 재적을 넣습니다. 시험 결시 입력 때 번호를 누르면 이름이 자동으로 채워집니다. 공번은 담임이 교실에서 지정합니다.',
+      state: st(rosterN >= totalClasses && enrollN >= totalClasses, rosterN > 0 || enrollN > 0),
+      status: `명단 ${rosterN}/${totalClasses}반 · 재적 ${enrollN}/${totalClasses}반 (${T}학년도)`,
+      acts: [['재적 입력 화면', "goPanel('exam')"]] },
+    { key: 'exam', title: '📝 시험 연동·과목 코드',
+      desc: '고사 관리 연결, 과목 코드 확인(1년에 한 번), 시범 학급 해제(전체 운영)를 점검합니다. 1학년 1학기(자유학기)는 시험이 없어 자동으로 평소 화면입니다.',
+      state: st(link.url && Number(link.subjectCodesYear) === T && pilot.length === 0 && link.enabled, !!link.url),
+      status: [
+        link.url ? '연결 설정됨' : '연결 미설정',
+        link.enabled ? '표시 켜짐' : '표시 꺼짐',
+        Number(link.subjectCodesYear) === T ? `과목 코드 ${T} 확인` : '과목 코드 확인 필요',
+        pilot.length ? `시범 학급만(${pilot.join(', ')})` : '전체 학급'
+      ].join(' · '),
+      acts: [['바로가기', "goPanel('exam')"]] },
+  ];
+
+  const done = steps.filter(x => x.state === 'done').length;
+  document.getElementById('ysProgress').textContent = `${done} / ${steps.length} 완료`;
+  document.getElementById('ysBar').style.width = Math.round(done / steps.length * 100) + '%';
+  list.innerHTML = steps.map((x, i) => `
+    <div class="ys-step ${x.state}">
+      <div class="ys-num">${x.state === 'done' ? '✓' : i + 1}</div>
+      <div class="ys-body">
+        <div class="ys-title">${x.title}</div>
+        <div class="ys-desc">${x.desc}</div>
+        <div class="ys-status">${x.state === 'done' ? '✅ ' : x.state === 'warn' ? '⚠️ ' : '○ '}${x.status}</div>
+      </div>
+      <div class="ys-acts">${x.acts.map(a => `<button class="btn ${a[0].indexOf('✔') === 0 ? 'btn-secondary' : 'btn-primary'} btn-sm" onclick="${a[1]}">${a[0]}</button>`).join('')}</div>
+    </div>`).join('');
+}
+
+window.ysCheck = async (key, on) => {
+  const T = document.getElementById('ysYear').value;
+  try {
+    await db.collection('settings').doc('yearSetup').set({ checks: { [T]: { [key]: !!on } } }, { merge: true });
+    renderYearSetup();
+  } catch (e) { showToast('오류: ' + e.message); }
+};
 
 // ============================================================
 // 📄 결보강 PDF 업로드 → 일일 시간표 변경 자동 입력
@@ -6850,7 +7100,8 @@ const BACKUP_COLLECTIONS = [
   'classTimeOverrides',
   'settings', 'teachers',
   'dDays', 'schoolEvents',
-  'pendingAdmins'
+  'pendingAdmins',
+  'classEnrollment', 'classRosters', 'examAbsents'   // 시험 기간: 재적·공번, 학생 명단, 결시 기록
 ];
 
 // 백업/복원 결과 표시용 한글 라벨
@@ -6860,7 +7111,8 @@ const COLLECTION_LABELS = {
   timetable: '기초시간표', timetableOverrides: '일일/결보강',
   classTimeOverrides: '단축수업', settings: '설정(급식·교사대체 등)',
   teachers: '교사', dDays: 'D-Day', schoolEvents: '학사일정',
-  pendingAdmins: '관리자초대'
+  pendingAdmins: '관리자초대',
+  classEnrollment: '재적·공번', classRosters: '학생명단', examAbsents: '시험결시'
 };
 
 // Firestore Timestamp → JSON 직렬화
@@ -6920,6 +7172,7 @@ document.getElementById('btnBackup').addEventListener('click', async () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
+    db.collection('settings').doc('yearSetup').set({ lastBackupAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
     status.innerHTML = `✅ 백업 완료 — 총 <b>${totalDocs}개</b> 문서<br><span style="font-size:0.78rem;color:#475569;line-height:1.7;">${counts.join(' · ') || '데이터 없음'}</span>`;
     showToast('✅ 백업 파일 다운로드 완료');
   } catch (e) {
@@ -6961,7 +7214,7 @@ document.getElementById('btnRestore').addEventListener('click', async () => {
 });
 
 document.getElementById('btnNewYear').addEventListener('click', async () => {
-  if (!confirm('🆕 새 학년도 초기화\n\n다음 항목이 모두 삭제됩니다:\n• 모든 학교 공지사항\n• 모든 학급 게시판\n• 지난 D-Day · 학사일정\n• 활성화된 긴급공지\n\n시간표, 교사, 설정은 유지됩니다.\n\n반드시 먼저 백업을 받으셨나요?')) return;
+  if (!confirm('🆕 새 학년도 초기화\n\n다음 항목이 모두 삭제됩니다:\n• 모든 학교 공지사항\n• 모든 학급 게시판\n• 지난 D-Day · 학사일정\n• 활성화된 긴급공지\n• 학생 명단 · 재적·공번 · 시험 결시 기록\n\n시간표, 교사, 설정은 유지됩니다.\n\n반드시 먼저 백업을 받으셨나요?')) return;
   if (!confirm('정말 정말 진행하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.\n백업이 없으면 데이터를 영구히 잃게 됩니다.')) return;
 
   const status = document.getElementById('newYearStatus');
@@ -6996,6 +7249,13 @@ document.getElementById('btnNewYear').addEventListener('click', async () => {
     }
     // 긴급공지 비활성화
     await db.collection('emergency').doc('current').set({ isActive: false }, { merge: true });
+
+    // 시험 기간 자료: 학생 명단·재적·공번·결시 기록 (해마다 새로 입력, 백업에는 포함됨)
+    for (const col of ['classRosters', 'classEnrollment', 'examAbsents']) {
+      const sn = await db.collection(col).get();
+      for (const d of sn.docs) { await d.ref.delete(); total++; }
+    }
+    await db.collection('settings').doc('yearSetup').set({ lastResetAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
     status.textContent = `✅ 초기화 완료 — ${total}개 항목 정리됨`;
     showToast(`✅ 새 학년도 준비 완료 (${total}개 정리)`);
