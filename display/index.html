@@ -2929,7 +2929,7 @@
             <div class="ex-tile t-take"><span class="ex-tl">응시</span><span class="ex-tn">${hasEnroll ? enroll - absentCnt : '-'}<small>명</small></span></div>
           </div>
           <div class="ex-abs"><div class="ex-abs-list">
-            <div class="ex-abs-line"><span class="ex-abs-label ab">결시자</span>${order.length ? chips : '<span class="ex-allin">✨ 전원 응시</span>'}</div>
+            <div class="ex-abs-line"><span class="ex-abs-label ab">결시자</span>${order.length ? chips : '<span class="ex-allin">없음 ✨</span>'}</div>
             ${examVacant.length
               ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span>${examVacant.map(n => `<span class="ex-vac">${n}</span>`).join('')}</div>`
               : (hasEnroll ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span><span class="ex-none">없음</span></div>` : '')}
