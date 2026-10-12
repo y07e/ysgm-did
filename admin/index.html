@@ -1160,9 +1160,9 @@
       <div class="card" style="border-left:4px solid #f59e0b;">
         <div class="card-title">📝 시험 기간 전자칠판 표시</div>
         <p style="font-size:0.85rem;color:#475569;line-height:1.7;margin-bottom:12px;">
-          <b>양산여중 고사 관리</b>에 등록된 시험 시간표와 결시자를 전자칠판에 자동으로 보여줍니다.<br>
+          <b>양산여중 고사 관리</b>의 시험 시간표를 읽어 와 전자칠판에 보여줍니다. 결시자는 전자칠판에서 따로 입력합니다(고사 관리와 연동 안 함).<br>
           시험 날이 되면 각 반 화면의 <b>오늘 시간표</b> 칸이 <b>시험 시간표 + 결시 현황(재적·결시·응시·결시자)</b>으로 바뀌고,
-          시험 기간이 끝나면 원래 시간표로 자동 복귀합니다. 결시자는 고사 관리에서 입력하면 1분 안에 반영됩니다.
+          시험 기간이 끝나면 원래 시간표로 자동 복귀합니다.
         </p>
         <label class="toggle-row off" id="examEnabledRow">
           <span class="toggle-switch"><input type="checkbox" id="examEnabled"></span>
@@ -1191,7 +1191,7 @@
             <div class="form-row"><label>Supabase URL</label><input type="text" id="examUrl" placeholder="https://xxxx.supabase.co"></div>
             <div class="form-row"><label>anon 공개 키</label><input type="password" id="examKey" placeholder="eyJ..."></div>
           </div>
-          <p style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">고사 관리 앱의 .env.local 에 있는 NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY 값입니다. 전자칠판은 읽기만 하며 고사 관리 데이터를 수정하지 않습니다.</p>
+          <p style="font-size:0.78rem;color:#94a3b8;margin-top:4px;">고사 관리 앱의 .env.local 에 있는 NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY 값입니다. 전자칠판은 시험 시간표를 읽기만 하며 고사 관리 데이터를 수정하지 않습니다.</p>
         </details>
         <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-primary" id="btnSaveExamLink">💾 설정 저장</button>
@@ -1229,8 +1229,8 @@
       <div class="card" style="border-left:4px solid #ef4444;">
         <div class="card-title">✏️ 시험 결시자 입력</div>
         <p style="font-size:0.84rem;color:#475569;line-height:1.7;margin-bottom:12px;">
-          여기서 입력한 결시자는 <b>양산여중 고사 관리</b>에 바로 저장되고, 우리 반 전자칠판 결시 현황에도 1분 안에 반영됩니다.
-          (교실 전자칠판의 ✏️ 결시자 입력 버튼과 같은 기능입니다)
+          여기서 입력한 결시자는 <b>전자칠판 시스템에만 저장</b>되고 우리 반 전자칠판 결시 현황에 바로 반영됩니다.
+          (고사 관리와는 연동하지 않습니다 · 교실 전자칠판의 ✏️ 결시자 입력 버튼과 같은 기능입니다)
         </p>
         <div class="form-grid cols3" id="eaPickRow">
           <div class="form-row" id="eaGradeWrap"><label>학년</label><select id="eaGrade"></select></div>
@@ -5055,7 +5055,10 @@ document.getElementById('btnTestExamLink').addEventListener('click', async () =>
     // 오늘 결시자 수 (전체 반)
     const todayIds = sc.filter(s => s.exam_date === today && s.subject !== '자습').map(s => s.id);
     let absToday = [];
-    if (todayIds.length) absToday = await _examFetch(v, `absent_students?select=exam_schedule_id,grade,class_number&exam_schedule_id=in.(${todayIds.join(',')})`);
+    if (todayIds.length) {
+      const sa = await db.collection('examAbsents').where('date', '==', today).get();
+      absToday = sa.docs.map(d => d.data()).filter(x => todayIds.indexOf(x.scheduleId) !== -1).map(x => ({ grade: x.grade, class_number: x.cls }));
+    }
 
     const grades = [...new Set(sc.map(s => s.grade))].sort();
     const dow = d => ['일','월','화','수','목','금','토'][new Date(d + 'T00:00:00').getDay()];
@@ -5141,7 +5144,7 @@ document.getElementById('examPvDates').addEventListener('click', e => {
 
 // ============================================================
 // ✏️ 시험 결시 입력 (담임: 자기 반 / 관리자: 학년·반 선택)
-//   고사 관리 Supabase absent_students 에 직접 등록·삭제 (전자칠판 교실 입력과 동일)
+//   전자칠판 Firestore examAbsents 에 등록·삭제 (고사 관리와 연동 안 함, 교실 입력과 동일)
 // ============================================================
 const EA_REASONS = { illness:'질병결석', unauthorized:'미인정결석', approved:'인정결석', other:'기타결석' };
 let _eaInited = false, _eaExam = null, _eaScheds = [], _eaAbsents = [];
@@ -5149,13 +5152,6 @@ let _eaSel = { periods: [], students: {}, order: [] };   // 교시 여러 개 + 
 let _eaLink = null, _eaEnroll = {}, _eaVacant = {};   // 공번: { "1-9": [15, 22] }
 let _eaRoster = {}, _eaRosterKey = '', _eaSelKey = '';
 
-function _eaWrite(method, path, body) {
-  const opt = { method, headers: {
-    apikey: _eaLink.anonKey, Authorization: 'Bearer ' + _eaLink.anonKey,
-    'Content-Type': 'application/json', Prefer: 'return=minimal' } };
-  if (body) opt.body = JSON.stringify(body);
-  return fetch(`${_eaLink.url.replace(/\/+$/, '')}/rest/v1/${path}`, opt);
-}
 function _eaGC() {
   if (currentRole === 'teacher' && myTeacherData) return { g: String(myTeacherData.grade), c: String(myTeacherData.class) };
   return { g: document.getElementById('eaGrade').value, c: document.getElementById('eaClass').value };
@@ -5240,9 +5236,12 @@ async function _eaLoad() {
   try {
     _eaScheds = (await _examFetch(_eaLink, `exam_schedules?select=id,period,subject,start_time,end_time&exam_id=eq.${_eaExam.id}&exam_date=eq.${date}&grade=eq.${g}&order=period.asc`))
       .filter(s => s.subject !== '자습');
-    _eaAbsents = _eaScheds.length
-      ? await _examFetch(_eaLink, `absent_students?select=id,exam_schedule_id,student_number,student_name,reason,reported_by&exam_schedule_id=in.(${_eaScheds.map(s => s.id).join(',')})&grade=eq.${g}&class_number=eq.${c}&order=student_number.asc`)
-      : [];
+    // 결시 기록: 전자칠판 Firestore(examAbsents) — 고사 관리와 연동 안 함
+    const snapA = await db.collection('examAbsents').where('date', '==', date).where('classKey', '==', `${g}-${c}`).get();
+    const schedIds = _eaScheds.map(s => s.id);
+    _eaAbsents = snapA.docs.map(d => { const x = d.data(); return { id: d.id, exam_schedule_id: x.scheduleId, student_number: x.no, student_name: x.name || '', reason: x.reason || '', reported_by: x.reportedBy || '' }; })
+      .filter(a => schedIds.indexOf(a.exam_schedule_id) !== -1)
+      .sort((p, q) => p.student_number - q.student_number);
     // 학생 명단 (번호 → 이름) — 반이 바뀔 때만 다시 읽음
     if (_eaRosterKey !== `${g}-${c}`) {
       _eaRosterKey = `${g}-${c}`;
@@ -5344,9 +5343,9 @@ document.getElementById('tab-exam-absent').addEventListener('click', async e => 
     const i = _eaSel.periods.indexOf(v);
     if (i === -1) _eaSel.periods.push(v); else _eaSel.periods.splice(i, 1);
   } else if (kind === 'del') {
-    if (!confirm('이 결시 기록을 삭제할까요? (고사 관리에서도 삭제됩니다)')) return;
-    const r = await _eaWrite('DELETE', 'absent_students?id=eq.' + encodeURIComponent(v));
-    showToast(r.ok ? '🗑 삭제했습니다' : '❌ 삭제 실패: HTTP ' + r.status);
+    if (!confirm('이 결시 기록을 삭제할까요?')) return;
+    try { await db.collection('examAbsents').doc(v).delete(); showToast('🗑 삭제했습니다'); }
+    catch (err) { showToast('❌ 삭제 실패: ' + err.message); }
     await _eaLoad(); return;
   }
   _eaRender();
@@ -5369,18 +5368,24 @@ document.getElementById('btnEaSave').addEventListener('click', async () => {
   const who = (currentRole === 'teacher' && myTeacherData && myTeacherData.name) ? myTeacherData.name
     : ((auth.currentUser && (auth.currentUser.displayName || auth.currentUser.email)) || '관리자');
   msg.style.color = '#64748b'; msg.textContent = '저장 중...';
+  const date = document.getElementById('eaDate').value;
+  const batch = db.batch();
   let ok = 0, dup = 0, fail = '';
   for (const k of _eaSel.order) {
     const it = _eaSel.students[k];
     for (const sid of _eaSel.periods) {
-      const r = await _eaWrite('POST', 'absent_students', {
-        exam_schedule_id: sid, grade: Number(g), class_number: Number(c),
-        student_number: Number(k), student_name: (it.name || '').trim(), reason: it.reason,
-        reported_by: who + ' (DID 관리자)'
+      if (_eaAbsents.some(a => a.exam_schedule_id === sid && a.student_number === Number(k))) { dup++; continue; }
+      const sl = _eaScheds.find(x => x.id === sid) || {};
+      batch.set(db.collection('examAbsents').doc(), {
+        date, classKey: `${g}-${c}`, grade: Number(g), cls: Number(c),
+        scheduleId: sid, period: sl.period || 0, subject: sl.subject || '',
+        no: Number(k), name: (it.name || '').trim(), reason: it.reason,
+        reportedBy: who + ' (DID 관리자)', createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      if (r.ok) ok++; else if (r.status === 409) dup++; else fail = 'HTTP ' + r.status;
+      ok++;
     }
   }
+  try { if (ok) await batch.commit(); } catch (err) { fail = err.message; }
   const nStu = _eaSel.order.length;
   msg.style.color = fail ? '#dc2626' : '#059669';
   msg.textContent = fail ? `❌ 일부 실패: ${fail}` : `✅ ${nStu}명 결시 등록${dup ? ` · ${dup}건은 이미 등록되어 건너뜀` : ''}`;

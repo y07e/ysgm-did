@@ -2743,8 +2743,10 @@
   var examState = null;   // { name, dayNo, totalDays, today:[slot], nextDate, next:[slot], absents:[] }
   var examTimer = null;
   var _examReqSeq = 0;
-  var _absJustAdded = [];     // 방금 등록한 결시 기록 (다음 갱신에 서버 결과와 합침)
-  var _absJustDeleted = [];   // 방금 삭제한 결시 기록 id
+  // 결시 기록은 고사 관리와 연동하지 않고 전자칠판 Firestore(examAbsents)에만 저장 — 실시간 구독
+  var _absLive = [];          // 오늘 우리 반 결시 기록 (examAbsents 실시간)
+  var _absUnsub = null, _absSubKey = '';
+  var _absView = '';          // 입력 창 현재 화면: 'pin' | 'form' | 'settings'
 
   function _ymd(d) {
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -2793,16 +2795,9 @@
       scheds.forEach(s => { if (dates.indexOf(s.exam_date) === -1) dates.push(s.exam_date); });
       const nextDate = dates.filter(d => d > today)[0] || '';
       const ids = todaySlots.filter(s => s.subject !== '자습').map(s => s.id);
-      let absents = [];
-      if (ids.length) {
-        absents = await examFetch('absent_students?select=id,exam_schedule_id,student_number,student_name,reason'
-          + '&exam_schedule_id=in.(' + ids.join(',') + ')&grade=eq.' + grade + '&class_number=eq.' + cls
-          + '&order=student_number.asc');
-      }
       if (mySeq !== _examReqSeq) return;   // 더 최근 호출이 진행 중 → 이 결과는 버림
-      // 방금 등록/삭제한 기록은 서버 응답이 늦어도 화면에 확실히 반영
-      absents = absents.filter(a => _absJustDeleted.indexOf(a.id) === -1);
-      _absJustAdded.forEach(r => { if (!absents.some(a => a.id === r.id) && ids.indexOf(r.exam_schedule_id) !== -1) absents.push(r); });
+      _subscribeAbsents(today);
+      const absents = _absLive.filter(a => ids.indexOf(a.exam_schedule_id) !== -1);
       setExamState({
         name: ex.name,
         dayNo: dates.indexOf(today) + 1,
@@ -2812,7 +2807,7 @@
         next: nextDate ? scheds.filter(s => s.exam_date === nextDate) : [],
         absents: absents
       });
-      scheduleExamPoll(60*1000);   // 시험 날은 1분마다 결시 현황 갱신
+      scheduleExamPoll(5*60*1000);   // 시험 시간표 변경 확인 (결시 현황은 실시간 구독)
     } catch (e) {
       // 일시적 네트워크 오류 — 기존 화면 유지(시험 중 일반 시간표로 튀지 않게) 후 재시도
       console.warn('[시험 연동] 불러오기 실패:', e.message);
@@ -3003,7 +2998,7 @@
   window.addEventListener('resize', () => { if (examState) { _examLastHtml = ''; renderExamScreen(); } });
 
   // ============================================================
-  // ✏️ 교실에서 결시자 입력 — 담임 PIN 확인 후 고사 관리(absent_students)에 직접 등록
+  // ✏️ 교실에서 결시자 입력 — 담임 PIN 확인 후 전자칠판 Firestore(examAbsents)에 저장 (고사 관리와 연동 안 함)
   // ============================================================
   var _absUnlock = null;      // { name, until }
   var _absRoster = {};        // 번호 → 이름 (classRosters/{학년-반}, 로그인 후에만 읽기 가능)
@@ -3027,13 +3022,13 @@
     else showAbsentPin();
   }
   function closeAbsentInput() {
-    _absPendingDel = null;
+    _absPendingDel = null; _absView = '';
     document.getElementById('absModal').classList.remove('show');
     _absPin = '';
   }
 
   function showAbsentPin(msg) {
-    _absPin = '';
+    _absPin = ''; _absView = 'pin';
     const keys = ['1','2','3','4','5','6','7','8','9','지움','0','확인'];
     document.getElementById('absBody').innerHTML = `
       <div class="abs-h">🔒 ${grade}학년 ${cls}반 담임 PIN 입력</div>
@@ -3082,6 +3077,7 @@
   function _absTouch() { if (_absUnlock) _absUnlock.until = Date.now() + 10*60*1000; }
 
   function showAbsentForm() {
+    _absView = 'form';
     const st = examState;
     const slots = _absSlots();
     const enroll = parseInt(examEnroll[grade + '-' + cls], 10);
@@ -3171,6 +3167,7 @@
   var _absSet = null;   // { count, vacant: [] }
   function showAbsentSettings(msg) {
     if (_absExpired()) return;
+    _absView = 'settings';
     if (!_absSet) {
       const enroll = parseInt(examEnroll[grade + '-' + cls], 10);
       _absSet = { count: enroll > 0 ? enroll : 0, vacant: examVacant.slice() };
@@ -3251,13 +3248,26 @@
   function absSetName(k, v) { if (_absSel.students[k]) _absSel.students[k].name = v; _absTouch(); }
   function absSetReason(k, v) { if (_absSel.students[k]) _absSel.students[k].reason = v; _absTouch(); }
 
-  function _absWrite(method, path, body) {
-    const base = String(examLink.url).replace(/\/+$/, '');
-    const opt = { method: method, headers: {
-      apikey: examLink.anonKey, Authorization: 'Bearer ' + examLink.anonKey,
-      'Content-Type': 'application/json', Prefer: method === 'POST' ? 'return=representation' : 'return=minimal' } };
-    if (body) opt.body = JSON.stringify(body);
-    return fetch(base + '/rest/v1/' + path, opt);
+  // 오늘 우리 반 결시 기록 실시간 구독 (examAbsents: date + classKey)
+  function _subscribeAbsents(date) {
+    const key = date + '_' + grade + '-' + cls;
+    if (_absSubKey === key) return;
+    _absSubKey = key;
+    if (_absUnsub) { _absUnsub(); _absUnsub = null; }
+    _absUnsub = db.collection('examAbsents')
+      .where('date', '==', date).where('classKey', '==', grade + '-' + cls)
+      .onSnapshot(snap => {
+        _absLive = snap.docs.map(d => {
+          const x = d.data();
+          return { id: d.id, exam_schedule_id: x.scheduleId, student_number: x.no, student_name: x.name || '', reason: x.reason || '' };
+        }).sort((p, q) => p.student_number - q.student_number);
+        if (examState) {
+          const ids = _absSlots().map(s => s.id);
+          examState.absents = _absLive.filter(a => ids.indexOf(a.exam_schedule_id) !== -1);
+          _examLastHtml = ''; renderExamScreen();
+          if (_absView === 'form' && document.getElementById('absModal').classList.contains('show')) showAbsentForm();
+        }
+      }, err => console.warn('[결시 구독] 실패:', err.message));
   }
   function _absExpired() {
     if (!_absUnlock || _absUnlock.until < Date.now()) { showAbsentPin('시간이 지나 다시 PIN을 입력해 주세요'); return true; }
@@ -3269,49 +3279,43 @@
     if (!_absSel.periods.length) { _absMsg = '결시 교시를 선택하세요'; showAbsentForm(); return; }
     if (!_absSel.order.length) { _absMsg = '결시 학생 번호를 선택하세요'; showAbsentForm(); return; }
     document.getElementById('absErr').textContent = '저장 중...';
-    let ok = 0, dup = 0, fail = '';
-    for (let i = 0; i < _absSel.order.length; i++) {
-      const k = _absSel.order[i], it = _absSel.students[k];
-      for (let j = 0; j < _absSel.periods.length; j++) {
-        const r = await _absWrite('POST', 'absent_students', {
-          exam_schedule_id: _absSel.periods[j], grade: Number(grade), class_number: Number(cls),
-          student_number: Number(k), student_name: (it.name || '').trim(), reason: it.reason,
-          reported_by: _absUnlock.name + ' (전자칠판)'
+    const today = _ymd(new Date());
+    const slots = _absSlots();
+    const batch = db.batch();
+    let ok = 0, dup = 0;
+    _absSel.order.forEach(k => {
+      const it = _absSel.students[k];
+      _absSel.periods.forEach(sid => {
+        // 같은 학생·같은 교시가 이미 있으면 건너뜀
+        if (examState.absents.some(a => a.exam_schedule_id === sid && a.student_number === Number(k))) { dup++; return; }
+        const sl = slots.filter(x => x.id === sid)[0] || {};
+        batch.set(db.collection('examAbsents').doc(), {
+          date: today, classKey: grade + '-' + cls, grade: Number(grade), cls: Number(cls),
+          scheduleId: sid, period: sl.period || 0, subject: sl.subject || '',
+          no: Number(k), name: (it.name || '').trim(), reason: it.reason,
+          reportedBy: _absUnlock.name + ' (전자칠판)',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        if (r.ok) {
-          ok++;
-          try { const rows = await r.json(); if (Array.isArray(rows)) rows.forEach(x => _absJustAdded.push(x)); } catch (e) {}
-        } else if (r.status === 409) dup++; else fail = 'HTTP ' + r.status;
-      }
-    }
+        ok++;
+      });
+    });
     const nStu = _absSel.order.length;
-    // 화면에 즉시 반영 (서버 재조회 전에도 목록·결시 수가 바로 바뀜)
-    if (examState) {
-      _absJustAdded.forEach(x => { if (!examState.absents.some(a => a.id === x.id)) examState.absents.push(x); });
-      _examLastHtml = ''; renderExamScreen();
+    try {
+      if (ok) await batch.commit();
+      _absResetSel();
+      _absMsg = '✅ ' + nStu + '명 결시 등록 완료' + (dup ? ' · ' + dup + '건은 이미 등록되어 있어 건너뜀' : '') + ' — 화면에 바로 반영됩니다';
+    } catch (e) {
+      _absMsg = '❌ 저장 실패: ' + e.message + ' — 다시 시도해 주세요';
     }
-    await refreshExam();
-    _absResetSel();
-    _absMsg = fail ? ('❌ 일부 저장 실패 (' + fail + ') — 다시 시도해 주세요')
-      : ('✅ ' + nStu + '명 결시 등록 완료' + (dup ? ' · ' + dup + '건은 이미 등록되어 있어 건너뜀' : '') + ' — 화면에 바로 반영됩니다');
     showAbsentForm();
-  }
-
-  // 삭제한 기록을 화면 목록에서 즉시 제거
-  function _absForget(idList) {
-    idList.forEach(id => { _absJustDeleted.push(id); });
-    _absJustAdded = _absJustAdded.filter(x => idList.indexOf(x.id) === -1);
-    if (examState) { examState.absents = examState.absents.filter(a => idList.indexOf(a.id) === -1); _examLastHtml = ''; renderExamScreen(); }
   }
 
   async function absDelete(id) {
     if (_absExpired()) return;
     if (_absPendingDel !== id) { _absPendingDel = id; _absMsg = '삭제하려면 같은 칸을 한 번 더 누르세요'; showAbsentForm(); return; }
     _absPendingDel = null;
-    const r = await _absWrite('DELETE', 'absent_students?id=eq.' + encodeURIComponent(id));
-    if (r.ok) _absForget([id]);
-    await refreshExam();
-    _absMsg = r.ok ? '🗑 삭제했습니다' : '❌ 삭제 실패: HTTP ' + r.status;
+    try { await db.collection('examAbsents').doc(id).delete(); _absMsg = '🗑 삭제했습니다'; }
+    catch (e) { _absMsg = '❌ 삭제 실패: ' + e.message; }
     showAbsentForm();
   }
   async function absDeleteStudent(no) {
@@ -3321,13 +3325,12 @@
     if (!mine.length) return;
     if (_absPendingDel !== 'stu:' + no) { _absPendingDel = 'stu:' + no; _absMsg = no + '번 결시 ' + mine.length + '건을 모두 지우려면 한 번 더 누르세요'; showAbsentForm(); return; }
     _absPendingDel = null;
-    let bad = 0;
-    for (let i = 0; i < mine.length; i++) {
-      const r = await _absWrite('DELETE', 'absent_students?id=eq.' + encodeURIComponent(mine[i].id));
-      if (!r.ok) bad++; else _absForget([mine[i].id]);
-    }
-    await refreshExam();
-    _absMsg = bad ? '❌ 일부 삭제 실패' : '🗑 ' + no + '번 결시를 모두 삭제했습니다';
+    try {
+      const batch = db.batch();
+      mine.forEach(a => batch.delete(db.collection('examAbsents').doc(a.id)));
+      await batch.commit();
+      _absMsg = '🗑 ' + no + '번 결시를 모두 삭제했습니다';
+    } catch (e) { _absMsg = '❌ 삭제 실패: ' + e.message; }
     showAbsentForm();
   }
 

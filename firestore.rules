@@ -100,6 +100,19 @@ service cloud.firestore {
       allow delete: if isLoggedIn();
     }
 
+    // 시험 결시 기록 (고사 관리와 연동하지 않고 전자칠판에서만 관리)
+    // 읽기: 전자칠판 결시 현황 표시 (비로그인)
+    // 쓰기: 담임(PIN 익명 로그인)·관리자
+    match /examAbsents/{id} {
+      allow read: if true;
+      allow create, update: if isLoggedIn()
+        && request.resource.data.date is string
+        && request.resource.data.classKey is string
+        && request.resource.data.no is int
+        && (!('name' in request.resource.data) || validString(request.resource.data.name, 30));
+      allow delete: if isLoggedIn();
+    }
+
     // 학급별 학생 명단 (번호 → 이름) — 문서 ID "1-9"
     // 학생 이름은 개인정보라 공개 읽기 금지: 로그인 사용자(담임 PIN·관리자)만 읽기
     //   ※ 담임 PIN 로그인이 익명 인증이라 teachers 컬렉션과 같은 수준의 보호
