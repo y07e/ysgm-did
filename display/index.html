@@ -1817,10 +1817,19 @@
     .abs-stepper .abs-key { width: 72px; padding: 10px 0; }
     .abs-count { font-size: 2.4rem; font-weight: 900; min-width: 3.5em; text-align: center; }
     .abs-count small { font-size: 1rem; color: #94a3b8; margin-left: 4px; }
+    /* 입력 창 스크롤 막대 — 내용이 넘칠 때만 표시 (안드로이드는 기본 막대를 숨기므로 직접 그림) */
+    .abs-box { scrollbar-width: none; padding-right: 34px; }
+    .abs-box::-webkit-scrollbar { display: none; }
+    .abs-scroll { display: none; position: fixed; width: 16px; z-index: 9600; background: rgba(15,23,42,0.85);
+      border: 1px solid #334155; border-radius: 999px; cursor: pointer; touch-action: none; }
+    .abs-scroll-thumb { position: absolute; left: 2px; right: 2px; top: 0; min-height: 36px;
+      background: #64748b; border-radius: 999px; touch-action: none; }
+    .abs-scroll:hover .abs-scroll-thumb, .abs-scroll.drag .abs-scroll-thumb { background: #94a3b8; }
+
     /* ✏️ 입력 창 — 전자칠판(960×540)처럼 낮은 화면에서는 촘촘하게, 등록 버튼은 항상 아래에 고정 */
     .abs-sec.new .abs-foot { position: sticky; bottom: -12px; background: #0f172a; margin: 8px -14px -12px; padding: 8px 14px 10px; border-top: 1px solid #1e293b; border-radius: 0 0 12px 12px; }
     @media (max-height: 620px) {
-      .abs-box { padding: 10px 16px 12px; max-height: 97vh; }
+      .abs-box { padding: 10px 34px 12px 16px; max-height: 97vh; }
       .abs-h { font-size: 1.05rem; margin-bottom: 2px; }
       .abs-h small { font-size: 0.8rem; }
       .abs-top .abs-btn { font-size: 0.9rem; padding: 6px 14px; }
@@ -1941,6 +1950,7 @@
 <!-- ✏️ 교실 결시자 입력 모달 -->
 <div class="abs-modal" id="absModal">
   <div class="abs-box" id="absBody"></div>
+  <div class="abs-scroll" id="absScroll"><div class="abs-scroll-thumb"></div></div>
 </div>
 
 <!-- BREAK BAR -->
@@ -3047,6 +3057,57 @@
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
+  // ── 입력 창 스크롤 막대: 넘칠 때만 표시, 끌기·빈 곳 누르기로 이동 ──
+  function _absUpdateScroll() {
+    const box = document.getElementById('absBody'), bar = document.getElementById('absScroll');
+    if (!box || !bar) return;
+    const th = bar.firstElementChild;
+    const open = document.getElementById('absModal').classList.contains('show');
+    const over = box.scrollHeight - box.clientHeight;
+    if (!open || over <= 2) { bar.style.display = 'none'; return; }
+    const r = box.getBoundingClientRect();
+    const trackH = r.height - 16;
+    bar.style.display = 'block';
+    bar.style.top = (r.top + 8) + 'px';
+    bar.style.height = trackH + 'px';
+    bar.style.left = (r.right - 24) + 'px';
+    const thH = Math.max(36, trackH * box.clientHeight / box.scrollHeight);
+    th.style.height = thH + 'px';
+    th.style.top = ((trackH - thH) * box.scrollTop / over) + 'px';
+  }
+  (function _absInitScroll() {
+    const box = document.getElementById('absBody'), bar = document.getElementById('absScroll');
+    const th = bar.firstElementChild;
+    box.addEventListener('scroll', _absUpdateScroll);
+    window.addEventListener('resize', _absUpdateScroll);
+    if (window.MutationObserver) new MutationObserver(() => setTimeout(_absUpdateScroll, 0)).observe(box, { childList: true, subtree: true });
+    let drag = null;
+    const y = e => (e.touches && e.touches.length ? e.touches[0].clientY : e.clientY);
+    function start(e) {
+      e.preventDefault(); e.stopPropagation();
+      drag = { y: y(e), top: box.scrollTop };
+      bar.classList.add('drag');
+    }
+    function move(e) {
+      if (!drag) return;
+      e.preventDefault();
+      const over = box.scrollHeight - box.clientHeight;
+      const trackH = bar.clientHeight, thH = th.offsetHeight;
+      box.scrollTop = drag.top + (y(e) - drag.y) * over / Math.max(1, trackH - thH);
+      if (typeof _absArmIdle === 'function') _absArmIdle();
+    }
+    function end() { drag = null; bar.classList.remove('drag'); }
+    th.addEventListener('mousedown', start); th.addEventListener('touchstart', start, { passive: false });
+    window.addEventListener('mousemove', move); window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('mouseup', end); window.addEventListener('touchend', end);
+    // 막대 빈 곳을 누르면 그쪽으로 한 화면씩 이동
+    bar.addEventListener('click', e => {
+      if (e.target === th) return;
+      const r = th.getBoundingClientRect();
+      box.scrollTop += (e.clientY < r.top ? -1 : 1) * box.clientHeight * 0.8;
+    });
+  })();
+
   // 버튼을 누를 때마다 항상 담임 PIN 확인 (창이 열려 있는 동안만 잠금 해제)
   function openAbsentInput() {
     if (!examState) return;
@@ -3054,6 +3115,7 @@
     document.getElementById('absModal').classList.add('show');
     showAbsentPin();
     _absArmIdle();
+    setTimeout(_absUpdateScroll, 0);
   }
   // 3분 동안 조작이 없으면 입력 창을 자동으로 닫고 잠금
   var _absIdleTimer = null;
@@ -3071,6 +3133,7 @@
     _absUnlock = null; _absSet = null;
     if (_absIdleTimer) { clearTimeout(_absIdleTimer); _absIdleTimer = null; }
     try { if (firebase.auth().currentUser) firebase.auth().signOut(); } catch (e) {}
+    _absUpdateScroll();
   }
 
   function showAbsentPin(msg) {
