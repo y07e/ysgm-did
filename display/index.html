@@ -3015,16 +3015,30 @@
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
+  // 버튼을 누를 때마다 항상 담임 PIN 확인 (창이 열려 있는 동안만 잠금 해제)
   function openAbsentInput() {
     if (!examState) return;
+    _absUnlock = null;
     document.getElementById('absModal').classList.add('show');
-    if (_absUnlock && _absUnlock.until > Date.now()) showAbsentForm();
-    else showAbsentPin();
+    showAbsentPin();
+    _absArmIdle();
+  }
+  // 3분 동안 조작이 없으면 입력 창을 자동으로 닫고 잠금
+  var _absIdleTimer = null;
+  function _absArmIdle() {
+    if (_absIdleTimer) clearTimeout(_absIdleTimer);
+    _absIdleTimer = setTimeout(() => {
+      if (document.getElementById('absModal').classList.contains('show')) closeAbsentInput();
+    }, 3*60*1000);
   }
   function closeAbsentInput() {
     _absPendingDel = null; _absView = '';
     document.getElementById('absModal').classList.remove('show');
     _absPin = '';
+    // 창을 닫으면 바로 잠금 + 익명 로그인 해제 (다음에 열 때 다시 PIN 확인)
+    _absUnlock = null; _absSet = null;
+    if (_absIdleTimer) { clearTimeout(_absIdleTimer); _absIdleTimer = null; }
+    try { if (firebase.auth().currentUser) firebase.auth().signOut(); } catch (e) {}
   }
 
   function showAbsentPin(msg) {
@@ -3038,6 +3052,7 @@
       <div class="abs-foot"><button class="abs-btn ghost" onclick="closeAbsentInput()">닫기</button></div>`;
   }
   function absPinKey(k) {
+    _absArmIdle();
     if (k === '지움') _absPin = _absPin.slice(0, -1);
     else if (k === '확인') { verifyAbsentPin(); return; }
     else if (_absPin.length < 8) _absPin += k;
@@ -3074,7 +3089,7 @@
     return rem.length ? rem : sl.map(s => s.id);
   }
   function _absResetSel() { _absSel = { periods: _absRemainingIds(), students: {}, order: [] }; }
-  function _absTouch() { if (_absUnlock) _absUnlock.until = Date.now() + 10*60*1000; }
+  function _absTouch() { if (_absUnlock) _absUnlock.until = Date.now() + 10*60*1000; _absArmIdle(); }
 
   function showAbsentForm() {
     _absView = 'form';
