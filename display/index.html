@@ -2739,6 +2739,9 @@
   var examVacant = [];      // 공번 (전출 등으로 비어 있는 번호) — classEnrollment/{학년-반}.vacant
   var examState = null;   // { name, dayNo, totalDays, today:[slot], nextDate, next:[slot], absents:[] }
   var examTimer = null;
+  var _examReqSeq = 0;
+  var _absJustAdded = [];     // 방금 등록한 결시 기록 (다음 갱신에 서버 결과와 합침)
+  var _absJustDeleted = [];   // 방금 삭제한 결시 기록 id
 
   function _ymd(d) {
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -2773,6 +2776,7 @@
     const pilot = Array.isArray(examLink.pilotClasses) ? examLink.pilotClasses : [];
     if (pilot.length && pilot.indexOf(grade + '-' + cls) === -1) { setExamState(null); return; }
     const today = _ymd(new Date());
+    const mySeq = ++_examReqSeq;   // 여러 번 겹쳐 호출될 때 늦게 끝난 옛 결과가 덮어쓰지 않도록
     try {
       const exams = await examFetch('exams?select=id,name,start_date,end_date&is_active=eq.true'
         + '&start_date=lte.' + today + '&end_date=gte.' + today + '&order=start_date.desc&limit=1');
@@ -2792,6 +2796,10 @@
           + '&exam_schedule_id=in.(' + ids.join(',') + ')&grade=eq.' + grade + '&class_number=eq.' + cls
           + '&order=student_number.asc');
       }
+      if (mySeq !== _examReqSeq) return;   // 더 최근 호출이 진행 중 → 이 결과는 버림
+      // 방금 등록/삭제한 기록은 서버 응답이 늦어도 화면에 확실히 반영
+      absents = absents.filter(a => _absJustDeleted.indexOf(a.id) === -1);
+      _absJustAdded.forEach(r => { if (!absents.some(a => a.id === r.id) && ids.indexOf(r.exam_schedule_id) !== -1) absents.push(r); });
       setExamState({
         name: ex.name,
         dayNo: dates.indexOf(today) + 1,
@@ -3240,7 +3248,7 @@
     const base = String(examLink.url).replace(/\/+$/, '');
     const opt = { method: method, headers: {
       apikey: examLink.anonKey, Authorization: 'Bearer ' + examLink.anonKey,
-      'Content-Type': 'application/json', Prefer: 'return=minimal' } };
+      'Content-Type': 'application/json', Prefer: method === 'POST' ? 'return=representation' : 'return=minimal' } };
     if (body) opt.body = JSON.stringify(body);
     return fetch(base + '/rest/v1/' + path, opt);
   }
@@ -3263,10 +3271,18 @@
           student_number: Number(k), student_name: (it.name || '').trim(), reason: it.reason,
           reported_by: _absUnlock.name + ' (전자칠판)'
         });
-        if (r.ok) ok++; else if (r.status === 409) dup++; else fail = 'HTTP ' + r.status;
+        if (r.ok) {
+          ok++;
+          try { const rows = await r.json(); if (Array.isArray(rows)) rows.forEach(x => _absJustAdded.push(x)); } catch (e) {}
+        } else if (r.status === 409) dup++; else fail = 'HTTP ' + r.status;
       }
     }
     const nStu = _absSel.order.length;
+    // 화면에 즉시 반영 (서버 재조회 전에도 목록·결시 수가 바로 바뀜)
+    if (examState) {
+      _absJustAdded.forEach(x => { if (!examState.absents.some(a => a.id === x.id)) examState.absents.push(x); });
+      _examLastHtml = ''; renderExamScreen();
+    }
     await refreshExam();
     _absResetSel();
     _absMsg = fail ? ('❌ 일부 저장 실패 (' + fail + ') — 다시 시도해 주세요')
@@ -3274,10 +3290,18 @@
     showAbsentForm();
   }
 
+  // 삭제한 기록을 화면 목록에서 즉시 제거
+  function _absForget(idList) {
+    idList.forEach(id => { _absJustDeleted.push(id); });
+    _absJustAdded = _absJustAdded.filter(x => idList.indexOf(x.id) === -1);
+    if (examState) { examState.absents = examState.absents.filter(a => idList.indexOf(a.id) === -1); _examLastHtml = ''; renderExamScreen(); }
+  }
+
   async function absDelete(id, label) {
     if (_absExpired()) return;
     if (!confirm((label || '이 교시') + ' 결시를 삭제할까요?\n(지각 후 응시한 경우 등)')) return;
     const r = await _absWrite('DELETE', 'absent_students?id=eq.' + encodeURIComponent(id));
+    if (r.ok) _absForget([id]);
     await refreshExam();
     _absMsg = r.ok ? '🗑 삭제했습니다' : '❌ 삭제 실패: HTTP ' + r.status;
     showAbsentForm();
@@ -3290,7 +3314,7 @@
     let bad = 0;
     for (let i = 0; i < mine.length; i++) {
       const r = await _absWrite('DELETE', 'absent_students?id=eq.' + encodeURIComponent(mine[i].id));
-      if (!r.ok) bad++;
+      if (!r.ok) bad++; else _absForget([mine[i].id]);
     }
     await refreshExam();
     _absMsg = bad ? '❌ 일부 삭제 실패' : '🗑 ' + no + '번 결시를 모두 삭제했습니다';
