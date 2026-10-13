@@ -2848,9 +2848,12 @@
       const scheds = await examFetch('exam_schedules?select=id,exam_date,period,subject,start_time,end_time'
         + '&exam_id=eq.' + ex.id + '&grade=eq.' + grade + '&order=exam_date.asc,period.asc');
       const todaySlots = scheds.filter(s => s.exam_date === today);
-      if (!todaySlots.length) { setExamState(null); scheduleExamPoll(15*60*1000); return; }
+      // 이 학년은 오늘 시험이 없음 (등록 안 됨 또는 자습만) → 평소 시간표
+      //   예: 1학기 1학년(자유학기), 3학년 2학기 2차처럼 학년마다 시험 기간이 달라도 학년별로 자동 판단
+      if (!todaySlots.some(s => s.subject !== '자습')) { setExamState(null); scheduleExamPoll(15*60*1000); return; }
       const dates = [];
-      scheds.forEach(s => { if (dates.indexOf(s.exam_date) === -1) dates.push(s.exam_date); });
+      scheds.forEach(s => { if (s.subject !== '자습' && dates.indexOf(s.exam_date) === -1) dates.push(s.exam_date); });
+      dates.sort();
       const nextDate = dates.filter(d => d > today)[0] || '';
       const ids = todaySlots.filter(s => s.subject !== '자습').map(s => s.id);
       if (mySeq !== _examReqSeq) return;   // 더 최근 호출이 진행 중 → 이 결과는 버림
