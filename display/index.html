@@ -1726,7 +1726,9 @@
     .ex-abs-label.r-approved { color: #93c5fd; } .ex-abs-label.r-illness { color: #fdba74; }
     .ex-abs-label.r-unauthorized { color: #fca5a5; } .ex-abs-label.r-other { color: #cbd5e1; } .ex-abs-label.r-mourning { color: #d8b4fe; }
     .ex-vcount { font-weight: 900; color: #e2e8f0; margin-right: 0.2em; }
-    .ex-range { font-style: normal; font-size: 0.3em; font-weight: 700; color: #94a3b8; margin-left: 0.3em; vertical-align: middle; }
+    /* 재적 옆 번호 범위 — 세 줄 모두 같은 폭의 칸을 두어 '명' 위치를 세로로 맞춤 */
+    .ex-tr { display: flex; align-items: center; }
+    .ex-trange { display: inline-block; width: 6.4em; margin-left: 0.5em; font-size: 0.4em; font-weight: 800; color: #cbd5e1; white-space: nowrap; text-align: left; font-variant-numeric: tabular-nums; }
     /* ⚠️ 부정행위 예방 띠 — 시험 날만, 헤더 바로 아래 노란 경고 띠 */
     .exam-notice { display: none; }
     body.exam-mode .exam-notice:not(:empty) {
@@ -3035,9 +3037,9 @@
         </div>
         <div class="ex-body"><div class="ex-fit ex-rbody">
           <div class="ex-tiles" style="flex-grow:${[1.45, 1.45, 1.45, 1.1, 0.85, 0.7, 0.6][Math.min(6, (absLines.match(/ex-abs-line/g) || ['x']).length + (vacLine ? 1 : 0))]}">
-            <div class="ex-tile t-enroll"><span class="ex-tl">재적</span><span class="ex-tn">${hasEnroll ? enroll : '-'}<small>명</small>${lastNo ? `<em class="ex-range">(1~${lastNo}번)</em>` : ''}</span></div>
-            <div class="ex-tile t-absent${absentCnt ? ' has' : ''}"><span class="ex-tl">결시</span><span class="ex-tn">${absentCnt}<small>명</small></span></div>
-            <div class="ex-tile t-take"><span class="ex-tl">응시</span><span class="ex-tn">${hasEnroll ? enroll - absentCnt : '-'}<small>명</small></span></div>
+            <div class="ex-tile t-enroll"><span class="ex-tl">재적</span><span class="ex-tr"><span class="ex-tn">${hasEnroll ? enroll : '-'}<small>명</small></span><span class="ex-trange">${lastNo ? `(1번~${lastNo}번)` : ''}</span></span></div>
+            <div class="ex-tile t-absent${absentCnt ? ' has' : ''}"><span class="ex-tl">결시</span><span class="ex-tr"><span class="ex-tn">${absentCnt}<small>명</small></span><span class="ex-trange"></span></span></div>
+            <div class="ex-tile t-take"><span class="ex-tl">응시</span><span class="ex-tr"><span class="ex-tn">${hasEnroll ? enroll - absentCnt : '-'}<small>명</small></span><span class="ex-trange"></span></span></div>
           </div>
           <div class="ex-abs"><div class="ex-abs-list">
             ${absLines || '<div class="ex-abs-line"><span class="ex-abs-label ab">결시자</span><span class="ex-abs-vals"><span class="ex-allin">없음 ✨</span></span></div>'}
@@ -3306,7 +3308,7 @@
         </div>
       </div>
       <div class="abs-err" id="absErr">${msg}</div>
-      <div class="abs-info">재적 <b>${enroll > 0 ? enroll + '명' + ' (1~' + _absMaxNo() + '번)' : '미입력'}</b> · 공번 <b>${(function () { const o = examVacant.concat(examExempt).sort(function (x, y) { return x - y; }); return o.length ? o.length + '명 (' + o.join(', ') + '번)' : '없음'; })()}</b></div>
+      <div class="abs-info">재적 <b>${enroll > 0 ? enroll + '명' + ' (1번~' + _absMaxNo() + '번)' : '미입력'}</b> · 공번 <b>${(function () { const o = examVacant.concat(examExempt).sort(function (x, y) { return x - y; }); return o.length ? o.length + '명 (' + o.join(', ') + '번)' : '없음'; })()}</b></div>
 
       <div class="abs-sec">
         <div class="abs-label">📋 오늘 등록된 결시자 ${regOrder.length ? `<span class="abs-cnt">${regOrder.length}명</span>` : ''}</div>
