@@ -2792,6 +2792,7 @@
   var examLink = null;
   var examEnroll = {};
   var examVacant = [];      // 공번 (전출 등으로 비어 있는 번호) — classEnrollment/{학년-반}.vacant
+  var examExempt = [];      // 정원 외 학생 번호 (번호는 있지만 재적·결시 대상 아님) — classEnrollment.exempt
   var examState = null;   // { name, dayNo, totalDays, today:[slot], nextDate, next:[slot], absents:[] }
   var examTimer = null;
   var _examReqSeq = 0;
@@ -3244,6 +3245,7 @@
     for (let n = 1; n <= maxNo; n++) {
       const k = String(n);
       if (examVacant.indexOf(n) !== -1) { nums += `<button class="abs-num vac" disabled>${n}<small>공번</small></button>`; continue; }
+      if (examExempt.indexOf(n) !== -1) { nums += `<button class="abs-num vac" disabled>${n}<small>정원외</small></button>`; continue; }
       const on = !!_absSel.students[k];
       const nm = _absRoster[k];
       nums += `<button class="abs-num${on ? ' on' : ''}${reg[k] ? ' reg' : ''}" onclick="absPick('no',${n})">${n}${nm ? `<small>${escapeHtml(nm)}</small>` : ''}</button>`;
@@ -3293,8 +3295,9 @@
   // 번호 버튼 범위: 재적 + 공번 수 (재적 미입력이면 35번까지)
   function _absMaxNo() {
     const enroll = parseInt(examEnroll[grade + '-' + cls], 10);
-    const vmax = examVacant.length ? examVacant[examVacant.length - 1] : 0;
-    return Math.max(enroll > 0 ? enroll + examVacant.length : 35, vmax);
+    const all = examVacant.concat(examExempt);
+    const vmax = all.length ? Math.max.apply(null, all) : 0;
+    return Math.max(enroll > 0 ? enroll + examVacant.length + examExempt.length : 35, vmax);
   }
 
   // ⚙️ 재적·공번 설정 (담임이 교실에서 바로)
@@ -3306,13 +3309,14 @@
       const enroll = parseInt(examEnroll[grade + '-' + cls], 10);
       _absSet = { count: enroll > 0 ? enroll : 0, vacant: examVacant.slice() };
     }
-    const top = Math.max(_absSet.count + _absSet.vacant.length + 3, 30);
+    const top = Math.max(_absSet.count + _absSet.vacant.length + examExempt.length + 3, 30);
     let nums = '';
     for (let n = 1; n <= top; n++) {
+      if (examExempt.indexOf(n) !== -1) { nums += `<button class="abs-num vac" disabled>${n}<small>정원외</small></button>`; continue; }
       const v = _absSet.vacant.indexOf(n) !== -1;
       nums += `<button class="abs-num${v ? ' vacsel' : ''}" onclick="absSetVacant(${n})">${n}${v ? '<small>공번</small>' : ''}</button>`;
     }
-    const last = _absSet.count + _absSet.vacant.length;
+    const last = _absSet.count + _absSet.vacant.length + examExempt.length;
     document.getElementById('absBody').innerHTML = `
       <div class="abs-top">
         <div class="abs-h">⚙️ ${grade}학년 ${cls}반 재적·공번 설정</div>
@@ -3474,11 +3478,12 @@
   });
   // 우리 반 재적 인원 (classEnrollment/{학년-반}.count — 담임·관리자가 입력)
   db.collection('classEnrollment').doc(grade + '-' + cls).onSnapshot(snap => {
-    examEnroll = {}; examVacant = [];
+    examEnroll = {}; examVacant = []; examExempt = [];
     const ed = snap.exists ? snap.data() : null;
     if (ed && _isThisYear(ed)) {   // 작년 재적·공번은 무시
       if (ed.count > 0) examEnroll[grade + '-' + cls] = ed.count;
       if (Array.isArray(ed.vacant)) examVacant = ed.vacant.map(Number).filter(n => n > 0).sort((a, b) => a - b);
+      if (Array.isArray(ed.exempt)) examExempt = ed.exempt.map(Number).filter(n => n > 0).sort((a, b) => a - b);
     }
     if (examState) { _examLastHtml = ''; renderExamScreen(); }
   });

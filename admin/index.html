@@ -5243,7 +5243,7 @@ document.getElementById('examPvDates').addEventListener('click', e => {
 const EA_REASONS = { illness:'질병결석', unauthorized:'미인정결석', approved:'인정결석', other:'기타결석' };
 let _eaInited = false, _eaExam = null, _eaScheds = [], _eaAbsents = [];
 let _eaSel = { periods: [], students: {}, order: [] };   // 교시 여러 개 + 학생 여러 명(학생별 이름·사유)
-let _eaLink = null, _eaEnroll = {}, _eaVacant = {};   // 공번: { "1-9": [15, 22] }
+let _eaLink = null, _eaEnroll = {}, _eaVacant = {}, _eaExempt = {};   // 공번·정원외: { "1-9": [15, 22] }
 let _eaRoster = {}, _eaRosterKey = '', _eaSelKey = '';
 
 function _eaGC() {
@@ -5265,10 +5265,12 @@ function initExamAbsentTab() {
     document.getElementById('eaDate').addEventListener('change', _eaLoad);
     db.collection('classEnrollment').onSnapshot(snap => {
       _eaEnroll = {}; _eaVacant = {};
+      _eaExempt = {};
       snap.docs.forEach(d => {
         if (!_isThisYear(d.data())) return;   // 작년 재적·공번은 무시
         if (d.data().count > 0) _eaEnroll[d.id] = d.data().count;
         if (Array.isArray(d.data().vacant)) _eaVacant[d.id] = d.data().vacant.map(Number).filter(n => n > 0).sort((a, b) => a - b);
+        if (Array.isArray(d.data().exempt)) _eaExempt[d.id] = d.data().exempt.map(Number).filter(n => n > 0).sort((a, b) => a - b);
       });
       if (_eaExam) _eaRender();
     });
@@ -5387,10 +5389,13 @@ function _eaRender() {
   document.getElementById('eaPeriods').innerHTML =
     _eaScheds.map(s => `<button class="ea-chip${_eaSel.periods.indexOf(s.id) !== -1 ? ' on' : ''}" data-ea="period" data-v="${s.id}">${s.period}교시 ${escapeHtml(s.subject)}</button>`).join('')
     + `<button class="ea-chip ghost" data-ea="all">전 교시</button>`;
-  const maxNo = Math.max(enroll > 0 ? enroll + vacant.length : 35, vacant.length ? vacant[vacant.length - 1] : 0);
+  const exempt = _eaExempt[`${g}-${c}`] || [];
+  const allOff = vacant.concat(exempt);
+  const maxNo = Math.max(enroll > 0 ? enroll + vacant.length + exempt.length : 35, allOff.length ? Math.max(...allOff) : 0);
   let nums = '';
   for (let n = 1; n <= maxNo; n++) {
     if (vacant.indexOf(n) !== -1) { nums += `<button class="ea-num vac" disabled>${n}<small>공번</small></button>`; continue; }
+    if (exempt.indexOf(n) !== -1) { nums += `<button class="ea-num vac" disabled>${n}<small>정원외</small></button>`; continue; }
     const k = String(n), nm = _eaRoster[k];
     nums += `<button class="ea-num${_eaSel.students[k] ? ' on' : ''}${registered[k] ? ' reg' : ''}" data-ea="no" data-v="${n}">${n}${nm ? `<small>${escapeHtml(nm)}</small>` : ''}</button>`;
   }
