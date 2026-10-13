@@ -227,6 +227,23 @@
     .btn-secondary { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
     .btn-secondary:hover { background: #e2e8f0; }
     .btn-sm { padding: 4px 10px; font-size: 0.76rem; }
+    /* 🧑‍🎓 명렬 업로드 */
+    .ro-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    .ro-table th, .ro-table td { border: 1px solid #e2e8f0; padding: 5px 6px; text-align: center; }
+    .ro-table th { background: #f1f5f9; color: #334155; }
+    .ro-table tr.ro-row { cursor: pointer; }
+    .ro-table tr.ro-row:hover { background: #f8fafc; }
+    .ro-table tr.warn td { background: #fffbeb; }
+    .ro-detail td { background: #f8fafc; text-align: left; }
+    .ro-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 4px; margin: 4px 0 6px; }
+    .ro-chip { border: 1px solid #cbd5e1; border-radius: 6px; padding: 3px 5px; font-size: 0.76rem; background: white; cursor: pointer; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: inherit; }
+    .ro-chip b { color: #1e40af; margin-right: 3px; }
+    .ro-chip.ex { background: #fef9c3; border-color: #eab308; }
+    .ro-chip.vac { background: #f1f5f9; color: #94a3b8; border-style: dashed; }
+    .ro-chip.hole { background: #fee2e2; border-color: #f87171; color: #b91c1c; }
+    .ro-chip.fr { border-color: #0ea5e9; }
+    .ro-file { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 0.83rem; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 6px; background: #f8fafc; }
+
     /* 🗓️ 신학년 준비 */
     .ys-step { display: flex; gap: 14px; align-items: flex-start; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
     .ys-step.done { border-color: #a7f3d0; background: #f0fdf4; }
@@ -1229,6 +1246,26 @@
           <input type="text" id="scNewCode" placeholder="코드" style="width:70px;">
           <button class="btn btn-secondary btn-sm" id="btnScAdd">＋ 추가</button>
           <button class="btn btn-primary" id="btnScSave" style="margin-left:auto;">💾 과목 코드 저장 (올해 확인 완료)</button>
+        </div>
+      </div>
+
+      <div class="card" id="rosterCard" style="border-left:4px solid #0ea5e9;">
+        <div class="card-title">🧑‍🎓 학생 명렬 업로드 — 명단·재적·공번 한 번에</div>
+        <p style="font-size:0.83rem;color:#475569;line-height:1.7;margin-bottom:10px;">
+          <b>엑셀(.xlsx) · PDF · 한글(.hwpx)</b> 명렬 파일을 올리면 반별 명단·재적·공번·정원 외를 읽어 옵니다. 학년별 파일을 <b>여러 개 한꺼번에</b> 올려도 됩니다.<br>
+          읽을 수 있는 표: ① <b>번호 × 반</b> 표(행=번호, 열=반) ② <b>반·번호·성명</b>(또는 학번·성명) 목록 · "전출/공번" 칸은 공번, 노란 칸·"정원외"는 정원 외로 처리<br>
+          <span style="color:#b45309;">한글 .hwp 파일은 한글에서 <b>다른 이름으로 저장 → PDF 또는 HWPX</b>로 저장해서 올려 주세요. 스캔(사진) PDF는 읽을 수 없습니다.</span>
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <label style="font-weight:700;color:#334155;">학년도</label>
+          <select id="roYear" style="width:auto;"></select>
+          <input type="file" id="roFiles" multiple accept=".xlsx,.xls,.pdf,.hwpx,.hwp" style="flex:1;min-width:220px;">
+        </div>
+        <div id="roFilesInfo" style="margin-top:10px;"></div>
+        <div id="roPreview" style="margin-top:10px;"></div>
+        <div id="roSaveRow" style="display:none;margin-top:12px;flex-wrap:wrap;gap:10px;align-items:center;">
+          <label style="display:flex;gap:6px;align-items:center;font-size:0.85rem;color:#334155;"><input type="checkbox" id="roOverwrite" checked style="width:auto;"> 담임이 입력한 재적·공번도 이 파일 값으로 바꾸기</label>
+          <button class="btn btn-primary" id="btnRoSave" style="margin-left:auto;">💾 명단·재적 저장</button>
         </div>
       </div>
 
@@ -5019,6 +5056,7 @@ let _examTabInited = false;
 let _examDates = [];
 
 function initExamTab() {
+  if (typeof roInit === 'function') roInit();
   if (_examTabInited) return;
   _examTabInited = true;
   db.collection('settings').doc('examLink').onSnapshot(s => {
@@ -5494,6 +5532,369 @@ document.getElementById('btnEaSave').addEventListener('click', async () => {
 });
 
 // ============================================================
+// 🧑‍🎓 명렬 읽기 — 엑셀·PDF·HWPX 를 공통 표(rows: [[{t, fill}]])로 바꾼 뒤 한 가지 분석기로 처리
+//   지원 형식: ① "번호 × 반" 표 (행=번호, 열=반)  ② "학년·반·번호·성명"(또는 학번·성명) 목록
+//   공번: "전출"/"공번" 칸 · 정원 외: 노란 칸(엑셀) 또는 "정원외" 표시된 학번 · 외국 이름: 짧게 변환(수정 가능)
+// ============================================================
+const RO_NAME_SEED = {   // 원래 표기(띄어쓰기 무시) → 화면용 짧은 이름
+  'POPOVAALEKSANDRA': 'Aleksandra P.', 'HABIBAUMME': 'Habiba U.', 'TSOYANASTASIYA': 'Anastasiya T.',
+  'DZHURAEVAIASMINA': 'Iasmina D.', 'JINNAYAN': 'Jin Nayan', 'STOLYAROVADIANA': 'Diana S.',
+  'MUBINAMAMADZHANOVA': 'Mubina M.', 'MAMADZHANOVAMUBINA': 'Mubina M.', 'LESVETLANA': 'Svetlana L.', 'NGUYENXUANMAI': 'Xuan Mai N.'
+};
+const RO_VN_SURNAMES = ['NGUYEN','TRAN','LE','PHAM','HOANG','HUYNH','VU','VO','DANG','BUI','DO','HO','NGO','DUONG','LY','PHAN','TRUONG'];
+function roTitle(w) { return String(w).toLowerCase().replace(/(^|[\s-])([a-z])/g, (m, a, b) => a + b.toUpperCase()); }
+function roNameKey(raw) { return String(raw).toUpperCase().replace(/[^A-Z]/g, ''); }
+// 외국 이름 → 짧은 이름 (map: 관리자가 고친 이름 우선)
+function roShortName(raw, map) {
+  const key = roNameKey(raw);
+  if (map && map[key]) return map[key];
+  if (RO_NAME_SEED[key]) return RO_NAME_SEED[key];
+  const tk = String(raw).trim().toUpperCase().split(/\s+/).filter(Boolean);
+  if (tk.length < 2) return roTitle(tk[0] || raw);
+  if (RO_VN_SURNAMES.indexOf(tk[0]) !== -1) return roTitle(tk.slice(1).join(' ')) + ' ' + tk[0][0] + '.';     // 베트남: 성 이름
+  if (tk.length === 2 && tk[0].length <= 4 && tk[1].length <= 6) return roTitle(tk.join(' '));                  // 짧은 중국식 이름은 그대로
+  return roTitle(tk.slice(1).join(' ')) + ' ' + tk[0][0] + '.';                                                  // 러시아·중앙아시아식: 성 이름
+}
+function roIsForeign(t) { return /[A-Za-z]/.test(t) && !/[가-힣]/.test(t); }
+function roClean(t) { return String(t == null ? '' : t).replace(/ /g, ' ').trim(); }
+
+// 학년 추정: "3-1" 같은 반 표기 → 파일 이름 "3학년" → 본문 "3 학년"
+function roGuessGrade(fileName, rows) {
+  const flat = rows.slice(0, 6).map(r => r.map(c => c.t).join(' ')).join(' ');
+  let m = flat.match(/(?:^|\s|\(|<)([1-3])\s*-\s*\d{1,2}\s*\(/) || flat.match(/(?:^|\s)([1-3])\s*-\s*1(?:\s|$|\()/);
+  if (m) return +m[1];
+  m = String(fileName).match(/([1-3])\s*학년/); if (m) return +m[1];
+  m = flat.match(/([1-3])\s*학\s*년/); if (m) return +m[1];
+  return null;
+}
+
+// 공통 분석기: rows → { mode, classes: { "3-1": { students:{no:{raw,name,foreign}}, vacant:[], exempt:[], expect } }, gradeTotal, warnings }
+function roAnalyze(rows, grade, nameMap) {
+  const res = { mode: '', classes: {}, gradeTotal: null, warnings: [] };
+  const T = (r, c) => (rows[r] && rows[r][c] ? roClean(rows[r][c].t) : '');
+  const F = (r, c) => (rows[r] && rows[r][c] ? rows[r][c].fill || '' : '');
+  const classLabel = t => { let m = t.match(/^([1-3])\s*-\s*(\d{1,2})(?:\s*\(.*)?$/); if (m) return { g: +m[1], c: +m[2] }; m = t.match(/^(\d{1,2})\s*반$/); if (m) return { g: null, c: +m[1] }; return null; };
+  const isNo = t => /^(\d{1,2})\s*번?$/.test(t);
+  const put = (g, c) => { const k = `${g}-${c}`; return res.classes[k] = res.classes[k] || { students: {}, vacant: [], exempt: [], expect: null }; };
+  const addName = (o, no, raw, fill) => {
+    raw = roClean(raw).replace(/\((전입|재입학|재입|편입)\)/g, '').trim();
+    if (!raw) return;
+    if (/^전\s*출$|^공\s*번$|^결\s*번$/.test(raw)) { if (o.vacant.indexOf(no) === -1) o.vacant.push(no); return; }
+    if (/정원\s*외/.test(raw)) { raw = raw.replace(/\(?정원\s*외\)?/g, '').trim(); if (o.exempt.indexOf(no) === -1) o.exempt.push(no); if (!raw) return; }
+    const foreign = roIsForeign(raw);
+    o.students[no] = { raw, name: foreign ? roShortName(raw, nameMap) : raw.replace(/\s+/g, ''), foreign };
+    if (/^FFFF00$/i.test(fill) && o.exempt.indexOf(no) === -1) o.exempt.push(no);   // 노란 칸 = 정원 외
+  };
+  // ① "번호 × 반" 표
+  let h = -1, cols = [];
+  for (let r = 0; r < Math.min(rows.length, 12) && h < 0; r++) {
+    const found = [];
+    (rows[r] || []).forEach((cell, ci) => { const L = classLabel(roClean(cell.t)); if (L) found.push({ ci, ...L }); });
+    if (found.length >= 2) { h = r; cols = found; }
+  }
+  if (h >= 0) {
+    res.mode = 'grid';
+    let noCol = -1, best = 0;
+    for (let ci = 0; ci < 4; ci++) { let n = 0; for (let r = h + 1; r < rows.length; r++) if (isNo(T(r, ci))) n++; if (n > best) { best = n; noCol = ci; } }
+    if (noCol < 0) { res.warnings.push('번호 열을 찾지 못했습니다'); return res; }
+    let lastNoRow = h;
+    for (let r = h + 1; r < rows.length; r++) {
+      const t = T(r, noCol); if (!isNo(t)) continue;
+      lastNoRow = r; const no = parseInt(t, 10);
+      cols.forEach(col => addName(put(col.g || grade, col.c), no, T(r, col.ci), F(r, col.ci)));
+    }
+    // 맨 아래 반별 인원: "28명" 또는 첫 칸이 정원·재적·계·인원인 숫자 줄 (+ 그 줄 끝의 학년 합계)
+    const lastCi = Math.max(...cols.map(c => c.ci));
+    for (let r = lastNoRow + 1; r < Math.min(rows.length, lastNoRow + 4); r++) {
+      const label = /정원|재적|인원|^계$|합계/.test(T(r, noCol));
+      cols.forEach(col => { const t = T(r, col.ci); const m = t.match(/^(\d{1,2})\s*명$/) || (label && t.match(/^(\d{1,2})$/)); if (m) put(col.g || grade, col.c).expect = +m[1]; });
+      if (label) for (let ci = lastCi + 1; ci < (rows[r] || []).length; ci++) { const v = T(r, ci); if (/^\d{3}$/.test(v)) { res.gradeTotal = +v; break; } }
+    }
+  } else {
+    // ② 목록 형식: 머리글에서 학년/반/번호/성명 또는 학번/성명 열 찾기
+    let hh = -1, map = {};
+    for (let r = 0; r < Math.min(rows.length, 15) && hh < 0; r++) {
+      const m = {};
+      (rows[r] || []).forEach((cell, ci) => { const t = roClean(cell.t).replace(/\s/g, '');
+        if (/^학년$/.test(t)) m.g = ci; else if (/^반$/.test(t)) m.c = ci; else if (/^(번호|번)$/.test(t)) m.n = ci; else if (/^(성명|이름|학생명)$/.test(t)) m.name = ci; else if (/^학번$/.test(t)) m.id = ci; });
+      if (m.name != null && ((m.c != null && m.n != null) || m.id != null)) { hh = r; map = m; }
+    }
+    if (hh < 0) { res.warnings.push('명렬 표를 찾지 못했습니다 ("번호×반" 표 또는 "반·번호·성명" 목록이어야 합니다)'); return res; }
+    res.mode = 'list';
+    for (let r = hh + 1; r < rows.length; r++) {
+      let g = grade, c, n;
+      if (map.id != null && /^\d{5}$/.test(T(r, map.id))) { const id = T(r, map.id); g = +id[0]; c = +id.slice(1, 3); n = +id.slice(3); }
+      else { c = parseInt(T(r, map.c), 10); n = parseInt(T(r, map.n), 10); if (map.g != null && parseInt(T(r, map.g), 10)) g = parseInt(T(r, map.g), 10); }
+      if (!g || !c || !n) continue;
+      addName(put(g, c), n, T(r, map.name), F(r, map.name));
+    }
+  }
+  // 오른쪽 메모 등: 같은 줄에 "학번(5자리)" + "정원외" → 정원 외
+  rows.forEach(row => {
+    const ts = row.map(c => roClean(c.t));
+    const id = ts.find(t => /^\d{5}$/.test(t)), ex = ts.some(t => /^정원\s*외$/.test(t));
+    if (id && ex) { const k = `${+id[0]}-${+id.slice(1, 3)}`, n = +id.slice(3); const o = res.classes[k]; if (o && o.students[n] && o.exempt.indexOf(n) === -1) { o.exempt.push(n); res.warnings.push(`${k}반 ${n}번: 메모의 "정원외"(학번 ${id})로 정원 외 처리`); } }
+  });
+  // 학년 총원 ("현재 311 명", "총원 236")
+  const all = rows.map(r => r.map(c => roClean(c.t)).join(' ')).join(' ');
+  const tm = all.match(/(?:현재|총\s*원|총\s*인원|합\s*계)\s{0,3}(\d{3})(?!\d)/);
+  if (res.gradeTotal == null && tm) res.gradeTotal = +tm[1];
+  else if (res.gradeTotal == null) { const ri = rows.findIndex(r => r.some(c => /^총\s*원$/.test(roClean(c.t)))); if (ri >= 0 && rows[ri + 1]) { const v = rows[ri + 1].map(c => roClean(c.t)).find(t => /^\d{2,3}$/.test(t)); if (v) res.gradeTotal = +v; } }
+  // 정리
+  Object.keys(res.classes).forEach(k => {
+    const o = res.classes[k]; o.vacant.sort((a, b) => a - b); o.exempt.sort((a, b) => a - b);
+    const nos = Object.keys(o.students).map(Number), max = Math.max(0, ...nos, ...o.vacant);
+    const max2 = Math.max(max, ...o.exempt);
+    o.holes = []; for (let n = 1; n <= max2; n++) if (!o.students[n] && o.vacant.indexOf(n) === -1 && o.exempt.indexOf(n) === -1) o.holes.push(n);
+  });
+  return res;
+}
+
+// PDF 글자 조각 → 공통 표: 반 머리글 위치로 열, 번호 위치로 행을 정해 칸에 배치 (여러 줄 외국 이름도 한 칸으로)
+function roPdfItemsToRows(items) {
+  const raw = items.filter(i => i.str && i.str.trim()).map(i => ({ x: i.transform[4], y: i.transform[5], w: i.width || 0, s: i.str.trim() }));
+  raw.sort((a, b) => Math.round(b.y) - Math.round(a.y) || a.x - b.x);
+  const its = [];
+  raw.forEach(i => { const p = its[its.length - 1];
+    if (p && Math.abs(p.y - i.y) < 2 && i.x >= p.x + p.w - 1 && i.x - (p.x + p.w) < 4 && !/^\d{1,2}$/.test(p.s)) { p.s += i.s; p.w = i.x + i.w - p.x; }
+    else its.push(Object.assign({}, i)); });
+  const heads = its.filter(i => /^([1-3])\s*-\s*\d{1,2}(\(|$)/.test(i.s) || /^\d{1,2}\s*반$/.test(i.s)).sort((a, b) => a.x - b.x);
+  if (heads.length < 2) {   // 표 머리글이 없으면 줄 단위 글자로 (목록 형식)
+    const lines = []; its.forEach(i => { const L = lines[lines.length - 1]; if (L && Math.abs(L.y - i.y) < 3) L.cells.push(i); else lines.push({ y: i.y, cells: [i] }); });
+    return lines.map(L => L.cells.sort((a, b) => a.x - b.x).map(c => ({ t: c.s })));
+  }
+  const headY = heads[0].y;
+  const leftX = Math.min(...heads.map(hd => hd.x));
+  const numRows = its.filter(i => i.x < leftX && /^\d{1,2}$/.test(i.s) && i.y < headY).map(i => ({ no: +i.s, y: i.y }));
+  const bounds = heads.map((hd, k) => k === 0 ? -Infinity : (heads[k - 1].x + hd.x) / 2).concat([Infinity]);
+  const minNoY = numRows.length ? Math.min(...numRows.map(r => r.y)) : 0;
+  const grid = {}; const foot = {};
+  its.forEach(i => {
+    if (heads.indexOf(i) !== -1 || i.y >= headY - 2) return;
+    let ci = -1; for (let k = 0; k < heads.length; k++) if (i.x + 2 >= bounds[k] && i.x + 2 < bounds[k + 1]) ci = k;
+    if (ci < 0 || i.x < leftX - 25) return;
+    if (i.y < minNoY - 8) { if (/^\d{1,2}\s*명?$/.test(i.s)) foot[ci] = i.s; return; }
+    const row = numRows.reduce((b, r) => (Math.abs(r.y - i.y) < Math.abs(b.y - i.y) ? r : b), numRows[0]);
+    if (!row || Math.abs(row.y - i.y) > 9) return;
+    const k = row.no + '|' + ci; (grid[k] = grid[k] || []).push(i);
+  });
+  const header = [{ t: '번호' }].concat(heads.map(hd => ({ t: hd.s })));
+  const out = [header];
+  numRows.sort((a, b) => a.no - b.no).forEach(r => out.push([{ t: String(r.no) }].concat(heads.map((hd, ci) => {
+    const parts = (grid[r.no + '|' + ci] || []).filter(p => !/^\d{1,2}$/.test(p.s)).sort((a, b) => b.y - a.y || a.x - b.x).map(p => p.s);
+    return { t: parts.join(' ') };
+  }))));
+  if (Object.keys(foot).length) out.push([{ t: '' }].concat(heads.map((hd, ci) => ({ t: foot[ci] ? (/명$/.test(foot[ci]) ? foot[ci] : foot[ci] + '명') : '' }))));
+  // 맨 위 제목 줄(총원 등)도 함께 넘김
+  const title = its.filter(i => i.y > headY + 3).sort((a, b) => a.x - b.x).map(i => ({ t: i.s }));
+  if (title.length) out.unshift(title);
+  return out;
+}
+
+
+// ── 파일 → 공통 표 ──
+async function roReadXlsx(buf) {
+  const wb = XLSX.read(buf, { type: 'array', cellStyles: true });
+  const sets = [];
+  wb.SheetNames.forEach(sn => {
+    const ws = wb.Sheets[sn]; if (!ws['!ref']) return;
+    const rg = XLSX.utils.decode_range(ws['!ref']); const rows = [];
+    for (let r = rg.s.r; r <= rg.e.r; r++) { const row = [];
+      for (let c = rg.s.c; c <= rg.e.c; c++) { const cell = ws[XLSX.utils.encode_cell({ r, c })];
+        row.push({ t: cell ? String(cell.w != null ? cell.w : (cell.v != null ? cell.v : '')) : '', fill: (cell && cell.s && cell.s.fgColor && cell.s.fgColor.rgb) || '' }); }
+      rows.push(row); }
+    sets.push(rows);
+  });
+  return sets;
+}
+async function roReadPdf(buf) {
+  if (typeof pdfjsLib === 'undefined') throw new Error('PDF 라이브러리 로드 실패');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const sets = []; let textLen = 0;
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    textLen += tc.items.reduce((n, i) => n + (i.str || '').trim().length, 0);
+    sets.push(roPdfItemsToRows(tc.items));
+  }
+  if (textLen < 20) throw new Error('글자가 없는 PDF입니다 (스캔·사진 파일). 엑셀이나 글자가 있는 PDF로 다시 받아 주세요');
+  return sets;
+}
+function roLoadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => no(new Error('라이브러리 로드 실패')); document.head.appendChild(s); }); }
+async function roReadHwpx(buf) {
+  if (typeof JSZip === 'undefined') await roLoadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+  const zip = await JSZip.loadAsync(buf);
+  const secs = Object.keys(zip.files).filter(n => /^Contents\/section\d+\.xml$/i.test(n)).sort();
+  if (!secs.length) throw new Error('HWPX 본문을 찾지 못했습니다');
+  const sets = [];
+  for (const n of secs) {
+    const doc = new DOMParser().parseFromString(await zip.file(n).async('string'), 'application/xml');
+    const all = Array.prototype.slice.call(doc.getElementsByTagName('*'));
+    all.filter(e => e.localName === 'tbl').forEach(tbl => {
+      const cells = Array.prototype.slice.call(tbl.getElementsByTagName('*')).filter(e => e.localName === 'tc' && e.closest && true);
+      const grid = [];
+      cells.forEach(tc => {
+        // 이 표에 직접 속한 칸만 (안쪽 표 제외)
+        let up = tc.parentNode; while (up && up.localName !== 'tbl') up = up.parentNode; if (up !== tbl) return;
+        const addr = Array.prototype.slice.call(tc.childNodes).find(x => x.localName === 'cellAddr');
+        const r = addr ? +addr.getAttribute('rowAddr') : grid.length, c = addr ? +addr.getAttribute('colAddr') : 0;
+        const txt = Array.prototype.slice.call(tc.getElementsByTagName('*')).filter(x => x.localName === 't').map(x => x.textContent).join('');
+        (grid[r] = grid[r] || [])[c] = { t: txt };
+      });
+      const rows = grid.map(r => { const a = r || []; for (let i = 0; i < a.length; i++) if (!a[i]) a[i] = { t: '' }; return a; });
+      if (rows.length) sets.push(rows);
+    });
+  }
+  if (!sets.length) throw new Error('HWPX 안에서 표를 찾지 못했습니다');
+  return sets;
+}
+
+// ── 업로드 상태 ──
+let _ro = { files: [], classes: {}, open: {}, nameMap: {} };
+function roInit() {
+  const sel = document.getElementById('roYear');
+  if (sel && !sel.options.length) {
+    const d = (typeof _ysDefaultYear === 'function') ? _ysDefaultYear() : schoolYearNow();
+    sel.innerHTML = [d - 1, d, d + 1].map(y => `<option value="${y}">${y}학년도</option>`).join('');
+    sel.value = String(d);
+  }
+}
+document.getElementById('roFiles').addEventListener('change', async e => {
+  roInit();
+  const files = Array.prototype.slice.call(e.target.files || []);
+  if (!files.length) return;
+  try { const nm = await db.collection('settings').doc('rosterNameMap').get(); _ro.nameMap = (nm.exists && nm.data().map) || {}; } catch (err) { _ro.nameMap = {}; }
+  _ro.files = []; _ro.open = {};
+  document.getElementById('roFilesInfo').innerHTML = '<span style="color:#64748b;">파일을 읽는 중...</span>';
+  for (const f of files) {
+    const item = { name: f.name, kind: '', grade: null, sets: [], error: '' };
+    try {
+      const ext = (f.name.split('.').pop() || '').toLowerCase();
+      const buf = await f.arrayBuffer();
+      if (ext === 'hwp') throw new Error('HWP(옛 한글) 파일은 읽을 수 없습니다. 한글에서 PDF 또는 HWPX로 저장해 올려 주세요');
+      if (ext === 'xlsx' || ext === 'xls') { item.kind = '엑셀'; item.sets = await roReadXlsx(buf); }
+      else if (ext === 'pdf') { item.kind = 'PDF'; item.sets = await roReadPdf(buf); }
+      else if (ext === 'hwpx') { item.kind = '한글'; item.sets = await roReadHwpx(buf); }
+      else throw new Error('지원하지 않는 형식입니다 (엑셀·PDF·HWPX)');
+      item.grade = roGuessGrade(f.name, [].concat.apply([], item.sets));
+    } catch (err) { item.error = err.message; }
+    _ro.files.push(item);
+  }
+  roRebuild();
+});
+
+function roRebuild() {
+  _ro.classes = {}; const totals = {}; const warns = [];
+  _ro.files.forEach(f => {
+    f.result = null; if (f.error) return;
+    const merged = { classes: {}, gradeTotal: null, warnings: [], mode: '' };
+    f.sets.forEach(rows => { const r = roAnalyze(rows, f.grade, _ro.nameMap); Object.assign(merged.classes, r.classes); if (r.gradeTotal != null) merged.gradeTotal = r.gradeTotal; merged.warnings = merged.warnings.concat(r.warnings); merged.mode = merged.mode || r.mode; });
+    f.result = merged;
+    Object.keys(merged.classes).forEach(k => {
+      const o = merged.classes[k];
+      if (Object.keys(o.students).length || o.vacant.length) _ro.classes[k] = o;
+    });
+    if (merged.gradeTotal != null && f.grade) totals[f.grade] = merged.gradeTotal;
+  });
+  _ro.totals = totals;
+  roRender();
+}
+
+function roCount(o) { return Object.keys(o.students).map(Number).filter(n => o.exempt.indexOf(n) === -1).length; }
+function roRender() {
+  const info = document.getElementById('roFilesInfo');
+  info.innerHTML = _ro.files.map((f, i) => `<div class="ro-file">
+      <b>${escapeHtml(f.name)}</b> <span style="color:#64748b;">${f.kind || ''}</span>
+      ${f.error ? `<span style="color:#dc2626;font-weight:700;">❌ ${escapeHtml(f.error)}</span>` : `
+        <label style="display:flex;gap:4px;align-items:center;">학년 <select data-ro-grade="${i}" style="width:auto;padding:2px 6px;">
+          <option value="">자동</option>${[1, 2, 3].map(g => `<option value="${g}"${f.grade === g ? ' selected' : ''}>${g}학년</option>`).join('')}</select></label>
+        <span style="color:#059669;">${f.result ? `✅ ${Object.keys(f.result.classes).length}개 반 · ${f.result.mode === 'list' ? '목록 형식' : '번호×반 표'}${f.result.gradeTotal ? ` · 파일 총원 ${f.result.gradeTotal}명` : ''}` : ''}</span>
+        ${f.result && f.result.warnings.length ? `<span style="color:#b45309;">⚠️ ${f.result.warnings.map(escapeHtml).join(' / ')}</span>` : ''}`}
+    </div>`).join('');
+  const keys = Object.keys(_ro.classes).sort((a, b) => { const [g1, c1] = a.split('-').map(Number), [g2, c2] = b.split('-').map(Number); return g1 - g2 || c1 - c2; });
+  const pv = document.getElementById('roPreview');
+  document.getElementById('roSaveRow').style.display = keys.length ? 'flex' : 'none';
+  if (!keys.length) { pv.innerHTML = ''; return; }
+  const gsum = {}; keys.forEach(k => { gsum[k[0]] = (gsum[k[0]] || 0) + roCount(_ro.classes[k]); });
+  let html = `<div style="font-size:0.85rem;margin-bottom:6px;font-weight:700;color:#334155;">학년별 재적: ${Object.keys(gsum).map(g => {
+      const t = _ro.totals[g]; const ok = t == null ? '' : (t === gsum[g] ? ' <span style="color:#059669;">✅ 파일 총원과 일치</span>' : ` <span style="color:#dc2626;">⚠️ 파일 총원 ${t}명과 다름</span>`);
+      return `${g}학년 ${gsum[g]}명${ok}`; }).join(' · ')}</div>
+    <div style="font-size:0.78rem;color:#64748b;margin-bottom:6px;">반을 누르면 번호별 명단이 펼쳐집니다. 학생 칸을 누르면 <b>정원 외</b> ⇄ 학생, 빨간 빈 번호를 누르면 <b>공번</b>으로 지정됩니다.</div>
+    <div style="overflow-x:auto;"><table class="ro-table"><tr><th>반</th><th>학생</th><th>정원 외</th><th>재적</th><th>공번</th><th>번호 범위</th><th>파일 표기 인원</th><th>확인</th></tr>`;
+  keys.forEach(k => {
+    const o = _ro.classes[k]; const cnt = roCount(o);
+    const nos = Object.keys(o.students).map(Number).concat(o.vacant, o.exempt); const max = nos.length ? Math.max(...nos) : 0;
+    const bad = o.holes.length || (o.expect != null && o.expect !== cnt);
+    const status = o.holes.length ? `⚠️ 빈 번호 ${o.holes.join(',')}` : (o.expect != null ? (o.expect === cnt ? '✅' : `⚠️ 표기 ${o.expect}명과 다름`) : '✅');
+    html += `<tr class="ro-row${bad ? ' warn' : ''}" data-ro-open="${k}"><td><b>${k}</b></td><td>${Object.keys(o.students).length}</td><td>${o.exempt.join(', ') || '-'}</td><td><b>${cnt}</b></td><td>${o.vacant.join(', ') || '-'}</td><td>1~${max}</td><td>${o.expect != null ? o.expect + '명' : '-'}</td><td>${status}</td></tr>`;
+    if (_ro.open[k]) {
+      let chips = '';
+      for (let n = 1; n <= max; n++) {
+        const st = o.students[n];
+        if (o.vacant.indexOf(n) !== -1) chips += `<button class="ro-chip vac" data-ro-vac="${k}|${n}"><b>${n}</b>공번</button>`;
+        else if (st) chips += `<button class="ro-chip${o.exempt.indexOf(n) !== -1 ? ' ex' : ''}${st.foreign ? ' fr' : ''}" data-ro-ex="${k}|${n}" title="${escapeHtml(st.raw)}"><b>${n}</b>${escapeHtml(st.name)}${o.exempt.indexOf(n) !== -1 ? ' (정원외)' : ''}</button>`;
+        else if (o.exempt.indexOf(n) !== -1) chips += `<button class="ro-chip ex" data-ro-ex="${k}|${n}"><b>${n}</b>정원외</button>`;
+        else chips += `<button class="ro-chip hole" data-ro-vac="${k}|${n}"><b>${n}</b>빈 번호</button>`;
+      }
+      const fr = Object.keys(o.students).filter(n => o.students[n].foreign);
+      const frHtml = fr.length ? `<div style="margin-top:4px;font-size:0.8rem;"><b>외국 학생 이름</b> (화면에 짧게 표시 · 고치면 내년에도 이 이름으로 자동 변환):
+        ${fr.map(n => `<div style="display:flex;gap:6px;align-items:center;margin-top:3px;"><span style="min-width:200px;color:#64748b;">${n}번 ${escapeHtml(o.students[n].raw)}</span> → <input type="text" data-ro-name="${k}|${n}" value="${escapeHtml(o.students[n].name)}" style="width:160px;padding:3px 6px;"></div>`).join('')}</div>` : '';
+      html += `<tr class="ro-detail"><td colspan="8"><div class="ro-chips">${chips}</div>${frHtml}</td></tr>`;
+    }
+  });
+  html += '</table></div>';
+  pv.innerHTML = html;
+}
+
+document.getElementById('rosterCard').addEventListener('change', e => {
+  const gi = e.target.dataset.roGrade;
+  if (gi != null) { const v = e.target.value; _ro.files[+gi].grade = v ? +v : roGuessGrade(_ro.files[+gi].name, [].concat.apply([], _ro.files[+gi].sets)); roRebuild(); }
+});
+document.getElementById('rosterCard').addEventListener('input', e => {
+  const key = e.target.dataset.roName; if (!key) return;
+  const [k, n] = key.split('|'); const st = _ro.classes[k] && _ro.classes[k].students[n];
+  if (st) { st.name = e.target.value.trim(); st.edited = true; }
+});
+document.getElementById('rosterCard').addEventListener('click', e => {
+  const open = e.target.closest('[data-ro-open]');
+  const ex = e.target.closest('[data-ro-ex]'), vac = e.target.closest('[data-ro-vac]');
+  if (ex) { const [k, n] = ex.dataset.roEx.split('|'); const o = _ro.classes[k]; const i = o.exempt.indexOf(+n);
+    if (i === -1) o.exempt.push(+n); else if (o.students[n]) o.exempt.splice(i, 1); else { o.exempt.splice(i, 1); o.vacant.push(+n); }
+    o.exempt.sort((a, b) => a - b); o.vacant.sort((a, b) => a - b); roRender(); return; }
+  if (vac) { const [k, n] = vac.dataset.roVac.split('|'); const o = _ro.classes[k]; const i = o.vacant.indexOf(+n);
+    if (i === -1) { o.vacant.push(+n); o.holes = o.holes.filter(x => x !== +n); } else { o.vacant.splice(i, 1); o.holes.push(+n); o.holes.sort((a, b) => a - b); }
+    o.vacant.sort((a, b) => a - b); roRender(); return; }
+  if (open) { const k = open.dataset.roOpen; _ro.open[k] = !_ro.open[k]; roRender(); }
+});
+
+document.getElementById('btnRoSave').addEventListener('click', async () => {
+  const keys = Object.keys(_ro.classes); if (!keys.length) return;
+  const year = +document.getElementById('roYear').value;
+  const holes = keys.filter(k => _ro.classes[k].holes.length);
+  if (holes.length && !confirm(`빈 번호가 있는 반이 있습니다 (${holes.join(', ')}).\n빈 번호는 공번으로도 저장되지 않습니다. 그래도 저장할까요?`)) return;
+  const overwrite = document.getElementById('roOverwrite').checked;
+  if (!confirm(`${year}학년도 명렬을 저장합니다.\n· ${keys.length}개 반 명단${overwrite ? '·재적·공번·정원 외' : ''}\n\n계속할까요?`)) return;
+  const btn = document.getElementById('btnRoSave'); btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    let existing = {};
+    if (!overwrite) { const sn = await db.collection('classEnrollment').get(); sn.docs.forEach(d => { if (Number(d.data().year || 2026) === year && d.data().count > 0) existing[d.id] = true; }); }
+    const batch = db.batch(); const nameMap = {};
+    const src = _ro.files.filter(f => !f.error).map(f => f.name).join(', ').slice(0, 300);
+    keys.forEach(k => {
+      const o = _ro.classes[k]; const students = {};
+      Object.keys(o.students).forEach(n => { students[n] = o.students[n].name; if (o.students[n].foreign && o.students[n].edited && o.students[n].name) nameMap[roNameKey(o.students[n].raw)] = o.students[n].name; });
+      batch.set(db.collection('classRosters').doc(k), { students, year, source: src, updatedBy: '관리자(명렬 업로드)', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      if (overwrite || !existing[k]) batch.set(db.collection('classEnrollment').doc(k), { count: roCount(o), vacant: o.vacant, exempt: o.exempt, year, updatedBy: '관리자(명렬 업로드)', updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    });
+    if (Object.keys(nameMap).length) batch.set(db.collection('settings').doc('rosterNameMap'), { map: nameMap }, { merge: true });
+    await batch.commit();
+    showToast(`✅ ${year}학년도 명렬 저장 — ${keys.length}개 반`);
+    btn.textContent = '✅ 저장 완료';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '💾 명단·재적 저장'; }, 2500);
+  } catch (err) { showToast('❌ 저장 실패: ' + err.message); btn.disabled = false; btn.textContent = '💾 명단·재적 저장'; }
+});
+
+// ============================================================
 // 🗓️ 신학년 준비 — 해마다 할 기초 작업을 한 화면에서 순서대로 (상태 자동 확인)
 //   settings/yearSetup { lastBackupAt, lastResetAt, checks: { "2027": { school:true, ... } } }
 // ============================================================
@@ -5609,10 +6010,10 @@ async function renderYearSetup() {
       status: evIn ? `${T}학년도 학사일정 ${evIn}건 등록` : `${T}학년도 학사일정 없음`,
       acts: [['학사일정', "goPanel('events')"], ['D-Day', "goPanel('dday')"]] },
     { key: 'roster', title: '🧑‍🎓 학생 명렬 (명단·재적)',
-      desc: '학년별 명렬 파일로 반별 명단과 재적을 넣습니다. 시험 결시 입력 때 번호를 누르면 이름이 자동으로 채워집니다. 공번은 담임이 교실에서 지정합니다.',
+      desc: '학년별 명렬 파일(엑셀·PDF·HWPX)을 올리면 반별 명단·재적·공번·정원 외가 한 번에 들어갑니다. 시험 결시 입력 때 번호를 누르면 이름이 자동으로 채워집니다.',
       state: st(rosterN >= totalClasses && enrollN >= totalClasses, rosterN > 0 || enrollN > 0),
       status: `명단 ${rosterN}/${totalClasses}반 · 재적 ${enrollN}/${totalClasses}반 (${T}학년도)`,
-      acts: [['재적 입력 화면', "goPanel('exam')"]] },
+      acts: [['📤 명렬 업로드', "goPanel('exam');setTimeout(()=>{const c=document.getElementById('rosterCard');if(c)c.scrollIntoView({behavior:'smooth'});},300)"]] },
     { key: 'exam', title: '📝 시험 연동·과목 코드',
       desc: '고사 관리 연결, 과목 코드 확인(1년에 한 번), 시범 학급 해제(전체 운영)를 점검합니다. 1학년 1학기(자유학기)는 시험이 없어 자동으로 평소 화면입니다.',
       state: st(link.url && Number(link.subjectCodesYear) === T && pilot.length === 0 && link.enabled, !!link.url),
