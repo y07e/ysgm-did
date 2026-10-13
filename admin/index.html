@@ -1210,10 +1210,22 @@
           <span class="toggle-switch"><input type="checkbox" id="examShowNames" checked></span>
           <div class="toggle-content">
             <span class="toggle-title">결시자 이름 표시</span>
-            <span class="toggle-desc" id="examNamesDesc">켜짐 — "12 홍길동 질병결석 1·2교시" 형태</span>
+            <span class="toggle-desc" id="examNamesDesc">켜짐 — "병결  12 홍길동 1·2교시" 형태</span>
           </div>
           <span class="toggle-badge" id="examNamesBadge">켜짐</span>
         </label>
+        <div style="margin-top:12px;border:1px solid #fde68a;background:#fffbeb;border-radius:10px;padding:10px 12px;">
+          <label class="toggle-row on" id="examNoticeRow" style="margin:0 0 8px;">
+            <span class="toggle-switch"><input type="checkbox" id="examNoticeOn" checked></span>
+            <div class="toggle-content"><span class="toggle-title">⚠️ 부정행위 예방 띠 표시</span>
+              <span class="toggle-desc">시험 날 전자칠판 맨 위(학교 알림판 바로 아래)에 노란 띠로 표시됩니다.</span></div>
+            <span class="toggle-badge" id="examNoticeBadge">켜짐</span>
+          </label>
+          <div class="form-grid cols2">
+            <div class="form-row"><label>제목</label><input type="text" id="examNoticeTitle" placeholder="⚠️ 부정행위 예방"></div>
+            <div class="form-row"><label>항목 (한 줄에 하나)</label><textarea id="examNoticeItems" rows="3" placeholder="🗄️ 책상 서랍 비우기&#10;📵 휴대폰·스마트기기 소지 금지"></textarea></div>
+          </div>
+        </div>
         <div class="form-row" style="margin-top:10px;">
           <label>🧪 시범 운영 학급 (비우면 전체 학급)</label>
           <input type="text" id="examPilot" placeholder="예: 1-9, 2-3  (학년-반, 쉼표로 구분)">
@@ -5120,8 +5132,8 @@ function _setToggleUI(rowId, badgeId, descId, on, onText, offText) {
 }
 const _EXAM_ON_TXT  = '켜짐 — 시험 날 각 반 화면에 시험 시간표와 결시 현황이 표시됩니다.';
 const _EXAM_OFF_TXT = '꺼짐 — 시험 날에도 평소 시간표가 표시됩니다.';
-const _NAMES_ON_TXT = '켜짐 — "12 홍길동 질병결석 1·2교시" 형태';
-const _NAMES_OFF_TXT = '꺼짐 — "12번 질병결석 1·2교시"처럼 이름 없이 표시';
+const _NAMES_ON_TXT = '켜짐 — "병결  12 홍길동 1·2교시" 형태';
+const _NAMES_OFF_TXT = '꺼짐 — "병결  12번 1·2교시"처럼 이름 없이 표시';
 
 function _renderExamLinkForm() {
   const en = !!_examLink.enabled;
@@ -5131,11 +5143,21 @@ function _renderExamLinkForm() {
   _setToggleUI('examEnabledRow', 'examEnabledBadge', 'examEnabledDesc', en, _EXAM_ON_TXT, _EXAM_OFF_TXT);
   _setToggleUI('examNamesRow', 'examNamesBadge', 'examNamesDesc', nm, _NAMES_ON_TXT, _NAMES_OFF_TXT);
   document.getElementById('examPilot').value = (Array.isArray(_examLink.pilotClasses) ? _examLink.pilotClasses : []).join(', ');
+  const nOn = _examLink.noticeEnabled !== false;
+  document.getElementById('examNoticeOn').checked = nOn;
+  document.getElementById('examNoticeRow').classList.toggle('on', nOn); document.getElementById('examNoticeRow').classList.toggle('off', !nOn);
+  document.getElementById('examNoticeBadge').textContent = nOn ? '켜짐' : '꺼짐';
+  document.getElementById('examNoticeTitle').value = _examLink.noticeTitle != null ? _examLink.noticeTitle : '⚠️ 부정행위 예방';
+  document.getElementById('examNoticeItems').value = (Array.isArray(_examLink.noticeItems) ? _examLink.noticeItems : ['🗄️ 책상 서랍 비우기', '📵 휴대폰·스마트기기 소지 금지']).join('\n');
   document.getElementById('examUrl').value = _examLink.url || '';
   document.getElementById('examKey').value = _examLink.anonKey || '';
 }
 document.getElementById('examEnabled').addEventListener('change', e =>
   _setToggleUI('examEnabledRow', 'examEnabledBadge', 'examEnabledDesc', e.target.checked, _EXAM_ON_TXT, _EXAM_OFF_TXT));
+document.getElementById('examNoticeOn').addEventListener('change', e => {
+  const r = document.getElementById('examNoticeRow'); r.classList.toggle('on', e.target.checked); r.classList.toggle('off', !e.target.checked);
+  document.getElementById('examNoticeBadge').textContent = e.target.checked ? '켜짐' : '꺼짐';
+});
 document.getElementById('examShowNames').addEventListener('change', e =>
   _setToggleUI('examNamesRow', 'examNamesBadge', 'examNamesDesc', e.target.checked, _NAMES_ON_TXT, _NAMES_OFF_TXT));
 
@@ -5143,6 +5165,9 @@ function _examFormValues() {
   return {
     enabled: document.getElementById('examEnabled').checked,
     showNames: document.getElementById('examShowNames').checked,
+    noticeEnabled: document.getElementById('examNoticeOn').checked,
+    noticeTitle: document.getElementById('examNoticeTitle').value.trim(),
+    noticeItems: document.getElementById('examNoticeItems').value.split('\n').map(x => x.trim()).filter(Boolean),
     pilotClasses: document.getElementById('examPilot').value.split(/[,\s]+/).map(x => x.trim()).filter(x => /^\d+-\d+$/.test(x)),
     url: document.getElementById('examUrl').value.trim().replace(/\/+$/, ''),
     anonKey: document.getElementById('examKey').value.trim(),
@@ -5278,7 +5303,8 @@ document.getElementById('examPvDates').addEventListener('click', e => {
 // ✏️ 시험 결시 입력 (담임: 자기 반 / 관리자: 학년·반 선택)
 //   전자칠판 Firestore examAbsents 에 등록·삭제 (고사 관리와 연동 안 함, 교실 입력과 동일)
 // ============================================================
-const EA_REASONS = { illness:'질병결석', unauthorized:'미인정결석', approved:'인정결석', other:'기타결석' };
+// 결시 사유 — 답안지 분류와 같은 이름·순서 (저장 코드는 그대로)
+const EA_REASONS = { approved:'공결', illness:'병결', unauthorized:'미인정결', other:'기타결', mourning:'상고' };
 let _eaInited = false, _eaExam = null, _eaScheds = [], _eaAbsents = [];
 let _eaSel = { periods: [], students: {}, order: [] };   // 교시 여러 개 + 학생 여러 명(학생별 이름·사유)
 let _eaLink = null, _eaEnroll = {}, _eaVacant = {}, _eaExempt = {};   // 공번·정원외: { "1-9": [15, 22] }

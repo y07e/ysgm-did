@@ -1710,7 +1710,7 @@
     .ex-abs-list { padding: 0.2em 0.5em; display: flex; flex-direction: column; gap: 0.25em; max-width: 100%; }
     /* 왼쪽 정렬: 라벨은 위 재적·결시·응시 글자와 같은 세로선, 값은 두 줄이 같은 위치에서 시작 */
     .ex-abs-line { display: flex; align-items: flex-start; gap: 0.5em; }
-    .ex-abs-label { flex-shrink: 0; width: 3.4em; font-weight: 900; color: #94a3b8; letter-spacing: 0.1em; line-height: 1.6; }
+    .ex-abs-label { flex-shrink: 0; width: 4.3em; font-weight: 900; color: #94a3b8; letter-spacing: 0; line-height: 1.6; white-space: nowrap; }
     .ex-abs-vals { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3em; min-width: 0; line-height: 1.5; }
     .ex-abs-label.ab { color: #fca5a5; }
     .ex-vac { background: #1e293b; border: 2px dashed #64748b; color: #e2e8f0; border-radius: 999px; padding: 0.02em 0.65em; font-weight: 800; }
@@ -1723,6 +1723,20 @@
     .ex-chip b { color: #f87171; font-weight: 900; }
     .ex-chip small { color: #fca5a5; font-size: 0.75em; font-weight: 500; }
     .ex-chip.off { opacity: 0.4; }
+    .ex-abs-label.r-approved { color: #93c5fd; } .ex-abs-label.r-illness { color: #fdba74; }
+    .ex-abs-label.r-unauthorized { color: #fca5a5; } .ex-abs-label.r-other { color: #cbd5e1; } .ex-abs-label.r-mourning { color: #d8b4fe; }
+    .ex-vcount { font-weight: 900; color: #e2e8f0; margin-right: 0.2em; }
+    .ex-range { font-style: normal; font-size: 0.3em; font-weight: 700; color: #94a3b8; margin-left: 0.3em; vertical-align: middle; }
+    /* ⚠️ 부정행위 예방 띠 — 시험 날만, 헤더 바로 아래 노란 경고 띠 */
+    .exam-notice { display: none; }
+    body.exam-mode .exam-notice:not(:empty) {
+      display: flex; flex-shrink: 0; align-items: center; justify-content: center; flex-wrap: wrap;
+      background: #facc15; color: #111827; font-weight: 900; font-size: 3.4vh; letter-spacing: -0.02em;
+      padding: 0.9vh 2vw; border-bottom: 3px solid #b45309; white-space: nowrap;
+    }
+    .exam-notice span { margin: 0 0.5em; }
+    .exam-notice .ex-nsep { opacity: 0.35; margin: 0 0.2em; }
+    .exam-notice .ex-ntitle { background: #111827; color: #facc15; border-radius: 999px; padding: 0.05em 0.7em; margin-right: 0.8em; }
     .ex-none { color: #64748b; font-weight: 700; }
     .ex-reason { font-style: normal; font-size: 0.85em; font-weight: 800; border-radius: 0.4em; padding: 0.02em 0.4em; background: #475569; color: #f1f5f9; }
     .ex-reason.r-illness { background: #b45309; color: #fffbeb; }
@@ -1888,6 +1902,9 @@
     <div class="clock" id="clock">00:00:00</div>
   </div>
 </header>
+
+<!-- ⚠️ 시험 날 부정행위 예방 띠 (body.exam-mode 일 때만) -->
+<div class="exam-notice" id="examNotice"></div>
 
 <!-- D-Day BAR -->
 <div class="dday-bar" id="ddayBar"></div>
@@ -2887,7 +2904,8 @@
     const base = s.replace(/\s*\d+$/, '');      // "국어1" → "국어"
     return custom[base] || EXAM_SUBJECT_CODES[base] || '';
   }
-  var EXAM_REASONS = { illness:'질병결석', unauthorized:'미인정결석', approved:'인정결석', other:'기타결석' };
+  // 결시 사유 — 답안지 분류와 같은 이름·순서 (저장 코드는 그대로: approved=공결, illness=병결 …)
+  var EXAM_REASONS = { approved:'공결', illness:'병결', unauthorized:'미인정결', other:'기타결', mourning:'상고' };
   var _examLastHtml = '';
 
   // 결시 수를 보여줄 '기준 교시' — 시험 중이면 그 교시, 쉬는 시간이면 다음 교시, 다 끝나면 마지막 교시
@@ -2960,29 +2978,44 @@
     const enroll = parseInt(examEnroll[grade + '-' + cls], 10);
     const hasEnroll = enroll > 0;
     const absentCnt = basis ? st.absents.filter(a => a.exam_schedule_id === basis.id).length : 0;
-    // 결시자 — 학생별로 묶어 표시 (사유는 화면에 표시하지 않음)
-    const byStu = {}; const order = [];
+    // 결시자 — 답안지처럼 사유별로 한 줄씩 (사유 → 학생 → 교시)
+    const showNames = examLink.showNames !== false;
+    const byReason = {};
     st.absents.forEach(a => {
       const slot = examSlots.filter(s => s.id === a.exam_schedule_id)[0];
       if (!slot) return;
+      const rk = EXAM_REASONS[a.reason] ? a.reason : 'other';
+      const g = byReason[rk] = byReason[rk] || {};
       const k = String(a.student_number);
-      if (!byStu[k]) { byStu[k] = { no: a.student_number, name: a.student_name, reasons: [], periods: [] }; order.push(k); }
-      if (byStu[k].periods.indexOf(slot.period) === -1) byStu[k].periods.push(slot.period);
-      if (a.reason && byStu[k].reasons.indexOf(a.reason) === -1) byStu[k].reasons.push(a.reason);
+      if (!g[k]) g[k] = { no: a.student_number, name: a.student_name, periods: [] };
+      if (g[k].periods.indexOf(slot.period) === -1) g[k].periods.push(slot.period);
     });
-    // 정렬: 지금(기준) 교시 결시자 먼저 → 번호순
-    const inBasis = k => !basis || byStu[k].periods.indexOf(basis.period) !== -1;
-    order.sort((x, y) => (inBasis(y) - inBasis(x)) || (byStu[x].no - byStu[y].no));
-    const showNames = examLink.showNames !== false;
-    const chips = order.map(k => {
-      const b = byStu[k];
-      const pTxt = b.periods.length === examSlots.length ? '전 교시' : b.periods.sort((x, y) => x - y).join('·') + '교시';
-      // 결시 사유 (교시마다 다르면 모두 표시)
-      const rTxt = b.reasons.map(r => EXAM_REASONS[r] || '').filter(Boolean).join('·');
-      // 지금(기준) 교시에 결시가 아닌 학생은 흐리게 — 감독 교사가 이번 교시 결시자만 바로 옮겨 적도록
-      const off = basis && b.periods.indexOf(basis.period) === -1;
-      return `<span class="ex-chip${off ? ' off' : ''}"><b>${b.no}</b>${showNames && b.name ? escapeHtml(b.name) : '번'}${rTxt ? `<em class="ex-reason r-${b.reasons[0]}">${rTxt}</em>` : ''}<small>${pTxt}</small></span>`;
+    const absLines = Object.keys(EXAM_REASONS).filter(rk => byReason[rk]).map(rk => {
+      const list = Object.keys(byReason[rk]).map(k => byReason[rk][k]);
+      // 지금(기준) 교시 결시자 먼저 → 번호순, 다른 교시만 결시한 학생은 흐리게
+      const inB = b => !basis || b.periods.indexOf(basis.period) !== -1;
+      list.sort((x, y) => (inB(y) - inB(x)) || (x.no - y.no));
+      const chips = list.map(b => {
+        const pTxt = b.periods.length === examSlots.length ? '' : b.periods.sort((x, y) => x - y).join('·') + '교시';
+        return `<span class="ex-chip${inB(b) ? '' : ' off'}"><b>${b.no}</b>${showNames && b.name ? escapeHtml(b.name) : '번'}${pTxt ? `<small>${pTxt}</small>` : ''}</span>`;
+      }).join('');
+      return `<div class="ex-abs-line"><span class="ex-abs-label r-${rk}">${EXAM_REASONS[rk]}</span><span class="ex-abs-vals">${chips}</span></div>`;
     }).join('');
+    // 공번 — 답안지처럼 정원 외 번호도 공번으로 함께 표시: "3명 (22, 27, 28번)"
+    const offNos = examVacant.concat(examExempt).filter((n, i, a2) => a2.indexOf(n) === i).sort((x, y) => x - y);
+    const vacLine = offNos.length
+      ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span><span class="ex-abs-vals"><span class="ex-vcount">${offNos.length}명</span>${offNos.map(n => `<span class="ex-vac">${n}</span>`).join('')}</span></div>`
+      : (hasEnroll ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span><span class="ex-abs-vals"><span class="ex-none">없음</span></span></div>` : '');
+    // 재적 옆 번호 범위 (공번·정원 외 포함 마지막 번호)
+    const lastNo = hasEnroll ? _absMaxNo() : 0;
+
+    // ⚠️ 부정행위 예방 띠 (관리자 문구 수정 가능, 비우면 숨김)
+    const nTitle = (examLink.noticeTitle != null ? examLink.noticeTitle : '⚠️ 부정행위 예방');
+    const nItems = Array.isArray(examLink.noticeItems) ? examLink.noticeItems : ['🗄️ 책상 서랍 비우기', '📵 휴대폰·스마트기기 소지 금지'];
+    const noticeHtml = (examLink.noticeEnabled !== false && nItems.filter(Boolean).length)
+      ? (nTitle ? `<span class="ex-ntitle">${escapeHtml(nTitle)}</span>` : '') + nItems.filter(Boolean).map((t, i) => (i ? '<span class="ex-nsep">|</span>' : '') + `<span>${escapeHtml(t)}</span>`).join('') : '';
+    const nEl = document.getElementById('examNotice');
+    if (nEl && nEl.getAttribute('data-h') !== noticeHtml) { nEl.setAttribute('data-h', noticeHtml); nEl.innerHTML = noticeHtml; nEl.style.display = noticeHtml ? '' : 'none'; _examLastHtml = ''; }
 
     const html = `
       <div class="ex-card ex-left">
@@ -3001,16 +3034,14 @@
           ${basis && examSlots.length > 1 ? `<span class="ex-head-sub">${basis.period}교시 ${escapeHtml(basis.subject)} 기준</span>` : ''}
         </div>
         <div class="ex-body"><div class="ex-fit ex-rbody">
-          <div class="ex-tiles">
-            <div class="ex-tile t-enroll"><span class="ex-tl">재적</span><span class="ex-tn">${hasEnroll ? enroll : '-'}<small>명</small></span></div>
+          <div class="ex-tiles" style="flex-grow:${[1.45, 1.45, 1.45, 1.1, 0.85, 0.7, 0.6][Math.min(6, (absLines.match(/ex-abs-line/g) || ['x']).length + (vacLine ? 1 : 0))]}">
+            <div class="ex-tile t-enroll"><span class="ex-tl">재적</span><span class="ex-tn">${hasEnroll ? enroll : '-'}<small>명</small>${lastNo ? `<em class="ex-range">(1~${lastNo}번)</em>` : ''}</span></div>
             <div class="ex-tile t-absent${absentCnt ? ' has' : ''}"><span class="ex-tl">결시</span><span class="ex-tn">${absentCnt}<small>명</small></span></div>
             <div class="ex-tile t-take"><span class="ex-tl">응시</span><span class="ex-tn">${hasEnroll ? enroll - absentCnt : '-'}<small>명</small></span></div>
           </div>
           <div class="ex-abs"><div class="ex-abs-list">
-            <div class="ex-abs-line"><span class="ex-abs-label ab">결시자</span><span class="ex-abs-vals">${order.length ? chips : '<span class="ex-allin">없음 ✨</span>'}</span></div>
-            ${examVacant.length
-              ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span><span class="ex-abs-vals">${examVacant.map(n => `<span class="ex-vac">${n}</span>`).join('')}</span></div>`
-              : (hasEnroll ? `<div class="ex-abs-line"><span class="ex-abs-label">공번</span><span class="ex-abs-vals"><span class="ex-none">없음</span></span></div>` : '')}
+            ${absLines || '<div class="ex-abs-line"><span class="ex-abs-label ab">결시자</span><span class="ex-abs-vals"><span class="ex-allin">없음 ✨</span></span></div>'}
+            ${vacLine}
           </div></div>
         </div></div>
         <div class="ex-foot">
@@ -3275,7 +3306,7 @@
         </div>
       </div>
       <div class="abs-err" id="absErr">${msg}</div>
-      <div class="abs-info">재적 <b>${enroll > 0 ? enroll + '명' : '미입력'}</b> · 공번 <b>${examVacant.length ? examVacant.join(', ') : '없음'}</b></div>
+      <div class="abs-info">재적 <b>${enroll > 0 ? enroll + '명' + ' (1~' + _absMaxNo() + '번)' : '미입력'}</b> · 공번 <b>${(function () { const o = examVacant.concat(examExempt).sort(function (x, y) { return x - y; }); return o.length ? o.length + '명 (' + o.join(', ') + '번)' : '없음'; })()}</b></div>
 
       <div class="abs-sec">
         <div class="abs-label">📋 오늘 등록된 결시자 ${regOrder.length ? `<span class="abs-cnt">${regOrder.length}명</span>` : ''}</div>
