@@ -3545,8 +3545,32 @@
     }
   });
 
+  // 📉 Firestore 사용량 절약 — 날짜가 붙은 기록은 필요한 날짜 범위만 구독하고,
+  // 날짜가 바뀌면 새 범위로 다시 구독 (전자칠판은 며칠씩 켜져 있으므로)
+  function _ymdKey(d) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function subscribeByDay(start) {
+    let unsub = null, key = '';
+    function run() {
+      const k = _ymdKey(new Date());
+      if (k === key) return;
+      key = k;
+      if (unsub) unsub();
+      unsub = start(new Date());
+    }
+    run();
+    setInterval(run, 60 * 1000);
+  }
+  // 문서 ID가 날짜(YYYY-MM-DD)인 컬렉션: 오늘~7일 뒤만 (주말엔 다음 월요일 기록이 필요)
+  function dayRangeQuery(col, now) {
+    const end = new Date(now); end.setDate(end.getDate() + 7);
+    const ID = firebase.firestore.FieldPath.documentId();
+    return db.collection(col).where(ID, '>=', _ymdKey(now)).where(ID, '<=', _ymdKey(end));
+  }
+
   // 단축 수업 일 오버라이드 (날짜별)
-  db.collection('classTimeOverrides').onSnapshot(snap => {
+  subscribeByDay(now => dayRangeQuery('classTimeOverrides', now).onSnapshot(snap => {
     _classTimeOverridesAll = {};
     snap.docs.forEach(d => _classTimeOverridesAll[d.id] = d.data());
     applyClassTimes();
@@ -3554,7 +3578,7 @@
     if (typeof applyMyLunch === 'function') applyMyLunch();
     // 미리보기 모드면 진단 정보 표시
     showShortDayDebug();
-  });
+  }));
 
   // 미리보기 모드에서 오늘 단축수업 데이터 진단 박스 표시 (회전 상세 포함)
   function showShortDayDebug() {
@@ -3834,40 +3858,53 @@
 
   // 일일 시간표 변경 (오늘 날짜만 적용)
   let dailyOverridesAll = {};
-  db.collection('timetableOverrides').onSnapshot(snap => {
+  subscribeByDay(now => dayRangeQuery('timetableOverrides', now).onSnapshot(snap => {
     dailyOverridesAll = {};
     snap.docs.forEach(d => dailyOverridesAll[d.id] = d.data());
     // 요일 통째 변경이 있으면 배지·시간표·점심 갱신 (요일 탭은 실제 요일 유지)
     renderDayTabs(getWeekdayIdx());
     if (typeof applyClassTimes === 'function') applyClassTimes();
     else renderPeriods(getDisplayDayIdx());
-  });
+  }));
 
-  // 학교 공지 (인덱스 불필요 — 클라이언트 필터링)
+  // 등록일 최신순 정렬 (복합 색인 없이 쓰려고 정렬은 화면에서)
+  const _byCreatedDesc = (a, b) => {
+    const ta = (a.createdAt && a.createdAt.toMillis) ? a.createdAt.toMillis() : Date.now();
+    const tb = (b.createdAt && b.createdAt.toMillis) ? b.createdAt.toMillis() : Date.now();
+    return tb - ta;
+  };
+
+  // 학교 공지 — 활성 공지만 구독 (대상 학년·반·만료는 화면에서 필터)
   db.collection('announcements')
-    .orderBy('createdAt','desc')
+    .where('isActive', '==', true)
     .onSnapshot(snap => {
-      const all = snap.docs.map(d => ({id:d.id,...d.data()}));
+      const all = snap.docs.map(d => ({id:d.id,...d.data()})).sort(_byCreatedDesc);
       schoolAnns  = filterSchoolAnns(all);
       schoolAnnIdx = 0;
       startSchoolSlideshow();
     });
 
-  // 학급 게시판 (인덱스 불필요 — 클라이언트 필터링)
+  // 학급 게시판 — 우리 반 글만 구독
   db.collection('classAnnouncements')
-    .orderBy('createdAt','desc')
+    .where('targetGrade', '==', grade)
+    .where('targetClass', '==', cls)
     .onSnapshot(snap => {
       const now = new Date();
       const anns = snap.docs
         .map(d=>({id:d.id,...d.data()}))
         .filter(a => a.targetGrade === grade && a.targetClass === cls)
         .filter(a => a.isActive)
-        .filter(a => !(a.expiresAt && a.expiresAt.toDate) || a.expiresAt.toDate() > now);
+        .filter(a => !(a.expiresAt && a.expiresAt.toDate) || a.expiresAt.toDate() > now)
+        .sort(_byCreatedDesc);
       renderClassBoard(anns);
     });
 
-  // D-Day 카운터 (상단 바)
-  db.collection('dDays').orderBy('targetDate').onSnapshot(snap => {
+  // D-Day 카운터 (상단 바) — 오늘 이후 D-Day만 구독
+  subscribeByDay(now => {
+    const d0 = new Date(now); d0.setHours(0,0,0,0);
+    return db.collection('dDays').where('targetDate', '>=', d0).orderBy('targetDate').onSnapshot(renderDDays);
+  });
+  function renderDDays(snap) {
     const today = new Date(); today.setHours(0,0,0,0);
     const items = snap.docs
       .map(d => ({id:d.id, ...d.data()}))
@@ -3911,10 +3948,17 @@
       const tw = document.getElementById('topWeather');
       if (tw) tw.innerHTML = window._lastWeatherHtml;
     }
-  });
+  }
 
-  // 금주 학사일정
-  db.collection('schoolEvents').orderBy('date').onSnapshot(snap => {
+  // 금주 학사일정 — 이번 주(월~일) 일정만 구독
+  subscribeByDay(now => {
+    const t = new Date(now); t.setHours(0,0,0,0);
+    const mon = new Date(t); mon.setDate(t.getDate() + ((t.getDay() === 0) ? -6 : (1 - t.getDay())));
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23,59,59,999);
+    return db.collection('schoolEvents').where('date', '>=', mon).where('date', '<=', sun)
+      .orderBy('date').onSnapshot(renderWeekEvents);
+  });
+  function renderWeekEvents(snap) {
     const today = new Date(); today.setHours(0,0,0,0);
     const day = today.getDay();
     const offsetToMon = (day === 0) ? -6 : (1 - day);
@@ -3950,7 +3994,7 @@
         </div>
       </div>`;
     }).join('');
-  });
+  }
 
   // 긴급 공지
   db.collection('emergency').doc('current').onSnapshot(snap => {
