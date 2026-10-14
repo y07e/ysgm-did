@@ -87,38 +87,36 @@ service cloud.firestore {
     }
 
     // 학급별 재적 인원·공번 (시험 결시 현황용) — 문서 ID "1-9", { count, vacant: [15, 22] }
-    // 읽기: 전자칠판(비로그인)에서 재적·응시 수 표시
-    // 쓰기: 담임(PIN 익명 로그인)·관리자 — 숫자 0~60만 허용
+    // 읽기: 전자칠판(비로그인)에서 재적·응시 수 표시 (숫자·번호만, 이름 없음)
+    // 쓰기: 관리자만 (2026-10-14 시험 연동 중지하며 잠금 — 익명 로그인 쓰기 차단)
     match /classEnrollment/{classId} {
       allow read: if true;
-      allow create, update: if isLoggedIn()
+      allow create, update: if isAdmin()
         && request.resource.data.count is int
         && request.resource.data.count >= 0
         && request.resource.data.count <= 60
         && (!('vacant' in request.resource.data)
             || (request.resource.data.vacant is list && request.resource.data.vacant.size() <= 60));
-      allow delete: if isLoggedIn();
+      allow delete: if isAdmin();
     }
 
-    // 시험 결시 기록 (고사 관리와 연동하지 않고 전자칠판에서만 관리)
-    // 읽기: 전자칠판 결시 현황 표시 (비로그인)
-    // 쓰기: 담임(PIN 익명 로그인)·관리자
+    // 시험 결시 기록 (학생 이름·사유 = 개인정보)
+    // 2026-10-14 시험 연동 중지하며 잠금: 읽기·쓰기 모두 관리자(이메일 로그인)만
+    //   ※ 다시 쓰려면 PIN 서버 확인(Cloud Functions) 등 보완 후 규칙 재설계 필요
     match /examAbsents/{id} {
-      allow read: if true;
-      allow create, update: if isLoggedIn()
+      allow read: if isAdmin();
+      allow create, update: if isAdmin()
         && request.resource.data.date is string
         && request.resource.data.classKey is string
         && request.resource.data.no is int
         && (!('name' in request.resource.data) || validString(request.resource.data.name, 30));
-      allow delete: if isLoggedIn();
+      allow delete: if isAdmin();
     }
 
-    // 학급별 학생 명단 (번호 → 이름) — 문서 ID "1-9"
-    // 학생 이름은 개인정보라 공개 읽기 금지: 로그인 사용자(담임 PIN·관리자)만 읽기
-    //   ※ 담임 PIN 로그인이 익명 인증이라 teachers 컬렉션과 같은 수준의 보호
-    // 쓰기: 관리자 일괄 업로드만
+    // 학급별 학생 명단 (번호 → 이름) — 문서 ID "1-9" (개인정보)
+    // 2026-10-14 잠금: 익명 로그인은 누구나 가능해 보호가 안 되므로 관리자만 읽기
     match /classRosters/{classId} {
-      allow read: if isLoggedIn();
+      allow read: if isAdmin();
       allow write: if isAdmin();
     }
 
